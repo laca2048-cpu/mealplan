@@ -110,7 +110,7 @@
             <span id="syncText">Connecting</span>
           </span>
         </div>
-        <p id="headerSub" class="text-[11px] text-slate-400">Fast, Cheap, High-Protein Meals</p>
+        <p id="headerSub" class="text-[11px] text-slate-400">Fast, Cheap, Healthy Meals</p>
       </div>
 
       <!-- User Switcher -->
@@ -1275,6 +1275,112 @@
       );
     })();
 
+    /********************************************************************
+     * 2c. 30 MORE: SANDWICHES, WRAPS, VEGETARIAN & LIGHT MEALS
+     * Not every meal needs meat or sky-high protein. All cheap and healthy.
+     ********************************************************************/
+    (function addLightRecipes() {
+      const AISLE = { M: "Meat & Fish", D: "Dairy & Eggs", V: "Veggies & Fruit", G: "Dry Goods & Carbs", S: "Sauces & Spices" };
+      const mk = (id, name, equipment, mins, protein, carbs, fat, cost, steps, ings) => ({
+        id, name, equipment, prepMinutes: mins, prepTime: mins + " min",
+        calories: protein * 4 + carbs * 4 + fat * 9, protein, carbs, fat, costPerPortion: "€" + cost.toFixed(2),
+        tags: ings.map(i => i[0].toLowerCase()), steps,
+        ingredients: ings.map(i => ({ name: i[0], amountPerPortion: i[1], unit: i[2], aisle: AISLE[i[3]], shelfLifeDays: i[4] }))
+      });
+      DEFAULT_RECIPES.push(
+        mk("ham-cheese-airfryer-toastie", "Ham, Cheese & Tomato Airfryer Toasties", "Airfryer", 10, 36, 52, 22, 1.40,
+          ["Layer ham, cheese and sliced tomato between bread slices.", "Airfry at 190°C for 5 mins, flip, 3 more mins until golden.", "Cut in half and eat hot."],
+          [["Bread slices", 4, "pcs", "G", 5], ["Lean ham", 80, "g", "M", 7], ["Grated cheese", 50, "g", "D", 14], ["Tomatoes", 80, "g", "V", 6]]),
+        mk("egg-salad-sandwich", "Creamy Egg Salad Sandwiches", "Gas Stove + Pan", 12, 30, 48, 20, 1.10,
+          ["Boil the eggs for 9 mins, then cool under cold water.", "Mash with Greek yogurt, salt and pepper.", "Pile onto bread with sliced cucumber."],
+          [["Eggs", 3, "pcs", "D", 18], ["Greek yogurt", 40, "g", "D", 10], ["Bread slices", 4, "pcs", "G", 5], ["Cucumber", 0.25, "pcs", "V", 6]]),
+        mk("tuna-cucumber-sandwich", "Tuna, Corn & Cucumber Sandwiches (No Cooking)", "No cooking", 8, 38, 48, 14, 1.40,
+          ["Mix drained tuna with yogurt and sweetcorn.", "Spread on bread.", "Top with sliced cucumber and close."],
+          [["Canned tuna", 110, "g", "M", 365], ["Bread slices", 4, "pcs", "G", 5], ["Greek yogurt", 40, "g", "D", 10], ["Cucumber", 0.3, "pcs", "V", 6], ["Sweetcorn (canned)", 40, "g", "S", 180]]),
+        mk("hummus-veggie-wrap", "Hummus & Crunchy Veggie Wraps (Vegetarian)", "No cooking", 10, 22, 70, 20, 1.30,
+          ["Spread hummus over the tortillas.", "Add sliced cucumber, tomato and pepper, and sprinkle with cheese.", "Roll up tight and slice in half."],
+          [["Large tortilla wraps", 2, "pcs", "G", 30], ["Hummus", 80, "g", "D", 10], ["Cucumber", 0.3, "pcs", "V", 6], ["Tomatoes", 80, "g", "V", 6], ["Bell pepper", 0.4, "pcs", "V", 7], ["Grated cheese", 30, "g", "D", 14]]),
+        mk("crispy-chicken-burger", "Crispy Airfryer Chicken Burgers", "Airfryer", 20, 48, 60, 20, 1.90,
+          ["Flatten chicken breast, coat in a little yogurt, then breadcrumbs and spices.", "Airfry at 200°C for 12 mins, flipping once.", "Build in buns with lettuce, tomato and a yogurt sauce."],
+          [["Chicken breast fillet", 180, "g", "M", 2], ["Burger buns", 2, "pcs", "G", 4], ["Greek yogurt", 40, "g", "D", 10], ["Lettuce", 40, "g", "V", 5], ["Tomatoes", 60, "g", "V", 6], ["Breadcrumbs & spices", 1, "set", "S", 90]]),
+        mk("tomato-soup-cheese-toastie", "Quick Tomato Soup with Cheese Toasties (Vegetarian)", "Gas Stove + Pan", 18, 28, 76, 20, 1.20,
+          ["Simmer passata with chopped onion, garlic, salt and a pinch of sugar for 10 mins.", "Make cheese toasties in a dry pan, 3 mins per side.", "Dunk the toasties in the soup."],
+          [["Tomato passata", 250, "g", "S", 60], ["Bread slices", 4, "pcs", "G", 5], ["Grated cheese", 60, "g", "D", 14], ["Onion & garlic", 0.3, "pcs", "V", 21]]),
+        mk("cottage-cheese-tomato-toast", "Cottage Cheese & Tomato Toast (Vegetarian)", "No cooking", 8, 30, 50, 12, 1.10,
+          ["Toast the bread.", "Spread thick cottage cheese on top.", "Add sliced tomato and cucumber, finish with salt and pepper."],
+          [["Bread slices", 4, "pcs", "G", 5], ["Cottage cheese", 150, "g", "D", 10], ["Tomatoes", 120, "g", "V", 6], ["Cucumber", 0.2, "pcs", "V", 6]]),
+        mk("chicken-schnitzel-sandwich", "Airfryer Chicken Schnitzel Sandwich", "Airfryer", 20, 50, 62, 20, 1.95,
+          ["Flatten chicken breast, dip in beaten egg then breadcrumbs.", "Airfry at 200°C for 12 mins, flipping halfway.", "Serve in a bun with lettuce."],
+          [["Chicken breast fillet", 180, "g", "M", 2], ["Breadcrumbs", 40, "g", "G", 180], ["Eggs", 1, "pcs", "D", 18], ["Burger buns", 2, "pcs", "G", 4], ["Lettuce", 40, "g", "V", 5]]),
+        mk("chickpea-smash-wrap", "Smashed Chickpea & Cucumber Wraps (Vegetarian)", "No cooking", 10, 24, 80, 14, 1.10,
+          ["Mash chickpeas with yogurt, salt, lemon juice and paprika.", "Spread over tortillas.", "Add cucumber and tomato and roll up."],
+          [["Canned chickpeas", 150, "g", "S", 180], ["Greek yogurt", 50, "g", "D", 10], ["Large tortilla wraps", 2, "pcs", "G", 30], ["Cucumber", 0.3, "pcs", "V", 6], ["Tomatoes", 60, "g", "V", 6]]),
+        mk("egg-cheese-toastie", "Egg, Cheese & Spinach Toasties (Vegetarian)", "Gas Stove + Pan", 10, 34, 44, 26, 1.20,
+          ["Scramble the eggs with spinach until just set.", "Fill bread with egg and cheese.", "Toast in a pan 2 mins per side."],
+          [["Eggs", 3, "pcs", "D", 18], ["Bread slices", 4, "pcs", "G", 5], ["Grated cheese", 40, "g", "D", 14], ["Baby spinach", 30, "g", "V", 5]]),
+        mk("veg-egg-fried-rice", "Veggie & Egg Fried Rice (Vegetarian)", "Rice Cooker + Gas Stove", 18, 26, 92, 16, 1.10,
+          ["Cook rice in the Rice Cooker.", "Scramble eggs in a hot pan, add frozen veg and cook 3 mins.", "Tip in the rice and soy sauce and stir-fry 3 mins."],
+          [["Jasmine rice", 110, "g", "G", 180], ["Eggs", 2, "pcs", "D", 18], ["Frozen peas & carrots mix", 100, "g", "V", 60], ["Soy sauce", 20, "ml", "S", 120]]),
+        mk("bean-cheese-quesadilla", "Black Bean & Cheese Quesadillas (Vegetarian)", "Airfryer + Pan", 15, 36, 84, 26, 1.40,
+          ["Mash half the beans and mix with the rest, corn and spices.", "Spread over tortillas with plenty of cheese and fold.", "Airfry at 190°C for 6 mins or toast in a pan; serve with sour cream."],
+          [["Large tortilla wraps", 2, "pcs", "G", 30], ["Red kidney beans (canned)", 100, "g", "S", 180], ["Grated cheese", 70, "g", "D", 14], ["Sweetcorn (canned)", 50, "g", "S", 180], ["Sour cream", 40, "g", "D", 10]]),
+        mk("creamy-tomato-spinach-pasta", "Creamy Tomato & Spinach Pasta (Vegetarian)", "Gas Stove + Pan", 18, 30, 92, 14, 1.20,
+          ["Boil the pasta.", "Simmer passata with cottage cheese until creamy, add spinach.", "Toss with pasta and a little grated cheese."],
+          [["Durum pasta", 120, "g", "G", 180], ["Tomato passata", 150, "g", "S", 60], ["Cottage cheese", 100, "g", "D", 10], ["Baby spinach", 60, "g", "V", 5], ["Grated cheese", 20, "g", "D", 14]]),
+        mk("paprikas-potato-egg", "Paprikás Krumpli with Fried Egg (Vegetarian)", "Gas Stove + Pan", 25, 26, 70, 16, 0.95,
+          ["Fry chopped onion with paprika, add diced potatoes and water to cover.", "Simmer 15 mins until soft and saucy.", "Top with a fried egg and a spoon of sour cream."],
+          [["Potatoes", 350, "g", "V", 21], ["Yellow onion", 0.5, "pcs", "V", 21], ["Eggs", 2, "pcs", "D", 18], ["Sour cream", 40, "g", "D", 10], ["Paprika", 1, "set", "S", 90]]),
+        mk("lentil-dal-rice", "Red Lentil Dal with Rice (Vegetarian)", "Rice Cooker + Gas Stove", 22, 30, 96, 10, 0.95,
+          ["Start rice in the Rice Cooker.", "Simmer red lentils with onion, passata, curry powder and water for 15 mins.", "Stir until thick and serve over rice."],
+          [["Red lentils", 80, "g", "G", 365], ["Jasmine rice", 100, "g", "G", 180], ["Yellow onion", 0.4, "pcs", "V", 21], ["Tomato passata", 80, "g", "S", 60], ["Curry powder & garlic", 1, "set", "S", 90]]),
+        mk("veggie-omelette-wedges", "Cheesy Veggie Omelette with Airfryer Wedges (Vegetarian)", "Airfryer + Pan", 22, 34, 58, 28, 1.30,
+          ["Cut potatoes into wedges, toss with oil and paprika and Airfry at 200°C for 18 mins.", "Whisk eggs, pour into a pan with diced pepper and cheese.", "Fold the omelette and serve with the wedges."],
+          [["Eggs", 3, "pcs", "D", 18], ["Potatoes", 300, "g", "V", 21], ["Bell pepper", 0.5, "pcs", "V", 7], ["Grated cheese", 30, "g", "D", 14]]),
+        mk("zucchini-fritters", "Zucchini & Cheese Fritters with Yogurt Dip (Vegetarian)", "Gas Stove + Pan", 20, 32, 48, 20, 1.25,
+          ["Grate zucchini and squeeze out the water.", "Mix with eggs, flour and cheese and fry spoonfuls 3 mins per side.", "Serve with a garlic yogurt dip."],
+          [["Zucchini", 1, "pcs", "V", 7], ["Eggs", 2, "pcs", "D", 18], ["Flour", 50, "g", "G", 365], ["Grated cheese", 40, "g", "D", 14], ["Greek yogurt", 70, "g", "D", 10]]),
+        mk("couscous-feta-chickpea", "Couscous, Chickpea & Feta Salad (Vegetarian)", "Gas Stove + Pan", 12, 30, 86, 16, 1.45,
+          ["Cover couscous with boiling water, cover for 5 mins and fluff.", "Mix in chickpeas, diced cucumber and tomato.", "Crumble feta on top with oil and lemon."],
+          [["Couscous", 100, "g", "G", 365], ["Canned chickpeas", 120, "g", "S", 180], ["Cucumber", 0.3, "pcs", "V", 6], ["Tomatoes", 80, "g", "V", 6], ["Feta cheese", 50, "g", "D", 14]]),
+        mk("sweet-potato-bean-bowl", "Sweet Potato & Bean Burrito Bowl (Vegetarian)", "Airfryer + Rice Cooker", 25, 28, 104, 12, 1.40,
+          ["Start rice in the Rice Cooker.", "Cube sweet potato, toss with paprika and oil, Airfry at 200°C for 18 mins.", "Bowl up rice, potato, beans, corn and a spoon of yogurt."],
+          [["Sweet potato", 300, "g", "V", 14], ["Jasmine rice", 70, "g", "G", 180], ["Red kidney beans (canned)", 100, "g", "S", 180], ["Sweetcorn (canned)", 50, "g", "S", 180], ["Greek yogurt", 50, "g", "D", 10]]),
+        mk("garlic-mushroom-pasta", "Garlic Mushroom Cream Pasta (Vegetarian)", "Gas Stove + Pan", 18, 28, 90, 18, 1.40,
+          ["Boil the pasta.", "Fry sliced mushrooms hard until golden, add garlic and cooking cream.", "Toss with pasta and cheese."],
+          [["Durum pasta", 120, "g", "G", 180], ["Mushrooms", 150, "g", "V", 5], ["Cooking cream (10–20%)", 60, "ml", "D", 12], ["Grated cheese", 30, "g", "D", 14], ["Garlic", 1, "set", "S", 21]]),
+        mk("chicken-salad-bowl", "Warm Chicken & Crunchy Salad Bowl", "Gas Stove + Pan", 15, 44, 40, 16, 1.80,
+          ["Pan-fry seasoned chicken strips for 7 mins.", "Chop lettuce, tomato and cucumber into a big bowl.", "Top with chicken, a yogurt dressing and toasted bread."],
+          [["Chicken breast fillet", 170, "g", "M", 2], ["Lettuce", 60, "g", "V", 5], ["Tomatoes", 100, "g", "V", 6], ["Cucumber", 0.3, "pcs", "V", 6], ["Bread slices", 2, "pcs", "G", 5], ["Greek yogurt", 40, "g", "D", 10]]),
+        mk("tuna-bean-salad", "Tuna & Bean Salad with Bread (No Cooking)", "No cooking", 10, 40, 46, 14, 1.50,
+          ["Drain the tuna and beans into a bowl.", "Add corn, chopped tomato, oil, salt and pepper.", "Eat with the bread."],
+          [["Canned tuna", 110, "g", "M", 365], ["Red kidney beans (canned)", 100, "g", "S", 180], ["Sweetcorn (canned)", 50, "g", "S", 180], ["Tomatoes", 100, "g", "V", 6], ["Bread slices", 2, "pcs", "G", 5]]),
+        mk("veg-soup-cheese-toast", "Hearty Veggie Soup with Cheese Toast (Vegetarian)", "Gas Stove + Pan", 25, 22, 66, 16, 0.90,
+          ["Simmer diced potato, carrot and onion in water or stock for 15 mins.", "Blend half the soup for a creamy texture.", "Serve with cheese melted on toast."],
+          [["Potatoes", 200, "g", "V", 21], ["Carrots", 100, "g", "V", 14], ["Yellow onion", 0.3, "pcs", "V", 21], ["Bread slices", 2, "pcs", "G", 5], ["Grated cheese", 40, "g", "D", 14]]),
+        mk("chicken-noodle-soup", "Comforting Chicken Noodle Soup", "Gas Stove + Pan", 22, 42, 60, 10, 1.45,
+          ["Simmer chicken breast with carrot, onion and a stock cube for 12 mins.", "Shred the chicken and return it to the pot.", "Add egg noodles and cook 4 mins."],
+          [["Chicken breast fillet", 150, "g", "M", 2], ["Egg noodles", 70, "g", "G", 180], ["Carrots", 100, "g", "V", 14], ["Yellow onion", 0.3, "pcs", "V", 21], ["Stock cube & herbs", 1, "set", "S", 180]]),
+        mk("skyr-oat-fruit-bowl", "Skyr, Oat & Banana Power Bowl (Vegetarian)", "No cooking", 5, 38, 70, 10, 1.30,
+          ["Spoon skyr into a big bowl.", "Top with oats and sliced banana.", "Add cinnamon or a drizzle of honey."],
+          [["Skyr", 200, "g", "D", 10], ["Rolled oats", 60, "g", "G", 180], ["Banana", 1, "pcs", "V", 5]]),
+        mk("tuna-pasta-salad", "Tuna Pasta Salad (Cook Once, Eat Cold)", "Gas Stove + Pan", 15, 38, 78, 14, 1.35,
+          ["Boil the pasta and rinse under cold water.", "Mix with tuna, corn, chopped tomato and cucumber.", "Stir through yogurt, salt and pepper."],
+          [["Durum pasta", 100, "g", "G", 180], ["Canned tuna", 110, "g", "M", 365], ["Sweetcorn (canned)", 50, "g", "S", 180], ["Tomatoes", 80, "g", "V", 6], ["Cucumber", 0.3, "pcs", "V", 6], ["Greek yogurt", 40, "g", "D", 10]]),
+        mk("cheesy-potato-bake", "Creamy Cheesy Potato Bake (Vegetarian)", "Oven + Pan", 25, 30, 68, 26, 1.20,
+          ["Slice potatoes thinly and layer in a dish with onion.", "Pour over cooking cream and top with cheese.", "Bake at 200°C for 25 mins until golden and soft."],
+          [["Potatoes", 400, "g", "V", 21], ["Grated cheese", 60, "g", "D", 14], ["Cooking cream (10–20%)", 60, "ml", "D", 12], ["Yellow onion", 0.3, "pcs", "V", 21]]),
+        mk("mac-and-cheese-peas", "Stovetop Mac & Cheese with Peas (Vegetarian)", "Gas Stove + Pan", 18, 34, 92, 20, 1.15,
+          ["Boil macaroni, adding frozen peas for the last 2 mins.", "Drain and stir in cottage cheese and grated cheese until creamy.", "Season with pepper and paprika."],
+          [["Macaroni", 120, "g", "G", 180], ["Grated cheese", 60, "g", "D", 14], ["Cottage cheese", 60, "g", "D", 10], ["Frozen peas", 80, "g", "V", 60]]),
+        mk("turos-palacsinta", "Túrós Palacsinta: Cottage Cheese Pancakes (Vegetarian)", "Gas Stove + Pan", 20, 36, 70, 16, 1.10,
+          ["Whisk flour, eggs and milk into a thin batter.", "Fry thin pancakes in a lightly oiled pan.", "Fill with sweetened cottage cheese and roll up."],
+          [["Flour", 70, "g", "G", 365], ["Eggs", 2, "pcs", "D", 18], ["Cottage cheese", 150, "g", "D", 10], ["Milk", 120, "ml", "D", 7]]),
+        mk("tortilla-pizza", "Airfryer Tortilla Pizzas", "Airfryer", 12, 36, 64, 20, 1.30,
+          ["Spread passata on tortillas.", "Top with cheese and diced ham.", "Airfry at 190°C for 5 mins until bubbling and crisp."],
+          [["Large tortilla wraps", 2, "pcs", "G", 30], ["Tomato passata", 80, "g", "S", 60], ["Grated cheese", 70, "g", "D", 14], ["Lean ham", 60, "g", "M", 7]])
+      );
+    })();
+
     const DISLIKE_OPTIONS = [
       "Mushrooms", "Fish", "Tuna", "Seafood", "Pork", "Beef", "Turkey",
       "Beans", "Lentils", "Peas", "Corn", "Broccoli", "Spinach", "Eggplant",
@@ -1631,6 +1737,8 @@
       if (filterKey === "ricecooker") return eq.includes("rice cooker");
       if (filterKey === "stove") return eq.includes("stove") || eq.includes("pan");
       if (filterKey === "oven") return eq.includes("oven");
+      if (filterKey === "nomeat") return !(recipe.ingredients || []).some(i => i.aisle === "Meat & Fish");
+      if (filterKey === "sandwich") return /sandwich|toast|wrap|burger|quesadilla|pizza|burrito/i.test(recipe.name);
       return true;
     }
 
@@ -1974,7 +2082,9 @@
         { key: "airfryer", label: "🍟 Airfryer" },
         { key: "ricecooker", label: "🍚 Rice Cooker" },
         { key: "stove", label: "🍳 Pan / Stove" },
-        { key: "oven", label: "🔥 Oven" }
+        { key: "oven", label: "🔥 Oven" },
+        { key: "nomeat", label: "🥦 No meat" },
+        { key: "sandwich", label: "🥪 Sandwiches & wraps" }
       ];
       document.getElementById("swipeFilterBar").innerHTML = filters.map(f => `
         <button onclick="setSwipeFilter('${f.key}')" class="shrink-0 px-3 py-1.5 rounded-xl text-xs font-bold border transition ${
@@ -3724,7 +3834,7 @@
       renderShopTab();
       renderSetupTab();
       renderReminderBanner();
-      document.getElementById("headerSub").textContent = `${getActiveRecipes().length} Fast, Cheap, High-Protein Meals`;
+      document.getElementById("headerSub").textContent = `${getActiveRecipes().length} Fast, Cheap, Healthy Meals`;
     }
 
     window.addEventListener("DOMContentLoaded", () => {
