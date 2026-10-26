@@ -58,6 +58,10 @@
       opacity: 0; pointer-events: none; transition: all .25s ease; z-index: 60;
     }
     .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    summary { list-style: none; cursor: pointer; }
+    summary::-webkit-details-marker { display: none; }
+    .chev { transition: transform .2s; display: inline-block; }
+    details[open] > summary .chev { transform: rotate(180deg); }
   </style>
 </head>
 <body class="min-h-screen antialiased selection:bg-emerald-500 selection:text-white">
@@ -133,84 +137,66 @@
 
     <!-- TAB 1: WEEK CALENDAR -->
     <section id="tab-week" class="space-y-4">
-      <!-- Guided next step -->
       <div id="nextStepCard" class="glass rounded-3xl p-4 border border-emerald-500/40"></div>
 
       <div class="glass rounded-3xl p-4">
-        <div class="flex items-center justify-between mb-2">
-          <div>
-            <h2 class="text-base font-bold text-white">Who is at the Apartment?</h2>
-            <p class="text-xs text-slate-400">Tap each day to set if you're both there, solo, or away.</p>
-          </div>
-          <span id="weekSummaryBadge" class="text-xs font-bold px-2.5 py-1 rounded-xl bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"></span>
-        </div>
+        <h2 class="text-base font-bold text-white">When are <span id="weekWho" class="text-emerald-300">you</span> home?</h2>
+        <p class="text-xs text-slate-400">Tap a day to switch between Home and Away. Only you can change your own days.</p>
+        <div id="calendarDaysList" class="space-y-1.5 mt-3"></div>
 
-        <div id="calendarDaysList" class="space-y-2 mt-3"></div>
-      </div>
+        <button id="sendWeekBtn" onclick="sendMyWeek()" class="mt-3 w-full py-3 rounded-2xl font-extrabold text-sm transition"></button>
 
-      <!-- Smart Batch Cooking Preview -->
-      <div class="glass rounded-3xl p-4 border border-emerald-500/20">
-        <div class="flex items-center justify-between mb-2">
-          <h3 class="text-sm font-bold text-emerald-300 flex items-center gap-1.5">
-            <span>⚡</span><span>Smart Batch-Cooking Blocks</span>
-          </h3>
-          <span class="text-[11px] text-slate-400">Cook once for 2 days</span>
-        </div>
-        <p class="text-xs text-slate-300 mb-3">
-          Consecutive days are grouped automatically (including 3-portion solo-to-couple carryovers) so you cook as few times as possible:
-        </p>
-        <div id="batchBlocksPreview" class="space-y-2"></div>
-        <button onclick="switchTab('swipe')" class="mt-3 w-full py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs shadow-lg shadow-emerald-500/20 transition">
-          Next: Swipe Meals for This Week →
+        <div id="partnerStatus" class="mt-3 p-3 rounded-2xl bg-slate-900/70 border border-slate-800 text-xs"></div>
+
+        <details class="mt-3">
+          <summary class="text-xs font-semibold text-emerald-300">Together this week · <span id="weekSummaryBadge">…</span> <span class="chev">▾</span></summary>
+          <div id="batchBlocksPreview" class="space-y-2 mt-2"></div>
+          <p class="text-[11px] text-slate-500 mt-2">Days next to each other share one big cook, so you cook less often.</p>
+        </details>
+
+        <button onclick="switchTab('swipe')" class="mt-4 w-full py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-sm shadow-lg shadow-emerald-500/20 transition">
+          Next: choose meals →
         </button>
       </div>
 
-      <!-- Start New Week -->
-      <div class="glass rounded-3xl p-4 border border-slate-800">
-        <h3 class="text-sm font-bold text-white flex items-center gap-1.5"><span>🗓</span><span>New week?</span></h3>
-        <p class="text-xs text-slate-400 mt-1 mb-3">
-          Saves this week's savings to your history, then clears swipes, the plan approval and all shopping ticks. Your calendar and dislikes stay.
-        </p>
-        <button onclick="startNewWeek()" class="w-full py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-100 font-bold text-xs transition">
-          🔄 Start New Week
-        </button>
-      </div>
+      <details class="glass rounded-3xl border border-slate-800">
+        <summary class="p-4 flex items-center justify-between text-sm font-bold text-white">
+          <span>🗓 Week finished? Start a new one</span><span class="chev text-slate-400">▾</span>
+        </summary>
+        <div class="px-4 pb-4">
+          <p class="text-xs text-slate-400 mb-3">Saves this week's savings, then clears swipes, the plan and shopping ticks. Your days and dislikes stay.</p>
+          <button onclick="startNewWeek()" class="w-full py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-100 font-bold text-xs transition">🔄 Start New Week</button>
+        </div>
+      </details>
     </section>
 
     <!-- TAB 2: TINDER SWIPE -->
-    <section id="tab-swipe" class="space-y-3.5 hidden">
-      <div class="flex items-center justify-between">
-        <div>
-          <h2 class="text-base font-bold text-white">Meal Matcher</h2>
-          <p id="swipeStatusSub" class="text-xs text-slate-400">Swipe right on meals you want to eat this week.</p>
+    <section id="tab-swipe" class="space-y-3 hidden">
+      <div class="flex items-center justify-between gap-2">
+        <div class="min-w-0">
+          <h2 class="text-base font-bold text-white">Pick meals</h2>
+          <p id="swipeStatusSub" class="text-xs text-slate-400"></p>
         </div>
-        <div class="flex gap-1.5">
-          <button onclick="openAddRecipeModal()" class="px-3 py-1.5 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-bold">
-            + Add Meal
-          </button>
-          <button onclick="resetWeeklySwipes()" class="px-2.5 py-1.5 rounded-xl bg-slate-800 border border-slate-700 text-slate-300 text-xs font-medium">
-            Reset
-          </button>
+        <div class="flex gap-1.5 shrink-0">
+          <button id="filterToggleBtn" onclick="toggleFilters()" class="px-3 py-1.5 rounded-xl bg-slate-800 border border-slate-700 text-slate-200 text-xs font-bold">⚙️ Filter</button>
+          <button onclick="openAddRecipeModal()" class="px-3 py-1.5 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-bold">+ Add</button>
         </div>
       </div>
 
-      <!-- Quick Filter Bar (Time & Equipment) -->
-      <div id="swipeFilterBar" class="flex items-center gap-1.5 overflow-x-auto pb-1"></div>
+      <div id="swipeFilterPanel" class="hidden glass rounded-2xl p-3 space-y-2">
+        <div id="swipeFilterBar" class="flex flex-wrap gap-1.5"></div>
+        <button onclick="resetWeeklySwipes()" class="text-[11px] text-slate-400 underline">Start all swipes over</button>
+      </div>
 
-      <!-- Swipe Card Container -->
-      <div id="swipeArea" class="relative min-h-[430px] flex flex-col justify-center"></div>
+      <div id="swipeArea" class="relative"></div>
 
-      <!-- Matched Pool Preview -->
+      <button onclick="generateInitialPlanFromSwipes()" class="w-full py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 font-extrabold text-sm shadow-lg shadow-emerald-500/20">
+        Done picking → build our week
+      </button>
+
       <div class="glass rounded-3xl p-4">
-        <div class="flex items-center justify-between mb-2">
-          <h3 class="text-sm font-bold text-white flex items-center gap-1.5">
-            <span>🔥</span><span>Matched & Liked Pool</span>
-          </h3>
-          <button onclick="generateInitialPlanFromSwipes()" class="text-xs font-bold px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950">
-            Build Recommended Plan →
-          </button>
-        </div>
-        <div id="matchedPoolList" class="space-y-2 mt-2"></div>
+        <h3 class="text-sm font-bold text-white mb-2">Picks so far</h3>
+        <div id="matchedPoolList" class="space-y-2"></div>
       </div>
     </section>
 
@@ -231,14 +217,23 @@
         <div class="flex items-center justify-between mb-3">
           <div>
             <h2 class="text-base font-bold text-white">Weekly Meal Plan</h2>
-            <p class="text-xs text-slate-400">Swap meals, split 2-day batches, or scale portion sizes.</p>
+            <p class="text-xs text-slate-400">Tap ⚙️ Change on any meal to swap it or change portions.</p>
           </div>
           <button onclick="generateInitialPlanFromSwipes()" class="text-xs font-semibold px-2.5 py-1.5 rounded-xl bg-slate-800 border border-slate-700 text-slate-300">
-            🔄 Auto-Fill
+            🔄 New suggestions
           </button>
         </div>
 
         <div id="planSlotsList" class="space-y-3"></div>
+      </div>
+
+      <div class="glass rounded-3xl p-4 border border-cyan-500/30">
+        <h3 class="text-sm font-extrabold text-white">🍽 Ran out of meals?</h3>
+        <p class="text-xs text-slate-400 mt-1 mb-3">Ate faster than planned? We'll pick new meals and add them to your shopping list.</p>
+        <div class="grid grid-cols-2 gap-2">
+          <button onclick="addExtraMeals(1)" class="py-2.5 rounded-xl bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 font-bold text-xs">+1 cook<br><span class="font-normal text-[10px]">about 2 days of food</span></button>
+          <button onclick="addExtraMeals(2)" class="py-2.5 rounded-xl bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 font-bold text-xs">+2 cooks<br><span class="font-normal text-[10px]">about 4 days of food</span></button>
+        </div>
       </div>
     </section>
 
@@ -287,121 +282,130 @@
     </section>
 
     <!-- TAB 5: SETUP (DISLIKES, REMINDERS, IOS CALENDAR, SYNC) -->
-    <section id="tab-setup" class="space-y-4 hidden">
+    <section id="tab-setup" class="space-y-3 hidden">
       <button onclick="openTour()" class="w-full py-3 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-bold text-xs">
         ❓ How does this app work? (quick tour)
       </button>
 
-      <!-- Dislike Picker -->
-      <div class="glass rounded-3xl p-4">
-        <div class="flex items-center justify-between mb-2">
+      <details class="glass rounded-3xl">
+        <summary class="p-4 flex items-center justify-between">
           <div>
-            <h2 class="text-base font-bold text-white">Disliked Ingredients</h2>
-            <p class="text-xs text-slate-400">Editing dislikes for <strong id="dislikeUserLabel" class="text-emerald-400">Laca</strong></p>
+            <div class="text-sm font-bold text-white">🚫 Foods we don't like</div>
+            <div class="text-[11px] text-slate-400">Editing for <strong id="dislikeUserLabel" class="text-emerald-400">Laca</strong> · <span id="dislikeSummary">none yet</span></div>
+          </div>
+          <span class="chev text-slate-400">▾</span>
+        </summary>
+        <div class="px-4 pb-4 space-y-3">
+          <p class="text-[11px] text-slate-400">Open a group and tap what you don't like. Meals with it are hidden. Switch person at the top of the screen.</p>
+          <input id="dislikeSearch" type="text" oninput="renderDislikes()" placeholder="🔍 Search an ingredient..." class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white" />
+          <div id="dislikeChipsGrid" class="space-y-2"></div>
+          <div class="flex gap-2">
+            <input id="customDislikeInput" type="text" placeholder="Something else, e.g. celery" class="flex-1 min-w-0 px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white" />
+            <button onclick="addCustomDislike()" class="px-3.5 py-2 rounded-xl bg-emerald-500 text-slate-950 font-bold text-xs">Add</button>
           </div>
         </div>
-        <p class="text-[11px] text-slate-400 mb-3">
-          When both of you are at the apartment, the app hides meals with <em>either</em> person's dislikes. On solo days, it only filters for the person eating!
-        </p>
+      </details>
 
-        <div id="dislikeChipsGrid" class="flex flex-wrap gap-1.5 mb-3"></div>
-
-        <div class="flex gap-2">
-          <input id="customDislikeInput" type="text" placeholder="Add custom dislike (e.g. celery)..." class="flex-1 px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white" />
-          <button onclick="addCustomDislike()" class="px-3.5 py-2 rounded-xl bg-emerald-500 text-slate-950 font-bold text-xs">Add</button>
-        </div>
-      </div>
-
-      <!-- Custom 2x/Day Notification Schedule + iOS Calendar Export -->
-      <div class="glass rounded-3xl p-4">
-        <div class="flex items-center justify-between mb-2">
+      <details class="glass rounded-3xl">
+        <summary class="p-4 flex items-center justify-between">
           <div>
-            <h2 class="text-base font-bold text-white">Daily Shopping Reminders</h2>
-            <p class="text-xs text-slate-400">Custom 2x/day times for your changing schedule</p>
+            <div class="text-sm font-bold text-white">🔔 Reminders</div>
+            <div class="text-[11px] text-slate-400">Two nudges a day so you don't order delivery</div>
           </div>
-          <button onclick="requestWebNotifications()" class="px-2.5 py-1 rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[11px] font-bold">
-            🔔 Enable Alerts
-          </button>
+          <span class="chev text-slate-400">▾</span>
+        </summary>
+        <div class="px-4 pb-4 space-y-3">
+          <div id="reminderScheduleList" class="space-y-2"></div>
+          <button onclick="exportToAppleCalendar()" class="w-full py-3 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-500 text-slate-950 font-bold text-xs">📅 Add to iPhone Calendar (.ics)</button>
+          <button onclick="requestWebNotifications()" class="w-full py-2.5 rounded-2xl bg-slate-800 border border-slate-700 text-slate-200 font-semibold text-xs">🔔 Allow alerts while the app is open</button>
         </div>
+      </details>
 
-        <div id="reminderScheduleList" class="space-y-2 mt-3"></div>
-
-        <button onclick="exportToAppleCalendar()" class="mt-4 w-full py-3 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-500 text-slate-950 font-bold text-xs shadow-lg shadow-cyan-500/20 flex items-center justify-center gap-2">
-          <span>📅</span><span>1-Tap Sync to iPhone Calendar / Reminders (.ics)</span>
-        </button>
-        <p class="text-[11px] text-slate-400 mt-1.5 text-center">
-          Adds lock-screen alerts at your exact custom times with the shopping list attached.
-        </p>
-      </div>
-
-      <!-- Money Settings -->
-      <div class="glass rounded-3xl p-4">
-        <h2 class="text-base font-bold text-white">Money Tracker</h2>
-        <p class="text-xs text-slate-400 mb-3">What would one portion cost if you ordered delivery instead? Used to calculate what you save by cooking.</p>
-        <div class="flex items-center gap-2">
-          <span class="text-sm text-slate-300">€</span>
-          <input id="deliveryPriceInput" type="number" inputmode="decimal" min="1" step="0.5" onchange="setDeliveryPrice(this.value)" class="w-24 px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white" />
-          <span class="text-xs text-slate-400">per delivered portion</span>
-        </div>
-      </div>
-
-      <!-- Pantry / freezer -->
-      <div class="glass rounded-3xl p-4 border border-cyan-500/30">
-        <h2 class="text-base font-bold text-white">🧊 Pantry & Freezer</h2>
-        <p class="text-xs text-slate-400 mb-3">Tell the app what you already own. It leans toward those meals and removes the amount from your shopping list, but never fills the whole week with one ingredient.</p>
-        <div class="flex gap-2">
-          <input id="pantryName" type="text" placeholder="e.g. chicken" class="flex-1 min-w-0 px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white" />
-          <input id="pantryAmount" type="number" inputmode="decimal" placeholder="3000" class="w-20 px-2 py-2 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white" />
-          <select id="pantryUnit" class="px-2 py-2 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white"><option value="g">g</option><option value="ml">ml</option><option value="pcs">pcs</option></select>
-          <button onclick="addPantryItem()" class="px-3 py-2 rounded-xl bg-emerald-500 text-slate-950 font-bold text-xs">Add</button>
-        </div>
-        <div id="pantryList" class="space-y-2 mt-3"></div>
-        <div class="flex items-center justify-between mt-3 text-xs text-slate-300">
-          <span>Max meals per week using the same pantry item</span>
-          <select id="pantryMaxSelect" onchange="setPantryMax(this.value)" class="px-2 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-xs text-white"><option value="1">1</option><option value="2">2</option><option value="3">3</option></select>
-        </div>
-        <p class="text-[10px] text-slate-500 mt-1">The rest of the stock stays for next week. Amounts are deducted when you tap Start New Week.</p>
-      </div>
-
-      <!-- Custom meals manager -->
-      <div class="glass rounded-3xl p-4">
-        <div class="flex items-center justify-between mb-2">
-          <h2 class="text-base font-bold text-white">Our Custom Meals</h2>
-          <button onclick="openAddRecipeModal()" class="px-3 py-1.5 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-bold">+ Add</button>
-        </div>
-        <div id="customMealsList" class="space-y-2"></div>
-      </div>
-
-      <!-- Hidden meals -->
-      <div class="glass rounded-3xl p-4">
-        <h2 class="text-base font-bold text-white">Hidden Meals</h2>
-        <p class="text-xs text-slate-400 mb-2">Meals you tapped "Never show again" on.</p>
-        <div id="hiddenMealsList" class="space-y-2"></div>
-      </div>
-
-      <!-- Cloud Sync & App Version Controls -->
-      <div class="glass rounded-3xl p-4 space-y-3">
-        <h2 class="text-base font-bold text-white">Cloud Sync & App Updates</h2>
-        <div class="p-3 rounded-2xl bg-slate-900/90 border border-slate-800 text-xs space-y-1">
-          <div class="flex justify-between">
-            <span class="text-slate-400">Firebase Project:</span>
-            <span class="font-mono text-emerald-400">meal-planning-app-17d85</span>
+      <details class="glass rounded-3xl border border-cyan-500/20">
+        <summary class="p-4 flex items-center justify-between">
+          <div>
+            <div class="text-sm font-bold text-white">🧊 Pantry & freezer</div>
+            <div class="text-[11px] text-slate-400">What we already have at home</div>
           </div>
-          <div class="flex justify-between">
-            <span class="text-slate-400">Active Endpoint:</span>
-            <span id="activeEndpointLabel" class="font-mono text-slate-300 truncate max-w-[190px]">Auto-detecting...</span>
+          <span class="chev text-slate-400">▾</span>
+        </summary>
+        <div class="px-4 pb-4">
+          <p class="text-xs text-slate-400 mb-3">The app leans toward meals using it and takes it off your shopping list, but never fills the week with one ingredient.</p>
+          <div class="flex gap-2">
+            <input id="pantryName" type="text" placeholder="e.g. chicken" class="flex-1 min-w-0 px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white" />
+            <input id="pantryAmount" type="number" inputmode="decimal" placeholder="3000" class="w-20 px-2 py-2 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white" />
+            <select id="pantryUnit" class="px-2 py-2 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white"><option value="g">g</option><option value="ml">ml</option><option value="pcs">pcs</option></select>
+            <button onclick="addPantryItem()" class="px-3 py-2 rounded-xl bg-emerald-500 text-slate-950 font-bold text-xs">Add</button>
+          </div>
+          <div id="pantryList" class="space-y-2 mt-3"></div>
+          <div class="flex items-center justify-between mt-3 text-xs text-slate-300">
+            <span>Max meals per week with the same item</span>
+            <select id="pantryMaxSelect" onchange="setPantryMax(this.value)" class="px-2 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-xs text-white"><option value="1">1</option><option value="2">2</option><option value="3">3</option></select>
+          </div>
+          <p class="text-[10px] text-slate-500 mt-1">The rest stays for next week. Used amounts are removed when you tap Start New Week.</p>
+        </div>
+      </details>
+
+      <details class="glass rounded-3xl">
+        <summary class="p-4 flex items-center justify-between">
+          <div>
+            <div class="text-sm font-bold text-white">💰 Money</div>
+            <div class="text-[11px] text-slate-400">What delivery would cost us</div>
+          </div>
+          <span class="chev text-slate-400">▾</span>
+        </summary>
+        <div class="px-4 pb-4">
+          <p class="text-xs text-slate-400 mb-3">Price of one delivered portion. Used to work out how much you save by cooking.</p>
+          <div class="flex items-center gap-2">
+            <span class="text-sm text-slate-300">€</span>
+            <input id="deliveryPriceInput" type="number" inputmode="decimal" min="1" step="0.5" onchange="setDeliveryPrice(this.value)" class="w-24 px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white" />
+            <span class="text-xs text-slate-400">per portion</span>
           </div>
         </div>
+      </details>
 
-        <div class="grid grid-cols-2 gap-2">
-          <button onclick="openPinSettings()" class="py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 border border-slate-700">
-            🔑 Change PIN / User
-          </button>
-          <button onclick="forceAppUpdate()" class="py-2.5 px-3 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-xs font-bold text-emerald-300 border border-emerald-500/30">
-            ⚡ Update App Version
-          </button>
+      <details class="glass rounded-3xl">
+        <summary class="p-4 flex items-center justify-between">
+          <div>
+            <div class="text-sm font-bold text-white">🍽 Our meals</div>
+            <div class="text-[11px] text-slate-400">Your own recipes and hidden meals</div>
+          </div>
+          <span class="chev text-slate-400">▾</span>
+        </summary>
+        <div class="px-4 pb-4 space-y-4">
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <h3 class="text-xs font-bold text-slate-300">Custom meals</h3>
+              <button onclick="openAddRecipeModal()" class="px-3 py-1.5 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-bold">+ Add</button>
+            </div>
+            <div id="customMealsList" class="space-y-2"></div>
+          </div>
+          <div>
+            <h3 class="text-xs font-bold text-slate-300 mb-2">Hidden meals</h3>
+            <div id="hiddenMealsList" class="space-y-2"></div>
+          </div>
         </div>
-      </div>
+      </details>
+
+      <details class="glass rounded-3xl">
+        <summary class="p-4 flex items-center justify-between">
+          <div>
+            <div class="text-sm font-bold text-white">☁️ Sync & updates</div>
+            <div class="text-[11px] text-slate-400">PIN, who's using this phone, app version</div>
+          </div>
+          <span class="chev text-slate-400">▾</span>
+        </summary>
+        <div class="px-4 pb-4 space-y-3">
+          <div class="p-3 rounded-2xl bg-slate-900/90 border border-slate-800 text-xs space-y-1">
+            <div class="flex justify-between"><span class="text-slate-400">Project</span><span class="font-mono text-emerald-400">meal-planning-app-17d85</span></div>
+            <div class="flex justify-between"><span class="text-slate-400">Endpoint</span><span id="activeEndpointLabel" class="font-mono text-slate-300 truncate max-w-[190px]">Auto-detecting...</span></div>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <button onclick="openPinSettings()" class="py-2.5 px-3 rounded-xl bg-slate-800 text-xs font-semibold text-slate-200 border border-slate-700">🔑 Change PIN / person</button>
+            <button onclick="forceAppUpdate()" class="py-2.5 px-3 rounded-xl bg-emerald-500/20 text-xs font-bold text-emerald-300 border border-emerald-500/30">⚡ Update app</button>
+          </div>
+        </div>
+      </details>
     </section>
 
   </main>
@@ -442,7 +446,7 @@
       </button>
       <button onclick="switchTab('swipe')" id="nav-swipe" class="flex flex-col items-center py-1 rounded-xl text-slate-400">
         <span class="text-lg">🔥</span>
-        <span class="text-[10px] font-bold mt-0.5">Swipe</span>
+        <span class="text-[10px] font-bold mt-0.5">Meals</span>
       </button>
       <button onclick="switchTab('plan')" id="nav-plan" class="relative flex flex-col items-center py-1 rounded-xl text-slate-400">
         <span class="text-lg">🤝</span>
@@ -1429,6 +1433,8 @@
         history: [],
         spending: [],
         pantry: [],
+        availability: null,
+        availabilitySent: { laca: true, fruzsi: true },
         planNegotiation: {
           status: "draft",
           proposedBy: "laca",
@@ -1478,6 +1484,15 @@
       s.history = toArr(r.history);
       s.spending = toArr(r.spending);
       s.pantry = toArr(r.pantry);
+      // per-person availability; older saves are converted from the shared calendar
+      s.availability = { laca: {}, fruzsi: {} };
+      DAY_KEYS.forEach(dk => {
+        const c = s.calendar[dk];
+        const ra = r.availability || {};
+        s.availability.laca[dk] = ra.laca && ra.laca[dk] != null ? !!ra.laca[dk] : (c === "both" || c === "laca");
+        s.availability.fruzsi[dk] = ra.fruzsi && ra.fruzsi[dk] != null ? !!ra.fruzsi[dk] : (c === "both" || c === "fruzsi");
+      });
+      s.availabilitySent = Object.assign({ laca: true, fruzsi: true }, r.availabilitySent || {});
       s.shopping = Object.assign({}, d.shopping, r.shopping || {});
       s.shopping.atHome = s.shopping.atHome || {};
       s.shopping.bought = s.shopping.bought || {};
@@ -1886,68 +1901,90 @@
     /********************************************************************
      * 7. RENDER TAB 1: WEEK CALENDAR & BATCH BLOCKS
      ********************************************************************/
-    function setDayStatus(dayKey, status) {
-      state.calendar[dayKey] = status;
+
+    // Each person only edits their own days; the shared calendar is derived from both
+    function deriveCalendar(av) {
+      const cal = {};
+      DAY_KEYS.forEach(d => {
+        const l = !!(av.laca && av.laca[d]), f = !!(av.fruzsi && av.fruzsi[d]);
+        cal[d] = l && f ? "both" : l ? "laca" : f ? "fruzsi" : "away";
+      });
+      return cal;
+    }
+
+    function toggleMyDay(dayKey) {
+      state.availability[currentUser][dayKey] = !state.availability[currentUser][dayKey];
+      state.availabilitySent[currentUser] = false;
+      saveStateAndSync(currentUser);
+    }
+
+    function sendMyWeek() {
+      state.availabilitySent[currentUser] = true;
+      state.calendar = deriveCalendar(state.availability);
       state.planNegotiation.currentSlots = buildBatchSlotsFromCalendar(state.calendar, state);
       state.planNegotiation.status = "draft";
       state.planNegotiation.acceptedBy = { laca: false, fruzsi: false };
+      state.planNegotiation.previousSlots = null;
       saveStateAndSync(currentUser);
+      const other = currentUser === "laca" ? "Fruzsi" : "Laca";
+      showToast(state.availabilitySent[currentUser === "laca" ? "fruzsi" : "laca"] ? "Week sent. Plan updated ✅" : `Sent! Waiting for ${other}'s days`);
     }
 
     function renderWeekTab() {
       const list = document.getElementById("calendarDaysList");
-      let activeDaysCount = 0;
+      const me = currentUser, other = me === "laca" ? "fruzsi" : "laca";
+      const nm = (u) => u === "laca" ? "Laca" : "Fruzsi";
+      const em = (u) => u === "laca" ? "👦" : "👩";
+      const mine = state.availability[me], theirs = state.availability[other];
+      const sent = state.availabilitySent[me];
+      document.getElementById("weekWho").textContent = `${em(me)} ${nm(me)}`;
 
       list.innerHTML = DAY_KEYS.map(dayKey => {
-        const val = state.calendar[dayKey] || "away";
-        if (val !== "away") activeDaysCount++;
-
-        const btnClass = (target) => val === target
-          ? "bg-emerald-500 text-slate-950 font-bold border-emerald-400 shadow-sm"
-          : "bg-slate-900/80 text-slate-400 border-slate-800 hover:text-slate-200";
-
+        const home = !!mine[dayKey];
+        const isToday = DAY_KEYS.indexOf(dayKey) === todayIdx();
         return `
-          <div class="p-3 rounded-2xl bg-slate-900/50 border border-slate-800/90 flex flex-col gap-2">
-            <div class="flex items-center justify-between">
-              <span class="text-sm font-bold text-white">${DAY_LABELS[dayKey]}</span>
-              <span class="text-[11px] font-medium text-slate-400">
-                ${val === "both" ? "👫 2 People (Laca + Fruzsi)" : val === "laca" ? "👦 Solo (Only Laca)" : val === "fruzsi" ? "👩 Solo (Only Fruzsi)" : "✈️ Away / Parents"}
-              </span>
-            </div>
-            <div class="grid grid-cols-4 gap-1.5">
-              <button onclick="setDayStatus('${dayKey}','both')" class="py-1.5 rounded-xl text-[11px] border transition ${btnClass('both')}">👫 Both</button>
-              <button onclick="setDayStatus('${dayKey}','laca')" class="py-1.5 rounded-xl text-[11px] border transition ${btnClass('laca')}">👦 Laca</button>
-              <button onclick="setDayStatus('${dayKey}','fruzsi')" class="py-1.5 rounded-xl text-[11px] border transition ${btnClass('fruzsi')}">👩 Fruzsi</button>
-              <button onclick="setDayStatus('${dayKey}','away')" class="py-1.5 rounded-xl text-[11px] border transition ${btnClass('away')}">✈️ Away</button>
-            </div>
-          </div>
-        `;
+          <button onclick="toggleMyDay('${dayKey}')" class="w-full flex items-center justify-between px-4 py-3 rounded-2xl border transition ${home ? "bg-emerald-500/15 border-emerald-500/50" : "bg-slate-900/70 border-slate-800"}">
+            <span class="text-sm font-bold ${isToday ? "text-emerald-300" : "text-white"}">${DAY_LABELS[dayKey]}${isToday ? ' <span class="text-[10px] font-semibold text-emerald-400">today</span>' : ""}</span>
+            <span class="text-sm font-bold ${home ? "text-emerald-300" : "text-slate-500"}">${home ? "🏠 Home" : "✈️ Away"}</span>
+          </button>`;
       }).join("");
 
+      const btn = document.getElementById("sendWeekBtn");
+      btn.textContent = sent ? "✓ Sent. Tap a day to change it" : "📤 Send my week";
+      btn.className = "mt-3 w-full py-3 rounded-2xl font-extrabold text-sm transition " +
+        (sent ? "bg-slate-800 border border-slate-700 text-emerald-300" : "bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/25");
+      btn.onclick = sent ? null : sendMyWeek;
+
+      const otherSent = state.availabilitySent[other];
+      document.getElementById("partnerStatus").innerHTML = `
+        <div class="flex items-center justify-between mb-2">
+          <span class="font-bold text-white">${em(other)} ${nm(other)}</span>
+          <span class="${otherSent ? "text-emerald-300" : "text-amber-300"} font-semibold">${otherSent ? "✅ sent their week" : "⏳ hasn't sent yet"}</span>
+        </div>
+        <div class="grid grid-cols-7 gap-1 text-center">
+          ${DAY_KEYS.map(d => `<div><div class="text-[10px] text-slate-500">${DAY_SHORT[d]}</div><div class="text-sm">${theirs[d] ? "🏠" : "✈️"}</div></div>`).join("")}
+        </div>`;
+
+      const activeDaysCount = DAY_KEYS.filter(d => state.calendar[d] && state.calendar[d] !== "away").length;
       const previewSlots = buildBatchSlotsFromCalendar(state.calendar, state);
-      document.getElementById("weekSummaryBadge").textContent = `${activeDaysCount} eat days • ${previewSlots.length} cooks`;
+      document.getElementById("weekSummaryBadge").textContent = previewSlots.length
+        ? `You cook ${previewSlots.length}×` : "No cooking";
 
       const previewContainer = document.getElementById("batchBlocksPreview");
       if (!previewSlots.length) {
-        previewContainer.innerHTML = `<div class="p-3 rounded-2xl bg-slate-900/60 text-xs text-slate-400 text-center">All days marked Away—no cooking needed!</div>`;
+        previewContainer.innerHTML = `<div class="p-3 rounded-2xl bg-slate-900/60 text-xs text-slate-400 text-center">All days are Away. No cooking needed!</div>`;
       } else {
         previewContainer.innerHTML = previewSlots.map((slot, idx) => {
           const dayNames = slot.days.map(d => DAY_SHORT[d]).join(" + ");
           const whoText = slot.whoConstraint === "both" ? "Laca & Fruzsi" : (slot.whoConstraint === "laca" ? "Only Laca" : "Only Fruzsi");
           return `
             <div class="p-2.5 rounded-2xl bg-slate-900/80 border border-slate-800 flex items-center justify-between">
-              <div class="flex items-center gap-2.5">
-                <span class="w-6 h-6 rounded-lg bg-emerald-500/20 text-emerald-300 font-bold text-xs flex items-center justify-center">#${idx + 1}</span>
-                <div>
-                  <div class="text-xs font-bold text-white">Cook on ${DAY_SHORT[slot.days[0]]} (${dayNames})</div>
-                  <div class="text-[11px] text-slate-400">${whoText}</div>
-                </div>
+              <div>
+                <div class="text-xs font-bold text-white">Cook on ${DAY_SHORT[slot.days[0]]} for ${dayNames}</div>
+                <div class="text-[11px] text-slate-400">${whoText}</div>
               </div>
-              <span class="text-xs font-bold px-2.5 py-1 rounded-xl bg-slate-800 text-emerald-300 border border-slate-700">
-                ${slot.basePortions} big portions
-              </span>
-            </div>
-          `;
+              <span class="text-xs font-bold px-2.5 py-1 rounded-xl bg-slate-800 text-emerald-300 border border-slate-700">${slot.basePortions} portions</span>
+            </div>`;
         }).join("");
       }
     }
@@ -2069,40 +2106,58 @@
       showToast("Fresh week started! Swipe your meals 🎉");
     }
 
+    let showFilters = false;
+    let swipeDetailsOpen = false;
+
+    function toggleFilters() { showFilters = !showFilters; renderSwipeTab(); }
+    function toggleSwipeDetails() { swipeDetailsOpen = !swipeDetailsOpen; renderSwipeTab(); }
+
+    function meToo(recipeId) {
+      if (!state.swipes[currentUser]) state.swipes[currentUser] = {};
+      state.swipes[currentUser][recipeId] = "right";
+      saveStateAndSync(currentUser);
+    }
+
+    function unpick(recipeId) {
+      delete state.swipes[currentUser][recipeId];
+      saveStateAndSync(currentUser);
+    }
+
     function renderSwipeTab() {
       const userLabel = currentUser === "laca" ? "Laca" : "Fruzsi";
       const mySwipes = state.swipes[currentUser] || {};
       const otherUser = currentUser === "laca" ? "fruzsi" : "laca";
+      const otherLabel = otherUser === "laca" ? "Laca" : "Fruzsi";
       const otherSwipes = state.swipes[otherUser] || {};
 
-      // Render Filter Pills
       const filters = [
-        { key: "all", label: "All Meals" },
-        { key: "fast", label: "⚡ ≤18 min" },
+        { key: "all", label: "All meals" },
+        { key: "fast", label: "⚡ Under 18 min" },
+        { key: "nomeat", label: "🥦 No meat" },
+        { key: "sandwich", label: "🥪 Sandwiches & wraps" },
         { key: "airfryer", label: "🍟 Airfryer" },
         { key: "ricecooker", label: "🍚 Rice Cooker" },
         { key: "stove", label: "🍳 Pan / Stove" },
-        { key: "oven", label: "🔥 Oven" },
-        { key: "nomeat", label: "🥦 No meat" },
-        { key: "sandwich", label: "🥪 Sandwiches & wraps" }
+        { key: "oven", label: "🔥 Oven" }
       ];
       document.getElementById("swipeFilterBar").innerHTML = filters.map(f => `
-        <button onclick="setSwipeFilter('${f.key}')" class="shrink-0 px-3 py-1.5 rounded-xl text-xs font-bold border transition ${
+        <button onclick="setSwipeFilter('${f.key}')" class="px-3 py-1.5 rounded-xl text-xs font-bold border transition ${
           activeSwipeFilter === f.key
             ? "bg-emerald-500 text-slate-950 border-emerald-400"
-            : "bg-slate-900/90 text-slate-400 border-slate-800 hover:text-white"
-        }">
-          ${f.label}
-        </button>
-      `).join("");
+            : "bg-slate-900/90 text-slate-400 border-slate-800"
+        }">${f.label}</button>`).join("");
+      document.getElementById("swipeFilterPanel").classList.toggle("hidden", !showFilters);
+      document.getElementById("filterToggleBtn").textContent = "⚙️ Filter" + (activeSwipeFilter !== "all" ? " •" : "");
 
       const available = getActiveRecipes()
         .filter(r => !recipeMatchesDislikes(r, currentUser))
         .filter(r => recipePassesSwipeFilter(r, activeSwipeFilter));
-      const unswiped = available.filter(r => !mySwipes[r.id]);
+      // Meals your partner already picked are not shown again: they're in the pool below
+      const partnerPicked = available.filter(r => !mySwipes[r.id] && otherSwipes[r.id] === "right").length;
+      const unswiped = available.filter(r => !mySwipes[r.id] && otherSwipes[r.id] !== "right");
 
       document.getElementById("swipeStatusSub").textContent =
-        `Swiping as ${userLabel} • ${unswiped.length} left in this filter`;
+        `${userLabel}: ${unswiped.length} meals to look at` + (partnerPicked ? ` · ${partnerPicked} already picked by ${otherLabel}` : "");
 
       const area = document.getElementById("swipeArea");
 
@@ -2110,137 +2165,71 @@
         area.innerHTML = `
           <div class="glass rounded-3xl p-6 text-center space-y-3 border border-emerald-500/30">
             <div class="text-4xl">🎉</div>
-            <h3 class="text-base font-bold text-white">No more unswiped meals in this filter!</h3>
-            <p class="text-xs text-slate-400">
-              Switch filter above, build your Recommended Meal Plan below, or reset swipes for a fresh week.
-            </p>
-            <div class="flex gap-2 justify-center pt-2 flex-wrap">
-              ${activeSwipeFilter !== "all" ? `
-                <button onclick="setSwipeFilter('all')" class="px-4 py-2.5 rounded-2xl bg-slate-800 text-white font-bold text-xs border border-slate-700">
-                  Show All Meals
-                </button>
-              ` : ""}
-              <button onclick="generateInitialPlanFromSwipes()" class="px-4 py-2.5 rounded-2xl bg-emerald-500 text-slate-950 font-bold text-xs">
-                Go to Meal Plan →
-              </button>
-              <button onclick="resetWeeklySwipes()" class="px-4 py-2.5 rounded-2xl bg-slate-800 text-slate-300 font-semibold text-xs">
-                Reset All Swipes
-              </button>
-            </div>
-          </div>
-        `;
+            <h3 class="text-base font-bold text-white">You've seen every meal here!</h3>
+            <p class="text-xs text-slate-400">Build your week below, or change the filter to look at other meals.</p>
+            ${activeSwipeFilter !== "all" ? `<button onclick="setSwipeFilter('all')" class="px-4 py-2.5 rounded-2xl bg-slate-800 text-white font-bold text-xs border border-slate-700">Show all meals</button>` : ""}
+          </div>`;
       } else {
         const top = unswiped[0];
-        const partnerLiked = otherSwipes[top.id] === "right";
         const mult = state.recipeMultipliers[top.id] || 1.0;
-
         area.innerHTML = `
-          <div id="activeSwipeCard" class="swipe-card glass rounded-3xl p-5 border border-slate-700/80 shadow-2xl flex flex-col justify-between space-y-4">
-            <div>
-              <div class="flex items-center justify-between gap-2 mb-2 flex-wrap">
-                <span class="text-[11px] font-bold px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
-                  🍳 ${top.equipment}
-                </span>
-                <div class="flex items-center gap-1.5">
-                  <span class="text-[11px] font-bold px-2 py-0.5 rounded-lg bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
-                    ⏱ ${top.prepTime}
-                  </span>
-                  <span class="text-[11px] font-bold px-2 py-0.5 rounded-lg bg-amber-500/15 text-amber-300 border border-amber-500/30">
-                    💰 ${top.costPerPortion}
-                  </span>
-                </div>
-              </div>
-
-              ${partnerLiked ? `
-                <div class="mb-2 inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-pink-500/20 border border-pink-500/40 text-pink-300 text-[11px] font-bold">
-                  💘 ${otherUser === "laca" ? "Laca" : "Fruzsi"} already swiped RIGHT!
-                </div>
-              ` : ""}
-
-              ${pantryBadge(top)}
-              <h3 class="text-lg font-extrabold text-white leading-snug">${esc(top.name)}</h3>
-
-              <!-- Macros Bar -->
-              <div class="grid grid-cols-4 gap-2 my-3 p-2.5 rounded-2xl bg-slate-900/90 border border-slate-800 text-center">
-                <div>
-                  <div class="text-[10px] text-slate-400">Protein</div>
-                  <div class="text-sm font-extrabold text-emerald-400">${Math.round(top.protein * mult)}g</div>
-                </div>
-                <div>
-                  <div class="text-[10px] text-slate-400">Calories</div>
-                  <div class="text-sm font-bold text-white">${Math.round(top.calories * mult)}</div>
-                </div>
-                <div>
-                  <div class="text-[10px] text-slate-400">Carbs</div>
-                  <div class="text-sm font-bold text-slate-200">${Math.round(top.carbs * mult)}g</div>
-                </div>
-                <div>
-                  <div class="text-[10px] text-slate-400">Fat</div>
-                  <div class="text-sm font-bold text-slate-200">${Math.round(top.fat * mult)}g</div>
-                </div>
-              </div>
-
-              <!-- Ingredients per 1 big portion -->
-              <div class="mb-3">
-                <div class="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
-                  Main Ingredients (per 1 big portion ${mult !== 1 ? `• ${mult}x` : ""})
-                </div>
-                <div class="flex flex-wrap gap-1.5">
-                  ${top.ingredients.map(ing => `
-                    <span class="text-xs px-2.5 py-1 rounded-xl bg-slate-800/90 text-slate-200 border border-slate-700/70">
-                      ${ing.name}: <strong>${Math.round(ing.amountPerPortion * mult * 10) / 10}${ing.unit}</strong>
-                    </span>
-                  `).join("")}
-                </div>
-              </div>
-
-              <!-- Quick Steps -->
-              <div class="space-y-1 text-xs text-slate-300 bg-slate-900/50 p-3 rounded-2xl border border-slate-800/80">
-                ${top.steps.map((s, idx) => `<div><strong class="text-emerald-400">${idx + 1}.</strong> ${s}</div>`).join("")}
-              </div>
+          <div id="activeSwipeCard" class="swipe-card glass rounded-3xl p-5 border border-slate-700/80 shadow-2xl space-y-3">
+            ${pantryBadge(top)}
+            <h3 class="text-xl font-extrabold text-white leading-snug">${esc(top.name)}</h3>
+            <div class="flex flex-wrap gap-1.5">
+              <span class="text-xs font-bold px-2.5 py-1 rounded-lg bg-cyan-500/15 text-cyan-300">⏱ ${esc(top.prepTime)}</span>
+              <span class="text-xs font-bold px-2.5 py-1 rounded-lg bg-amber-500/15 text-amber-300">💰 ${esc(top.costPerPortion)}</span>
+              <span class="text-xs font-bold px-2.5 py-1 rounded-lg bg-emerald-500/15 text-emerald-300">💪 ${Math.round(top.protein * mult)}g protein</span>
+              <span class="text-xs font-bold px-2.5 py-1 rounded-lg bg-slate-800 text-slate-300">🍳 ${esc(top.equipment)}</span>
             </div>
-
-            <!-- Swipe Buttons -->
-            <div class="grid grid-cols-2 gap-3 pt-2">
-              <button onclick="handleSwipe('${top.id}', 'left')" class="py-3.5 rounded-2xl bg-slate-800 hover:bg-rose-500/20 border border-slate-700 hover:border-rose-500/40 text-rose-300 font-bold text-sm flex items-center justify-center gap-2 transition active:scale-95">
+            <button onclick="toggleSwipeDetails()" class="text-xs font-semibold text-emerald-300">${swipeDetailsOpen ? "Hide details ▴" : "See ingredients & steps ▾"}</button>
+            ${swipeDetailsOpen ? `
+              <div class="space-y-2.5">
+                <div class="flex flex-wrap gap-1.5">
+                  ${top.ingredients.map(ing => `<span class="text-xs px-2.5 py-1 rounded-xl bg-slate-800/90 text-slate-200">${esc(ing.name)}: <strong>${Math.round(ing.amountPerPortion * mult * 10) / 10}${esc(ing.unit)}</strong></span>`).join("")}
+                </div>
+                <div class="text-[11px] text-slate-500">Amounts are for 1 portion. ${Math.round(top.calories * mult)} kcal · ${Math.round(top.carbs * mult)}g carbs · ${Math.round(top.fat * mult)}g fat</div>
+                <ol class="space-y-1 text-xs text-slate-300">
+                  ${top.steps.map((st, idx) => `<li><strong class="text-emerald-400">${idx + 1}.</strong> ${esc(st)}</li>`).join("")}
+                </ol>
+              </div>` : ""}
+            <div class="grid grid-cols-2 gap-3 pt-1">
+              <button onclick="handleSwipe('${top.id}', 'left')" class="py-3.5 rounded-2xl bg-slate-800 border border-slate-700 text-rose-300 font-bold text-sm flex items-center justify-center gap-2 transition active:scale-95">
                 <span>✕</span><span>Skip</span>
               </button>
               <button onclick="handleSwipe('${top.id}', 'right')" class="py-3.5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 font-extrabold text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/25 transition active:scale-95">
-                <span>❤️</span><span>Want to Eat!</span>
+                <span>❤️</span><span>Want it</span>
               </button>
             </div>
-            <button onclick="neverShowRecipe('${top.id}')" class="w-full text-[11px] font-semibold text-slate-500 hover:text-rose-300 transition">
-              🚫 Never show this meal again
-            </button>
-          </div>
-        `;
+            <p class="text-center text-[11px] text-slate-500">Drag the card or tap a button</p>
+            <button onclick="neverShowRecipe('${top.id}')" class="w-full text-[11px] font-semibold text-slate-500 hover:text-rose-300 transition">🚫 Never show this meal again</button>
+          </div>`;
       }
 
       attachSwipeDrag();
 
-      // Render Matched Pool
       const poolList = document.getElementById("matchedPoolList");
       const lacaR = state.swipes?.laca || {};
       const fruzsiR = state.swipes?.fruzsi || {};
-
       const matches = getActiveRecipes().filter(r => lacaR[r.id] === "right" || fruzsiR[r.id] === "right");
       if (!matches.length) {
-        poolList.innerHTML = `<div class="text-xs text-slate-400 py-2 text-center">Swipe right on meals above to build your weekly pool!</div>`;
+        poolList.innerHTML = `<div class="text-xs text-slate-400 py-2 text-center">Tap ❤️ on meals you'd like to eat. They show up here.</div>`;
       } else {
         poolList.innerHTML = matches.map(r => {
-          const both = lacaR[r.id] === "right" && fruzsiR[r.id] === "right";
-          const who = both ? "💘 Both Matched" : (lacaR[r.id] === "right" ? "👦 Laca Liked" : "👩 Fruzsi Liked");
+          const lacaYes = lacaR[r.id] === "right", fruzsiYes = fruzsiR[r.id] === "right";
+          const mine = currentUser === "laca" ? lacaYes : fruzsiYes;
+          const both = lacaYes && fruzsiYes;
+          const who = both ? "💘 Both" : (lacaYes ? "👦 Laca" : "👩 Fruzsi");
           return `
             <div class="p-2.5 rounded-2xl bg-slate-900/80 border ${both ? "border-emerald-500/40" : "border-slate-800"} flex items-center justify-between gap-2">
-              <div>
-                <div class="text-xs font-bold text-white">${r.name}</div>
-                <div class="text-[11px] text-slate-400">${r.prepTime} • ${r.equipment} • ${r.protein}g P</div>
+              <div class="min-w-0">
+                <div class="text-xs font-bold text-white truncate">${esc(r.name)}</div>
+                <div class="text-[11px] text-slate-400">${esc(r.prepTime)} · ${who}</div>
               </div>
-              <span class="shrink-0 text-[10px] font-bold px-2 py-1 rounded-lg ${both ? "bg-emerald-500/20 text-emerald-300" : "bg-slate-800 text-slate-300"}">
-                ${who}
-              </span>
-            </div>
-          `;
+              ${mine
+                ? `<button onclick="unpick('${r.id}')" class="shrink-0 text-[11px] text-slate-500 px-2 py-1">✕ Remove</button>`
+                : `<button onclick="meToo('${r.id}')" class="shrink-0 text-[11px] font-bold px-2.5 py-1.5 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300">👍 Me too</button>`}
+            </div>`;
         }).join("");
       }
     }
@@ -2879,12 +2868,27 @@
       saveStateAndSync(currentUser);
     }
 
+    let moneyOpen = false;
+    function toggleMoney() { moneyOpen = !moneyOpen; renderPlanTab(); }
+
     function renderMoneyCard() {
       const slots = state.planNegotiation.currentSlots || [];
       const locked = state.planNegotiation.status === "locked";
       const m = computeMoney(slots);
       const past = (state.history || []).reduce((sum, h) => sum + (Number(h.saved) || 0), 0);
       const total = past + (locked ? m.saved : 0);
+      document.getElementById("historyCard").classList.toggle("hidden", !moneyOpen);
+      if (!moneyOpen) {
+        document.getElementById("moneyCard").innerHTML = `
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="text-[11px] font-bold text-amber-300">💰 Saved vs delivery this week</div>
+              <div class="text-2xl font-extrabold text-white">${fmtEur(Math.max(0, m.saved))}</div>
+            </div>
+            <button onclick="toggleMoney()" class="text-xs font-semibold text-slate-300 px-3 py-1.5 rounded-xl bg-slate-800 border border-slate-700">Details ▾</button>
+          </div>`;
+        return;
+      }
       document.getElementById("moneyCard").innerHTML = `
         <div class="flex items-center justify-between mb-1">
           <span class="text-xs font-extrabold uppercase tracking-wider text-amber-300">💰 Money Saved This Week</span>
@@ -2907,7 +2911,8 @@
         </div>
         <div class="text-[11px] text-slate-400 mt-2.5">
           🏆 All-time saved: <strong class="text-amber-300">${fmtEur(total)}</strong>${state.history.length ? ` over ${state.history.length} finished week${state.history.length > 1 ? "s" : ""}` : ""}
-        </div>`;
+        </div>
+        <button onclick="toggleMoney()" class="mt-2 text-xs font-semibold text-slate-400">Hide ▴</button>`;
     }
 
     /* ---- Ping-pong diff: which slots did the partner change? ---- */
@@ -2921,7 +2926,7 @@
         const p = byId[s.id];
         const notes = [];
         if (!p) {
-          notes.push(s.days.length === 2 ? "🔗 Merged into a 2-day batch" : "✂️ Split into a 1-day meal");
+          if (s.extra) notes.push("➕ New extra meal"); else notes.push(s.days.length === 2 ? "🔗 Merged into a 2-day batch" : "✂️ Split into a 1-day meal");
           const pp = prev.find(x => x.days.includes(s.days[0]));
           if (pp && pp.recipeId !== s.recipeId) notes.push(`🍽 ${nm(pp.recipeId)} → ${nm(s.recipeId)}`);
         } else {
@@ -3124,57 +3129,94 @@
         const rec = getRecipeById(slot.recipeId);
         const mult = slot.multiplier || 1.0;
         const effectivePortions = Math.round(slot.basePortions * mult * 10) / 10;
-        const dayTitle = slot.days.map(d => DAY_LABELS[d]).join(" + ");
-        const canSplitOrMerge = slot.days.length === 2 || (idx + 1 < neg.currentSlots.length && neg.currentSlots[idx + 1].days.length === 1);
+        const nextSlot = neg.currentSlots[idx + 1];
+        const canSplitOrMerge = !slot.extra && (slot.days.length === 2 || (nextSlot && nextSlot.days.length === 1 && !nextSlot.extra));
         const changed = !!diff[slot.id];
         const cookOpen = openCook.has(slot.id);
+        const changeOpen = openChange.has(slot.id);
         const options = renderRecipeOptions(slot);
+        const dayTitle = slot.extra
+          ? `➕ Extra cook · ${DAY_LABELS[slot.days[0]]}`
+          : `${slot.days.map(d => DAY_SHORT[d]).join(" + ")}`;
+        const btn = (on, onclick, label) => `<button onclick="${onclick}" class="py-2 rounded-xl text-xs font-bold border transition ${on ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40" : "bg-slate-800 text-slate-200 border-slate-700"}">${label}</button>`;
 
         return `
-          <div class="p-3.5 rounded-2xl bg-slate-900/80 border ${changed ? "border-amber-500/50" : "border-slate-800"} space-y-2.5">
-            <div class="flex items-center justify-between gap-2">
-              <div>
-                <span class="text-xs font-extrabold uppercase tracking-wider text-emerald-400">
-                  🍳 Cook on ${DAY_LABELS[slot.days[0]]} (${esc(rec.prepTime)})
-                </span>
-                ${changed ? `<span class="ml-1 text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-amber-400 text-slate-950 align-middle">CHANGED</span>` : ""}
-                <div class="text-xs text-slate-400">Covers: ${dayTitle} (${slot.basePortions} base portions)</div>
-              </div>
-              ${canSplitOrMerge ? `
-                <button onclick="toggleSlotBatchSplit(${idx})" class="shrink-0 text-[11px] font-semibold px-2.5 py-1 rounded-xl bg-slate-800 text-slate-300 border border-slate-700">
-                  ${slot.days.length === 2 ? "✂️ Split 1-Day" : "🔗 Merge 2-Day"}
-                </button>
-              ` : ""}
-            </div>
-
+          <div class="p-3.5 rounded-2xl bg-slate-900/80 border ${changed ? "border-amber-500/50" : "border-slate-800"} ${slot.cooked ? "opacity-60" : ""} space-y-2.5">
             <div>
-              <select onchange="changeSlotRecipe(${idx}, this.value)" class="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-xs font-bold text-white">
-                ${options.html}
-              </select>
-              ${options.hiddenByDislike ? `<div class="text-[10px] text-slate-500 mt-1">${options.hiddenByDislike} meal${options.hiddenByDislike === 1 ? "" : "s"} hidden because of dislikes</div>` : ""}
-            </div>
-
-            <div class="flex items-center justify-between gap-2 pt-1">
-              <div class="flex items-center gap-1">
-                ${[1.0, 1.25, 1.5].map(m => `
-                  <button onclick="setSlotMultiplier(${idx}, ${m})" class="px-2.5 py-1 rounded-lg text-[11px] font-bold border transition ${mult === m ? "bg-emerald-500 text-slate-950 border-emerald-400" : "bg-slate-800 text-slate-300 border-slate-700"}">
-                    ${m}x ${m === 1 ? "Normal" : m === 1.25 ? "Big" : "Huge"}
-                  </button>
-                `).join("")}
+              <div class="text-[11px] font-extrabold uppercase tracking-wider text-emerald-400">
+                ${dayTitle}
+                ${changed ? `<span class="ml-1 text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-amber-400 text-slate-950 align-middle">CHANGED</span>` : ""}
               </div>
-
-              <button onclick="bumpRecipePermanentPortion('${esc(rec.id)}')" class="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
-                📈 Next time +20% (${effectivePortions}p)
-              </button>
+              <div class="text-sm font-bold text-white leading-snug ${slot.cooked ? "line-through" : ""}">${esc(rec.name)}</div>
+              <div class="text-[11px] text-slate-400 mt-0.5">⏱ ${esc(rec.prepTime)} · 🍽 ${effectivePortions} portions · 💪 ${Math.round(rec.protein * mult)}g protein</div>
             </div>
 
-            <button onclick="toggleCook('${esc(slot.id)}')" class="w-full py-2 rounded-xl text-xs font-bold border transition ${cookOpen ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40" : "bg-slate-800 text-slate-200 border-slate-700"}">
-              👩‍🍳 ${cookOpen ? "Hide recipe" : "Tap to cook: ingredients & steps"}
-            </button>
+            <div class="grid grid-cols-3 gap-1.5">
+              ${btn(cookOpen, `toggleCook('${esc(slot.id)}')`, "👩‍🍳 Recipe")}
+              ${btn(slot.cooked, `toggleCooked(${idx})`, slot.cooked ? "↩ Undo" : "✓ Cooked")}
+              ${btn(changeOpen, `toggleChange('${esc(slot.id)}')`, "⚙️ Change")}
+            </div>
+
+            ${changeOpen ? `
+              <div class="space-y-2.5 p-3 rounded-2xl bg-slate-950/60 border border-slate-800">
+                <div>
+                  <div class="text-[11px] font-bold text-slate-400 mb-1">Swap this meal</div>
+                  <select onchange="changeSlotRecipe(${idx}, this.value)" class="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-xs font-bold text-white">${options.html}</select>
+                  ${options.hiddenByDislike ? `<div class="text-[10px] text-slate-500 mt-1">${options.hiddenByDislike} meal${options.hiddenByDislike === 1 ? "" : "s"} hidden because of dislikes</div>` : ""}
+                </div>
+                <div>
+                  <div class="text-[11px] font-bold text-slate-400 mb-1">How hungry are we?</div>
+                  <div class="flex items-center gap-1 flex-wrap">
+                    ${[1.0, 1.25, 1.5].map(m => `
+                      <button onclick="setSlotMultiplier(${idx}, ${m})" class="px-2.5 py-1 rounded-lg text-[11px] font-bold border transition ${mult === m ? "bg-emerald-500 text-slate-950 border-emerald-400" : "bg-slate-800 text-slate-300 border-slate-700"}">${m === 1 ? "Normal" : m === 1.25 ? "Big" : "Huge"}</button>`).join("")}
+                    <button onclick="bumpRecipePermanentPortion('${esc(rec.id)}')" class="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">📈 Always +20%</button>
+                  </div>
+                </div>
+                ${canSplitOrMerge ? `
+                  <button onclick="toggleSlotBatchSplit(${idx})" class="w-full py-2 rounded-xl bg-slate-800 border border-slate-700 text-slate-200 text-xs font-semibold">
+                    ${slot.days.length === 2 ? "✂️ Cook each day separately" : "🔗 Cook once for 2 days"}
+                  </button>` : ""}
+              </div>` : ""}
+
             ${cookOpen ? renderCookDrawer(slot, rec, mult) : ""}
           </div>
         `;
       }).join("");
+    }
+
+    const openChange = new Set();
+    function toggleChange(slotId) {
+      if (openChange.has(slotId)) openChange.delete(slotId); else openChange.add(slotId);
+      renderPlanTab();
+    }
+
+    function toggleCooked(idx) {
+      const slot = state.planNegotiation.currentSlots[idx];
+      if (!slot) return;
+      slot.cooked = !slot.cooked;
+      saveStateAndSync(currentUser);
+    }
+
+    // Ate faster than planned: add new cooks (today) with fresh meals + pantry/variety logic
+    function addExtraMeals(n) {
+      const dk = DAY_KEYS[todayIdx()];
+      let who = state.calendar[dk];
+      if (!who || who === "away") who = "both";
+      const people = getPersonCountForDay(who) || 2;
+      recordCounterProposal((slots) => {
+        const ctx = newPantryCtx(state);
+        const used = new Set(slots.map(x => x.recipeId));
+        slots.forEach(x => consumePantryCtx(getRecipeById(x.recipeId), x.basePortions * (x.multiplier || 1), ctx));
+        for (let i = 0; i < n; i++) {
+          const portions = people * 2;
+          const rec = pickBestRecipeForConstraint(who, used, state, i, { ctx, portions });
+          used.add(rec.id);
+          const mult = state.recipeMultipliers[rec.id] || 1.0;
+          consumePantryCtx(rec, portions * mult, ctx);
+          slots.push({ id: "extra-" + Date.now() + "-" + i, days: [dk], whoConstraint: who, basePortions: portions, isBatch: true, extra: true, recipeId: rec.id, multiplier: mult });
+        }
+      });
+      showToast(`Added ${n} extra cook${n > 1 ? "s" : ""}. Check the shopping list`);
     }
 
     /********************************************************************
@@ -3219,6 +3261,7 @@
 
       slots.forEach(slot => {
         const rec = getRecipeById(slot.recipeId);
+        if (slot.cooked) return;
         const total = slot.basePortions * (slot.multiplier || 1.0);
         const cookIdx = DAY_KEYS.indexOf(slot.days[0]);
         (rec.ingredients || []).forEach(ing => {
@@ -3469,6 +3512,65 @@
     /********************************************************************
      * 12. RENDER TAB 5: SETUP, DISLIKES, REMINDERS & IOS .ICS EXPORT
      ********************************************************************/
+    const DISLIKE_GROUPS = [
+      { key: "meat", icon: "🥩", label: "Meat", items: ["Chicken", "Turkey", "Pork", "Beef", "Bacon", "Ham", "Sausage", "Minced meat", "Lamb", "Liver"] },
+      { key: "fish", icon: "🐟", label: "Fish & seafood", items: ["Fish", "Tuna", "Salmon", "Seafood", "Shrimp"] },
+      { key: "dairy", icon: "🧀", label: "Dairy & eggs", items: ["Egg", "Cheese", "Feta", "Mozzarella", "Cottage Cheese", "Yogurt", "Skyr", "Sour Cream", "Cream", "Milk", "Butter"] },
+      { key: "veg", icon: "🥦", label: "Vegetables", items: ["Mushrooms", "Broccoli", "Spinach", "Zucchini", "Eggplant", "Tomato", "Cucumber", "Bell Pepper", "Onion", "Garlic", "Carrot", "Cabbage", "Cauliflower", "Lettuce", "Celery", "Corn", "Peas", "Green Beans", "Potato", "Sweet Potato", "Pumpkin", "Beetroot", "Olives", "Pickles"] },
+      { key: "legumes", icon: "🫘", label: "Beans & lentils", items: ["Beans", "Lentils", "Chickpeas", "Hummus", "Tofu"] },
+      { key: "carbs", icon: "🍝", label: "Rice, pasta & bread", items: ["Rice", "Pasta", "Noodles", "Bread", "Tortilla", "Oats", "Couscous", "Bulgur", "Gnocchi"] },
+      { key: "flavour", icon: "🌶", label: "Sauces & flavours", items: ["Soy Sauce", "Mayonnaise", "Mustard", "Ketchup", "Pesto", "Curry", "Spicy Food", "Sesame", "Cilantro", "Honey"] },
+      { key: "fruit", icon: "🍌", label: "Fruit", items: ["Banana", "Lemon", "Apple"] }
+    ];
+    const openDislikeGroups = new Set();
+
+    function toggleDislikeGroup(key) {
+      if (openDislikeGroups.has(key)) openDislikeGroups.delete(key); else openDislikeGroups.add(key);
+      renderDislikes();
+    }
+
+    function renderDislikes() {
+      const mine = state.dislikes?.[currentUser] || [];
+      const q = ((document.getElementById("dislikeSearch") || {}).value || "").trim().toLowerCase();
+      const known = new Set(DISLIKE_GROUPS.flatMap(g => g.items));
+      const custom = mine.filter(x => !known.has(x));
+      const groups = [...DISLIKE_GROUPS];
+      if (custom.length) groups.push({ key: "custom", icon: "✏️", label: "My own", items: custom });
+
+      const chip = (item) => {
+        const on = mine.includes(item);
+        const arg = JSON.stringify(item).replace(/"/g, "&quot;");
+        return `<button onclick="toggleDislike(${arg})" class="px-2.5 py-1.5 rounded-xl text-xs font-semibold border transition ${on ? "bg-rose-500/25 text-rose-300 border-rose-500/50" : "bg-slate-900 text-slate-300 border-slate-700"}">${on ? "✕ " : ""}${esc(item)}</button>`;
+      };
+
+      document.getElementById("dislikeSummary").textContent = mine.length ? `${mine.length} selected` : "none yet";
+      const grid = document.getElementById("dislikeChipsGrid");
+
+      if (q) {
+        const hits = groups.flatMap(g => g.items).filter(i => i.toLowerCase().includes(q));
+        grid.innerHTML = hits.length
+          ? `<div class="flex flex-wrap gap-1.5">${hits.map(chip).join("")}</div>`
+          : `<div class="text-xs text-slate-400">No match. Type the full name below and tap Add.</div>`;
+        return;
+      }
+
+      grid.innerHTML = groups.map(g => {
+        const n = g.items.filter(i => mine.includes(i)).length;
+        const open = openDislikeGroups.has(g.key);
+        return `
+          <div class="rounded-2xl border border-slate-800 bg-slate-900/60">
+            <button onclick="toggleDislikeGroup('${g.key}')" class="w-full flex items-center justify-between px-3 py-2.5">
+              <span class="text-sm font-bold text-white">${g.icon} ${g.label}</span>
+              <span class="flex items-center gap-2">
+                ${n ? `<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-500/25 text-rose-300">${n} ✕</span>` : ""}
+                <span class="text-slate-400 text-xs">${open ? "▴" : "▾"}</span>
+              </span>
+            </button>
+            ${open ? `<div class="flex flex-wrap gap-1.5 px-3 pb-3">${g.items.map(chip).join("")}</div>` : ""}
+          </div>`;
+      }).join("");
+    }
+
     function toggleDislike(item) {
       if (!state.dislikes[currentUser]) state.dislikes[currentUser] = [];
       const arr = state.dislikes[currentUser];
@@ -3536,7 +3638,7 @@
         if ((state.calendar[dayKey] || "away") === "away") return;
         const times = state.reminders?.[dayKey] || ["13:00", "17:30"];
         const trip = trips.find(t => t.dayIdx >= dIdx && tripPending(t).length);
-        const cook = slots.find(s => s.days[0] === dayKey);
+        const cook = slots.find(s => s.days[0] === dayKey && !s.cooked);
 
         const parts = ["Don't order food!"];
         if (trip) {
@@ -3622,7 +3724,7 @@
       const slots = state.planNegotiation.currentSlots || [];
       const due = trips.filter(t => t.dayIdx <= idx);
       const pendingItems = due.flatMap(t => tripPending(t));
-      const cook = slots.find(s => s.days[0] === dayKey);
+      const cook = slots.find(s => s.days[0] === dayKey && !s.cooked);
 
       const lines = [];
       if (pendingItems.length) {
@@ -3685,21 +3787,7 @@
       const userLabel = currentUser === "laca" ? "Laca" : "Fruzsi";
       document.getElementById("dislikeUserLabel").textContent = userLabel;
 
-      const myDislikes = state.dislikes?.[currentUser] || [];
-      const allOptions = [...new Set([...DISLIKE_OPTIONS, ...myDislikes])];
-
-      document.getElementById("dislikeChipsGrid").innerHTML = allOptions.map(item => {
-        const active = myDislikes.includes(item);
-        return `
-          <button onclick="toggleDislike('${item.replace(/'/g, "\\'")}')" class="px-2.5 py-1.5 rounded-xl text-xs font-semibold border transition ${
-            active
-              ? "bg-rose-500/25 text-rose-300 border-rose-500/50"
-              : "bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200"
-          }">
-            ${active ? "✕ " : ""}${item}
-          </button>
-        `;
-      }).join("");
+      renderDislikes();
 
       const remList = document.getElementById("reminderScheduleList");
       remList.innerHTML = DAY_KEYS.map(dayKey => {
@@ -3745,8 +3833,8 @@
     /* ---- First-time tour ---- */
     const TOUR_STEPS = [
       { icon: "🍲", title: "Cook at home, save money", text: "This app plans your week's meals, builds one shopping list and reminds you to cook, so you stop ordering expensive delivery. Both phones stay in sync live." },
-      { icon: "📅", title: "1. Set your week", text: "On the Week tab, tap who is home each day: both of you, only one, or away. The app groups days into big batches so you cook as rarely as possible." },
-      { icon: "🔥", title: "2. Swipe meals", text: "On the Swipe tab, tap ❤️ for meals you'd eat and ✕ to skip. Each of you swipes on your own phone. Tell the app what you hate in Setup and those meals vanish." },
+      { icon: "📅", title: "1. Set your week", text: "On the Week tab, mark each of YOUR days as Home or Away, then tap Send. Your partner does the same on their phone. The app combines both and groups days into big batches so you cook as rarely as possible." },
+      { icon: "🔥", title: "2. Pick meals", text: "On the Meals tab, tap ❤️ for meals you'd eat and ✕ to skip. Each of you picks on your own phone, and meals your partner already picked are skipped for you. Tell the app what you hate in Setup and those meals vanish." },
       { icon: "🤝", title: "3. Agree on the plan", text: "On the Plan tab, the app proposes a week. Either of you can swap a meal or change portions, and the other sees what changed. When you both tap Accept, it's locked in." },
       { icon: "🛒", title: "4. Shop once, cook easy", text: "The Shop tab groups everything by aisle and trip day. Tap 🛒 Buy or 🏠 Home as you go and it updates on both phones. On cook day, tap a meal on the Plan tab for the recipe." },
       { icon: "🔔", title: "You're ready!", text: "Turn on reminders in Setup so you never forget. The green card at the top of the Week tab always tells you what to do next." }
@@ -3796,20 +3884,24 @@
       const pending = trips.reduce((n, t) => n + tripPending(t).length, 0);
 
       const steps = [
-        { label: "Week", done: true },
-        { label: "Swipe", done: myLikes >= 3 },
+        { label: "Week", done: !!state.availabilitySent[currentUser] },
+        { label: "Meals", done: myLikes >= 3 },
         { label: "Plan", done: locked },
         { label: "Shop", done: locked && trips.length > 0 && pending === 0 }
       ];
 
       let title, text, btn, tab;
-      if (myLikes < 3) {
+      if (!state.availabilitySent[currentUser]) {
+        title = "First: tell us when you're home"; text = "Mark each day Home or Away, then tap Send my week."; btn = "Set my days →"; tab = "week";
+      } else if (myLikes < 3) {
         title = "Next: swipe a few meals"; text = `Like at least 3 meals (you have ${myLikes}). Your week above looks right? Then go swipe.`; btn = "Start swiping →"; tab = "swipe";
       } else if (!locked) {
         const mineOk = neg.acceptedBy && neg.acceptedBy[currentUser];
         title = mineOk ? "Waiting for your partner" : "Next: review & accept the plan";
         text = mineOk ? "You accepted. The plan locks as soon as they accept too." : "Check the proposed meals, change anything you don't like, then tap Accept.";
         btn = "Open the plan →"; tab = "plan";
+      } else if ((neg.currentSlots || []).length && neg.currentSlots.every(s => s.cooked)) {
+        title = "All planned meals eaten 🍽"; text = "Need food for more days? Let the app pick extra meals and update your list."; btn = "Add extra meals →"; tab = "plan";
       } else if (pending > 0) {
         title = "Next: go shopping"; text = `${pending} item${pending === 1 ? "" : "s"} left on your list. Tap Buy or Home as you shop.`; btn = "Open shopping list →"; tab = "shop";
       } else {
