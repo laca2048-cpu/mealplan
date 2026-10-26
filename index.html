@@ -280,11 +280,7 @@
           <span class="chev text-slate-400">▾</span>
         </summary>
         <div class="px-4 pb-4">
-          <div class="grid grid-cols-2 gap-2">
-            <button onclick="openScanner()" class="py-3 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-500 text-slate-950 font-extrabold text-xs">📷 Scan barcode</button>
-            <button onclick="toggleManualStock()" class="py-3 rounded-2xl bg-slate-800 border border-slate-700 text-slate-200 font-bold text-xs">✏️ Add by hand</button>
-          </div>
-          <div id="manualStockForm" class="hidden mt-3">
+          <div id="manualStockForm">
             <div class="flex gap-2">
               <input id="pantryName" type="text" placeholder="e.g. chicken" class="flex-1 min-w-0 px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white" />
               <input id="pantryAmount" type="number" inputmode="decimal" placeholder="1000" class="w-20 px-2 py-2 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white" />
@@ -293,7 +289,7 @@
             </div>
           </div>
           <div id="pantryList" class="space-y-2 mt-3"></div>
-          <p class="text-[11px] text-slate-400 mt-3">Stock drops by itself when you tap ✓ Cooked on the Plan tab. Scan a product again to mark it finished. The app plans meals with it and takes it off your list.</p>
+          <p class="text-[11px] text-slate-400 mt-3">Type what you have, like "chicken 1000 g". Stock drops by itself when you tap ✓ Cooked on the Plan tab, and the app plans meals with it and takes it off your shopping list.</p>
           <div class="flex items-center justify-between mt-2 text-xs text-slate-300">
             <span>Max meals per week with the same item</span>
             <select id="pantryMaxSelect" onchange="setPantryMax(this.value)" class="px-2 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-xs text-white"><option value="1">1</option><option value="2">2</option><option value="3">3</option></select>
@@ -441,19 +437,6 @@
         <button onclick="closeTour()" class="px-4 py-3 rounded-2xl bg-slate-800 border border-slate-700 text-slate-300 font-bold text-xs">Skip</button>
         <button id="tourNext" onclick="tourNext()" class="flex-1 py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 font-extrabold text-sm">Next →</button>
       </div>
-    </div>
-  </div>
-
-  <!-- BARCODE SCANNER -->
-  <div id="scanModal" class="fixed inset-0 z-[58] bg-slate-950/95 backdrop-blur-xl flex items-center justify-center p-4 hidden">
-    <div class="w-full max-w-sm glass rounded-3xl p-5 border border-slate-700 max-h-[92vh] overflow-y-auto">
-      <div class="flex items-center justify-between mb-3">
-        <h3 class="text-base font-bold text-white">📷 Scan a product</h3>
-        <button onclick="closeScanner()" class="text-slate-400 text-sm px-2 py-1">✕</button>
-      </div>
-      <div id="scanStatus" class="text-xs text-slate-400 mb-2">Point the camera at the barcode.</div>
-      <div id="scanReader" class="rounded-2xl overflow-hidden"></div>
-      <div id="scanResult" class="mt-3"></div>
     </div>
   </div>
 
@@ -1456,7 +1439,6 @@
         spending: [],
         pantry: [],
         availability: null,
-        products: {},
         availabilitySent: { laca: true, fruzsi: true },
         planNegotiation: {
           status: "draft",
@@ -1507,7 +1489,6 @@
       s.history = toArr(r.history);
       s.spending = toArr(r.spending);
       s.pantry = toArr(r.pantry);
-      s.products = r.products || {};
       // per-person availability; older saves are converted from the shared calendar
       s.availability = { laca: {}, fruzsi: {} };
       DAY_KEYS.forEach(dk => {
@@ -2847,7 +2828,7 @@
     function renderPantry() {
       const used = buildShoppingTrips().pantryUsed || {};
       const stocked = state.pantry.filter(p => Number(p.amount) > 0).length;
-      document.getElementById("homeStockSub").textContent = stocked ? `${stocked} item${stocked === 1 ? "" : "s"} in stock` : "Nothing yet. Scan or add what you buy";
+      document.getElementById("homeStockSub").textContent = stocked ? `${stocked} item${stocked === 1 ? "" : "s"} in stock` : "Nothing yet. Add what you buy";
       const sel = document.getElementById("pantryMaxSelect");
       if (sel) sel.value = String(state.settings.pantryMax || 2);
       const fmt = (n, u) => (u === "g" && n >= 1000) ? `${Math.round(n) / 1000} kg` : `${Math.round(n)} ${u}`;
@@ -2865,7 +2846,7 @@
             <button onclick="removePantryItem('${esc(p.id)}')" class="text-slate-500 px-1">✕</button>
           </div>
         </div>`;
-      }).join("") : `<div class="text-xs text-slate-400">Empty. Scan a product or add what you have, e.g. "chicken 3000 g".</div>`;
+      }).join("") : `<div class="text-xs text-slate-400">Empty. Add what you have, e.g. "chicken 3000 g".</div>`;
     }
 
     /* ---- Weekly history chart ---- */
@@ -2915,169 +2896,6 @@
         });
       });
       return take;
-    }
-
-    function toggleManualStock() { document.getElementById("manualStockForm").classList.toggle("hidden"); }
-
-    /* ---- Barcode scanning: free html5-qrcode + free Open Food Facts lookup ---- */
-    let scanner = null, scanBusy = false;
-    const SCAN_LIB = "https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js";
-    const KEYWORD_GUESS = [
-      ["chicken", /chicken|csirke|poultry/], ["turkey", /turkey|pulyka/], ["pork", /pork|sert[eé]s|disznó/], ["beef", /beef|marha/],
-      ["sausage", /sausage|kolb[aá]sz|virsli/], ["bacon", /bacon|szalonna/], ["ham", /\bham\b|sonka/], ["tuna", /tuna|tonhal/], ["fish", /\bfish\b|hal\b|salmon/],
-      ["egg", /\beggs?\b|toj[aá]s/], ["rice", /\brice\b|rizs/], ["pasta", /pasta|t[eé]szta|penne|spaghetti|fusilli|macaroni|tagliatelle/],
-      ["potato", /potato|burgonya|krumpli/], ["cheese", /cheese|sajt/], ["cottage cheese", /cottage|t[uú]r[oó]/], ["yogurt", /yogh?urt|joghurt|skyr/],
-      ["milk", /\bmilk\b|\btej\b/], ["cream", /cream|tejsz[ií]n/], ["bread", /bread|keny[eé]r|toast/], ["tortilla", /tortilla|wrap/],
-      ["tomato", /tomato|paradicsom|passata/], ["oats", /\boats?\b|zab/], ["lentils", /lentil|lencse/], ["chickpeas", /chickpea|csicseribors/],
-      ["beans", /beans?\b|bab\b/], ["corn", /sweetcorn|corn\b|kukorica/], ["peas", /\bpeas\b|bors[oó]/], ["onion", /onion|hagyma/],
-      ["carrot", /carrot|s[aá]rgar[eé]pa/], ["cabbage", /cabbage|k[aá]poszta/], ["mushrooms", /mushroom|gomba/], ["spinach", /spinach|spen[oó]t/],
-      ["broccoli", /broccoli|brokkoli/], ["flour", /flour|liszt/], ["noodles", /noodle|metélt/], ["couscous", /couscous/]
-    ];
-
-    function guessKeyword(text) {
-      const t = String(text || "").toLowerCase();
-      const hit = KEYWORD_GUESS.find(k => k[1].test(t));
-      return hit ? hit[0] : "";
-    }
-
-    function parseQuantity(q) {
-      const m = String(q || "").toLowerCase().replace(",", ".").match(/([\d.]+)\s*(kg|g|l|ml|cl|dl|pcs|db)?/);
-      if (!m) return null;
-      const n = parseFloat(m[1]);
-      if (!n) return null;
-      const u = m[2];
-      if (u === "kg") return { amount: n * 1000, unit: "g" };
-      if (u === "g") return { amount: n, unit: "g" };
-      if (u === "l") return { amount: n * 1000, unit: "ml" };
-      if (u === "dl") return { amount: n * 100, unit: "ml" };
-      if (u === "cl") return { amount: n * 10, unit: "ml" };
-      if (u === "ml") return { amount: n, unit: "ml" };
-      if (u === "pcs" || u === "db") return { amount: n, unit: "pcs" };
-      return null;
-    }
-
-    function bkey(code) { return /^\d{6,14}$/.test(code) ? code : "q" + safeKey(code).slice(0, 40); }
-
-    async function lookupBarcode(code) {
-      const known = state.products[bkey(code)];
-      if (known) return Object.assign({ known: true }, known);
-      try {
-        const r = await fetch(`https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(code)}.json?fields=product_name,brands,quantity,product_quantity,product_quantity_unit,categories_tags`);
-        const j = await r.json();
-        if (j.status === 1 && j.product) {
-          const pr = j.product;
-          const label = [pr.brands ? String(pr.brands).split(",")[0] : "", pr.product_name || ""].filter(Boolean).join(" ").trim();
-          let q = parseQuantity(pr.quantity);
-          if (!q && pr.product_quantity) q = parseQuantity(pr.product_quantity + " " + (pr.product_quantity_unit || "g"));
-          const keyword = guessKeyword(label + " " + (pr.categories_tags || []).join(" "));
-          return { label: label || "Unknown product", keyword, amount: q ? q.amount : "", unit: q ? q.unit : "g" };
-        }
-      } catch (e) {}
-      return null;
-    }
-
-    function loadScript(url) {
-      return new Promise((resolve, reject) => {
-        if (window.Html5Qrcode) return resolve();
-        const sc = document.createElement("script");
-        sc.src = url; sc.onload = resolve; sc.onerror = () => reject(new Error("load failed"));
-        document.head.appendChild(sc);
-      });
-    }
-
-    async function stopScanner() {
-      if (!scanner) return;
-      try { await scanner.stop(); scanner.clear(); } catch (e) {}
-      scanner = null;
-    }
-
-    async function openScanner() {
-      scanBusy = false;
-      document.getElementById("scanModal").classList.remove("hidden");
-      document.getElementById("scanResult").innerHTML = "";
-      document.getElementById("scanReader").classList.remove("hidden");
-      const status = document.getElementById("scanStatus");
-      status.textContent = "Starting camera…";
-      try {
-        await loadScript(SCAN_LIB);
-        await stopScanner();
-        scanner = new Html5Qrcode("scanReader", { verbose: false, experimentalFeatures: { useBarCodeDetectorIfSupported: true } });
-        await scanner.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 260, height: 150 } }, onScanned, () => {});
-        status.textContent = "Point the camera at the barcode.";
-      } catch (e) {
-        status.innerHTML = "Camera not available. Allow camera access for this app in iPhone Settings → Safari, or close this and tap <strong>Add by hand</strong>.";
-      }
-    }
-
-    async function closeScanner() {
-      await stopScanner();
-      document.getElementById("scanModal").classList.add("hidden");
-    }
-
-    async function onScanned(text) {
-      if (scanBusy) return;
-      scanBusy = true;
-      await stopScanner();
-      document.getElementById("scanReader").classList.add("hidden");
-      document.getElementById("scanStatus").textContent = "Looking it up…";
-      const info = await lookupBarcode(text);
-      renderScanResult(text, info);
-    }
-
-    function renderScanResult(code, info) {
-      const inp = "w-full mt-1 px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white";
-      const i = info || { label: "", keyword: "", amount: "", unit: "g" };
-      const stock = i.keyword ? state.pantry.find(x => x.name.toLowerCase().trim() === i.keyword.toLowerCase().trim() && x.unit === i.unit) : null;
-      document.getElementById("scanStatus").textContent = info
-        ? (info.known ? "We know this one from before." : "Found it! Check the details.")
-        : "Not in the free product list. Type it once and the app remembers this barcode.";
-      document.getElementById("scanResult").innerHTML = `
-        <div class="space-y-2.5">
-          <div><label class="text-[11px] font-semibold text-slate-400">Product</label><input id="scanLabel" type="text" value="${esc(i.label)}" class="${inp}" /></div>
-          <div>
-            <label class="text-[11px] font-semibold text-slate-400">What is it? <span class="text-slate-500">(one word recipes use: chicken, rice, cheese…)</span></label>
-            <input id="scanKeyword" type="text" value="${esc(i.keyword)}" placeholder="e.g. chicken" class="${inp}" />
-          </div>
-          <div class="grid grid-cols-2 gap-2">
-            <div><label class="text-[11px] font-semibold text-slate-400">Amount in the pack</label><input id="scanAmount" type="number" inputmode="decimal" value="${i.amount}" class="${inp}" /></div>
-            <div><label class="text-[11px] font-semibold text-slate-400">Unit</label>
-              <select id="scanUnit" class="${inp}">${["g", "ml", "pcs"].map(u => `<option ${u === i.unit ? "selected" : ""}>${u}</option>`).join("")}</select></div>
-          </div>
-          ${stock ? `<div class="p-2.5 rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-xs text-cyan-200">At home now: <strong>${Math.round(stock.amount)} ${esc(stock.unit)}</strong></div>` : ""}
-          <button onclick="confirmScanAdd('${esc(code)}')" class="w-full py-3 rounded-2xl bg-emerald-500 text-slate-950 font-extrabold text-sm">➕ Add to what we have at home</button>
-          ${stock ? `<button onclick="scanFinish('${esc(code)}')" class="w-full py-3 rounded-2xl bg-rose-500/15 border border-rose-500/40 text-rose-300 font-bold text-sm">✓ Finished one pack (remove it)</button>` : ""}
-          <button onclick="openScanner()" class="w-full py-2.5 rounded-2xl bg-slate-800 border border-slate-700 text-slate-200 font-semibold text-xs">📷 Scan another</button>
-        </div>`;
-    }
-
-    function scanFields() {
-      return {
-        label: document.getElementById("scanLabel").value.trim(),
-        keyword: document.getElementById("scanKeyword").value.trim(),
-        amount: Number(document.getElementById("scanAmount").value),
-        unit: document.getElementById("scanUnit").value
-      };
-    }
-
-    function confirmScanAdd(code) {
-      const f = scanFields();
-      if (!f.keyword || !f.amount) { showToast("Add a one-word name and an amount"); return; }
-      addStock({ name: f.keyword, label: f.label || f.keyword, amount: f.amount, unit: f.unit });
-      state.products[bkey(code)] = { label: f.label || f.keyword, keyword: f.keyword, amount: f.amount, unit: f.unit };
-      saveStateAndSync(currentUser);
-      document.getElementById("scanModal").classList.add("hidden");
-      showToast(`${f.label || f.keyword} added ✅`);
-    }
-
-    function scanFinish(code) {
-      const f = scanFields();
-      const item = state.pantry.find(x => x.name.toLowerCase().trim() === f.keyword.toLowerCase().trim() && x.unit === f.unit);
-      if (!item) { showToast("Not in stock"); return; }
-      const left = Math.round((Number(item.amount) - (f.amount || Number(item.amount))) * 10) / 10;
-      if (left <= 0.5) state.pantry = state.pantry.filter(x => x.id !== item.id); else item.amount = left;
-      saveStateAndSync(currentUser);
-      document.getElementById("scanModal").classList.add("hidden");
-      showToast(left <= 0.5 ? `${f.label || f.keyword} finished and removed` : `${Math.round(left)} ${f.unit} left`);
     }
 
     /* ---- Food pictures: free emoji art, real photos optional ---- */

@@ -46,7 +46,7 @@ self.addEventListener("fetch", (e) => {
   if (/firebaseio\.com|firebasedatabase\.app/.test(url.hostname)) return;
   if (url.origin === location.origin) {
     e.respondWith(networkFirst(req));
-  } else if (/cdn\.tailwindcss\.com|www\.gstatic\.com|cdn\.jsdelivr\.net/.test(url.hostname)) {
+  } else if (/cdn\.tailwindcss\.com|www\.gstatic\.com/.test(url.hostname)) {
     e.respondWith(staleWhileRevalidate(req));
   }
 });
