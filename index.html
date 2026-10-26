@@ -270,6 +270,19 @@
       </div>
 
       <div id="shoppingTripsContainer" class="space-y-4"></div>
+
+      <!-- Grocery Spending (type in what the receipt said) -->
+      <div class="glass rounded-3xl p-4 border border-amber-500/30">
+        <h3 class="text-sm font-extrabold text-white">🧾 What did you actually spend?</h3>
+        <p class="text-[11px] text-slate-400 mb-3">After each shop, type the total from the receipt. The app then compares real spending to delivery.</p>
+        <div class="flex gap-2">
+          <input id="spendAmount" type="number" inputmode="decimal" step="0.01" min="0" placeholder="€ total" class="w-24 px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white" />
+          <input id="spendNote" type="text" placeholder="Store (optional)" class="flex-1 min-w-0 px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white" />
+          <button onclick="addSpend()" class="px-3.5 py-2 rounded-xl bg-emerald-500 text-slate-950 font-bold text-xs">Add</button>
+        </div>
+        <div id="spendSummary" class="mt-3 text-xs text-slate-300"></div>
+        <div id="spendList" class="space-y-1.5 mt-2"></div>
+      </div>
     </section>
 
     <!-- TAB 5: SETUP (DISLIKES, REMINDERS, IOS CALENDAR, SYNC) -->
@@ -446,7 +459,7 @@
     let isApplyingRemoteUpdate = false;
 
     /********************************************************************
-     * 2. 28 BUDGET, FAST, HIGH-PROTEIN, BIG-PORTION RECIPES
+     * 2. BUDGET, FAST, HIGH-PROTEIN, BIG-PORTION RECIPES
      * Built for Airfryer, Rice Cooker, Oven, and Gas Stove
      ********************************************************************/
     const DEFAULT_RECIPES = [
@@ -1139,6 +1152,110 @@
       }
     ];
 
+    /********************************************************************
+     * 2b. 22 MORE BUDGET-FRIENDLY, HEALTHY, HIGH-PROTEIN MEALS
+     * Aisle codes: M=Meat & Fish, D=Dairy & Eggs, V=Veggies & Fruit,
+     * G=Dry Goods & Carbs, S=Sauces & Spices
+     ********************************************************************/
+    (function addExtraRecipes() {
+      const AISLE = { M: "Meat & Fish", D: "Dairy & Eggs", V: "Veggies & Fruit", G: "Dry Goods & Carbs", S: "Sauces & Spices" };
+      const mk = (id, name, equipment, mins, calories, protein, carbs, fat, cost, tags, steps, ings) => ({
+        id, name, equipment, prepMinutes: mins, prepTime: mins + " min",
+        calories, protein, carbs, fat, costPerPortion: "€" + cost.toFixed(2), tags, steps,
+        ingredients: ings.map(i => ({ name: i[0], amountPerPortion: i[1], unit: i[2], aisle: AISLE[i[3]], shelfLifeDays: i[4] }))
+      });
+      DEFAULT_RECIPES.push(
+        mk("chicken-fajita-rice-bowl", "Airfryer Chicken Fajita Rice Bowl", "Airfryer + Rice Cooker", 20, 720, 54, 80, 16, 1.85,
+          ["chicken", "bell pepper", "onion", "rice", "yogurt"],
+          ["Start rice in the Rice Cooker.", "Toss chicken strips, sliced pepper and onion with fajita spice and 1 tsp oil; Airfry at 200°C for 14 mins.", "Pile over rice and top with a spoon of Greek yogurt."],
+          [["Chicken breast fillet", 210, "g", "M", 2], ["Jasmine rice", 110, "g", "G", 180], ["Bell pepper", 0.5, "pcs", "V", 7], ["Yellow onion", 0.4, "pcs", "V", 21], ["Greek yogurt", 50, "g", "D", 10]]),
+        mk("lentil-turkey-bolognese", "Hidden-Lentil Turkey Bolognese", "Gas Stove + Pan", 22, 740, 52, 88, 14, 1.60,
+          ["minced meat", "turkey", "lentils", "tomato", "pasta", "onion", "garlic"],
+          ["Cook pasta in salted water.", "Brown minced turkey with onion and garlic, stir in canned lentils and passata, simmer 10 mins.", "Mix with the pasta; the lentils add protein and stretch the meat."],
+          [["Minced turkey", 150, "g", "M", 2], ["Canned lentils", 90, "g", "S", 180], ["Durum pasta", 115, "g", "G", 180], ["Tomato passata", 150, "g", "S", 60], ["Yellow onion & garlic", 0.5, "pcs", "V", 21]]),
+        mk("cottage-cheese-egg-wrap", "Cottage Cheese & Egg Power Wraps", "Gas Stove + Pan", 12, 650, 48, 58, 22, 1.30,
+          ["cottage cheese", "egg", "tortilla", "tomato", "spinach"],
+          ["Scramble 3 eggs in a hot pan until just set.", "Warm tortillas and spread cottage cheese over them.", "Fill with egg, spinach and tomato, roll up and toast 1 min per side."],
+          [["Eggs", 3, "pcs", "D", 18], ["Cottage cheese", 120, "g", "D", 10], ["Large tortilla wraps", 2, "pcs", "G", 30], ["Baby spinach", 40, "g", "V", 5], ["Tomatoes", 80, "g", "V", 6]]),
+        mk("tuna-potato-bake", "Cheesy Tuna & Potato Tray Bake", "Oven + Pan", 25, 700, 50, 68, 22, 1.70,
+          ["tuna", "fish", "potato", "cheese", "sweetcorn", "yogurt"],
+          ["Slice potatoes thin, toss with oil and salt and roast at 220°C for 15 mins.", "Mix drained tuna with sweetcorn and Greek yogurt.", "Spoon over the potatoes, top with cheese and bake 8 more mins."],
+          [["Canned tuna", 130, "g", "M", 365], ["Potatoes", 350, "g", "V", 21], ["Grated cheese", 40, "g", "D", 14], ["Sweetcorn (canned)", 60, "g", "S", 180], ["Greek yogurt", 50, "g", "D", 10]]),
+        mk("chicken-chickpea-tray-bake", "Paprika Chicken & Chickpea Tray Bake", "Oven + Pan", 25, 730, 56, 66, 22, 1.95,
+          ["chicken", "chickpeas", "onion", "paprika", "yogurt"],
+          ["Mix chicken pieces, drained chickpeas and wedged onion with paprika, garlic powder, oil and salt on a tray.", "Roast at 210°C for 22 mins, turning once.", "Serve with a dollop of yogurt."],
+          [["Chicken thigh fillet", 220, "g", "M", 2], ["Canned chickpeas", 130, "g", "S", 180], ["Yellow onion", 0.5, "pcs", "V", 21], ["Greek yogurt", 50, "g", "D", 10], ["Paprika & garlic powder", 1, "set", "S", 90]]),
+        mk("protein-oat-pancakes", "Savoury-Sweet Protein Oat Pancakes with Skyr", "Gas Stove + Pan", 12, 640, 46, 72, 14, 1.25,
+          ["oats", "egg", "skyr", "banana", "cottage cheese"],
+          ["Blend oats, eggs, a banana and cottage cheese into a batter.", "Fry small pancakes 2 mins per side in a lightly oiled pan.", "Stack and top with skyr and a little honey."],
+          [["Rolled oats", 80, "g", "G", 180], ["Eggs", 3, "pcs", "D", 18], ["Banana", 1, "pcs", "V", 5], ["Cottage cheese", 100, "g", "D", 10], ["Skyr", 100, "g", "D", 10]]),
+        mk("turkey-meatball-tomato-rice", "Turkey Meatballs in Tomato Sauce with Rice", "Rice Cooker + Gas Stove", 24, 730, 53, 82, 16, 1.80,
+          ["minced meat", "turkey", "egg", "tomato", "rice", "garlic"],
+          ["Start rice in the Rice Cooker.", "Mix minced turkey with egg, garlic and breadcrumbs, roll into balls and brown in a pan.", "Pour in passata, simmer 10 mins and serve over rice."],
+          [["Minced turkey", 190, "g", "M", 2], ["Jasmine rice", 110, "g", "G", 180], ["Tomato passata", 160, "g", "S", 60], ["Eggs", 0.5, "pcs", "D", 18], ["Garlic & breadcrumbs", 1, "set", "S", 90]]),
+        mk("sausage-lentil-soup", "Smoked Sausage & Lentil One-Pot Stew", "Gas Stove + Pan", 25, 710, 44, 74, 24, 1.55,
+          ["sausage", "pork", "lentils", "carrot", "potato", "onion"],
+          ["Fry sliced smoked sausage with onion until browned.", "Add diced potato and carrot, red lentils and 500 ml water.", "Simmer 15 mins until thick; season with paprika and a splash of vinegar."],
+          [["Smoked sausage (kolbász)", 110, "g", "M", 14], ["Red lentils", 70, "g", "G", 365], ["Potatoes", 200, "g", "V", 21], ["Carrots", 80, "g", "V", 14], ["Yellow onion", 0.4, "pcs", "V", 21]]),
+        mk("one-pot-paprika-chicken-rice", "One-Pot Paprika Chicken & Rice", "Rice Cooker + Pan", 20, 740, 52, 84, 18, 1.75,
+          ["chicken", "rice", "paprika", "onion", "sour cream"],
+          ["Brown chicken pieces with onion and paprika in the pan.", "Tip it all into the Rice Cooker with rice and water (1:1.3) and press cook.", "Stir in a spoon of sour cream before serving."],
+          [["Chicken thigh fillet", 210, "g", "M", 2], ["Long-grain rice", 110, "g", "G", 180], ["Yellow onion", 0.4, "pcs", "V", 21], ["Sour cream", 40, "g", "D", 10], ["Paprika", 1, "set", "S", 90]]),
+        mk("airfryer-tuna-melt-potato", "Airfryer Tuna Melt Jacket Potato", "Airfryer", 25, 690, 46, 72, 20, 1.60,
+          ["tuna", "fish", "potato", "cheese", "yogurt", "corn"],
+          ["Prick large potatoes and Airfry at 200°C for 20 mins.", "Mix drained tuna with yogurt, sweetcorn and pepper.", "Split the potatoes, pile on the tuna and cheese and Airfry 3 more mins to melt."],
+          [["Large baking potatoes", 380, "g", "V", 21], ["Canned tuna", 130, "g", "M", 365], ["Grated cheese", 40, "g", "D", 14], ["Greek yogurt", 50, "g", "D", 10], ["Sweetcorn (canned)", 50, "g", "S", 180]]),
+        mk("pork-cabbage-noodle-stirfry", "Pork & Cabbage Noodle Stir-Fry", "Gas Stove + Pan", 18, 720, 48, 80, 20, 1.60,
+          ["pork", "minced meat", "cabbage", "noodles", "soy sauce", "garlic", "egg"],
+          ["Cook noodles for 4 mins and drain.", "Stir-fry minced pork with garlic until crispy, add shredded cabbage and cook 4 mins.", "Toss in the noodles with soy sauce and top with a fried egg."],
+          [["Minced pork", 170, "g", "M", 2], ["Egg noodles", 100, "g", "G", 180], ["White cabbage", 150, "g", "V", 14], ["Eggs", 1, "pcs", "D", 18], ["Soy sauce & garlic", 20, "ml", "S", 120]]),
+        mk("airfryer-bean-beef-burritos", "Airfryer Bean & Beef Burritos", "Airfryer + Pan", 20, 780, 50, 82, 24, 1.85,
+          ["minced meat", "beef", "beans", "tortilla", "cheese", "rice"],
+          ["Brown minced beef with taco spice and stir in kidney beans.", "Roll the filling with cheese into large tortillas.", "Airfry at 190°C for 6 mins until crisp."],
+          [["Minced beef or turkey", 160, "g", "M", 2], ["Red kidney beans (canned)", 90, "g", "S", 180], ["Large tortilla wraps", 2, "pcs", "G", 30], ["Grated cheese", 45, "g", "D", 14], ["Taco spice", 1, "set", "S", 90]]),
+        mk("fish-finger-rice-peas", "Airfryer Fish Fingers, Rice & Peas", "Airfryer + Rice Cooker", 15, 650, 40, 82, 14, 1.50,
+          ["fish", "rice", "peas", "yogurt", "cucumber"],
+          ["Start rice in the Rice Cooker and add frozen peas for the last 5 mins.", "Airfry fish fingers at 200°C for 10 mins.", "Serve with a quick yogurt-cucumber dip."],
+          [["Fish fingers (frozen)", 180, "g", "M", 120], ["Jasmine rice", 100, "g", "G", 180], ["Frozen peas", 80, "g", "V", 60], ["Greek yogurt", 60, "g", "D", 10], ["Cucumber", 0.25, "pcs", "V", 6]]),
+        mk("egg-ham-cheese-bake", "Egg, Ham & Cheese Veggie Bake", "Oven + Pan", 25, 640, 52, 36, 32, 1.70,
+          ["egg", "ham", "pork", "cheese", "spinach", "cottage cheese"],
+          ["Whisk eggs with cottage cheese, diced ham and spinach.", "Pour into an oiled oven dish and top with cheese.", "Bake at 200°C for 18 mins until set; serve with bread."],
+          [["Eggs", 4, "pcs", "D", 18], ["Lean ham", 70, "g", "M", 7], ["Cottage cheese", 100, "g", "D", 10], ["Grated cheese", 30, "g", "D", 14], ["Baby spinach", 50, "g", "V", 5]]),
+        mk("chicken-broccoli-cheese-pasta", "Chicken, Broccoli & Cheese Pasta", "Gas Stove + Pan", 20, 750, 56, 82, 18, 1.85,
+          ["chicken", "broccoli", "pasta", "cheese", "cottage cheese", "garlic"],
+          ["Boil pasta and add broccoli florets for the last 3 mins.", "Sear diced chicken with garlic in a pan for 7 mins.", "Toss everything with cottage cheese and grated cheese until creamy."],
+          [["Chicken breast fillet", 200, "g", "M", 2], ["Durum pasta", 115, "g", "G", 180], ["Broccoli (fresh or frozen)", 120, "g", "V", 6], ["Cottage cheese", 80, "g", "D", 10], ["Grated cheese", 30, "g", "D", 14]]),
+        mk("rice-cooker-chicken-pilaf", "Lazy Rice Cooker Chicken & Veg Pilaf", "Rice Cooker", 12, 700, 50, 82, 14, 1.65,
+          ["chicken", "rice", "peas", "carrot", "soy sauce"],
+          ["Put rice, water, diced chicken breast, frozen mixed veg and a splash of soy sauce into the Rice Cooker.", "Press cook and walk away.", "Fluff and serve; add chili sauce if you like."],
+          [["Chicken breast fillet", 190, "g", "M", 2], ["Jasmine rice", 110, "g", "G", 180], ["Frozen peas & carrots mix", 100, "g", "V", 60], ["Soy sauce", 20, "ml", "S", 120]]),
+        mk("turkey-chili-baked-potato", "Turkey Chili Loaded Baked Potato", "Airfryer + Gas Stove", 25, 760, 52, 88, 16, 1.80,
+          ["minced meat", "turkey", "beans", "tomato", "potato", "yogurt"],
+          ["Airfry pricked potatoes at 200°C for 20 mins.", "Brown minced turkey, add kidney beans, passata and chili powder; simmer 10 mins.", "Split the potatoes and load with chili and a spoon of yogurt."],
+          [["Minced turkey", 170, "g", "M", 2], ["Large baking potatoes", 350, "g", "V", 21], ["Red kidney beans (canned)", 90, "g", "S", 180], ["Tomato passata", 130, "g", "S", 60], ["Greek yogurt", 50, "g", "D", 10]]),
+        mk("skyr-chicken-wrap", "Crispy Chicken & Skyr Ranch Wraps", "Airfryer", 18, 700, 56, 66, 18, 1.90,
+          ["chicken", "tortilla", "skyr", "yogurt", "cucumber", "tomato"],
+          ["Airfry seasoned chicken strips at 200°C for 10 mins.", "Mix skyr with garlic powder, salt and herbs for a ranch sauce.", "Wrap chicken, cucumber, tomato and sauce in tortillas."],
+          [["Chicken breast fillet", 200, "g", "M", 2], ["Large tortilla wraps", 2, "pcs", "G", 30], ["Skyr", 80, "g", "D", 10], ["Cucumber", 0.3, "pcs", "V", 6], ["Tomatoes", 80, "g", "V", 6]]),
+        mk("chickpea-egg-curry-rice", "Chickpea & Egg Curry with Rice", "Rice Cooker + Gas Stove", 22, 700, 36, 100, 16, 1.20,
+          ["chickpeas", "egg", "rice", "tomato", "onion", "spinach", "garlic"],
+          ["Start rice in the Rice Cooker.", "Fry onion and garlic with curry powder, add chickpeas and passata and simmer 10 mins.", "Crack in eggs, cover until set, wilt in spinach and serve over rice."],
+          [["Canned chickpeas", 150, "g", "S", 180], ["Eggs", 2, "pcs", "D", 18], ["Jasmine rice", 100, "g", "G", 180], ["Tomato passata", 120, "g", "S", 60], ["Baby spinach", 50, "g", "V", 5], ["Onion, garlic & curry powder", 1, "set", "S", 21]]),
+        mk("turkey-zucchini-tomato-pasta", "Turkey, Zucchini & Tomato Pasta", "Gas Stove + Pan", 20, 730, 52, 86, 14, 1.75,
+          ["minced meat", "turkey", "zucchini", "tomato", "pasta", "cheese"],
+          ["Boil the pasta.", "Brown minced turkey, add grated zucchini and passata, simmer 8 mins.", "Toss with pasta and top with grated cheese."],
+          [["Minced turkey", 180, "g", "M", 2], ["Durum pasta", 115, "g", "G", 180], ["Zucchini", 0.5, "pcs", "V", 7], ["Tomato passata", 150, "g", "S", 60], ["Grated cheese", 30, "g", "D", 14]]),
+        mk("lecso-sausage-rice", "Hungarian Lecsó with Sausage & Rice", "Gas Stove + Rice Cooker", 25, 720, 38, 84, 26, 1.60,
+          ["sausage", "pork", "bell pepper", "tomato", "onion", "egg", "rice"],
+          ["Start rice in the Rice Cooker.", "Fry onion, then add sliced peppers, tomatoes and paprika and cook 12 mins.", "Add sliced sausage (and an egg if you like), simmer 5 mins and serve over rice."],
+          [["Smoked sausage (kolbász)", 110, "g", "M", 14], ["Jasmine rice", 100, "g", "G", 180], ["Bell pepper", 1, "pcs", "V", 7], ["Tomatoes", 150, "g", "V", 6], ["Eggs", 1, "pcs", "D", 18], ["Yellow onion", 0.4, "pcs", "V", 21]]),
+        mk("airfryer-pork-chops-roast-veg", "Airfryer Pork Chops with Roast Potatoes & Carrots", "Airfryer", 25, 760, 54, 62, 28, 2.00,
+          ["pork", "potato", "carrot", "garlic"],
+          ["Cube potatoes and carrots, toss with oil, salt and paprika and Airfry at 200°C for 10 mins.", "Add seasoned pork chops on top and Airfry another 12 mins, flipping once.", "Rest the chops 2 mins and serve."],
+          [["Pork chops (boneless)", 220, "g", "M", 3], ["Potatoes", 300, "g", "V", 21], ["Carrots", 120, "g", "V", 14], ["Garlic & paprika", 1, "set", "S", 90]])
+      );
+    })();
+
     const DISLIKE_OPTIONS = [
       "Mushrooms", "Fish", "Tuna", "Seafood", "Pork", "Beef", "Turkey",
       "Beans", "Lentils", "Peas", "Corn", "Broccoli", "Spinach", "Eggplant",
@@ -1185,6 +1302,7 @@
         hiddenRecipes: {},
         settings: { deliveryPrice: 13 },
         history: [],
+        spending: [],
         planNegotiation: {
           status: "draft",
           proposedBy: "laca",
@@ -1232,6 +1350,7 @@
       s.hiddenRecipes = r.hiddenRecipes || {};
       s.settings = Object.assign({}, d.settings, r.settings || {});
       s.history = toArr(r.history);
+      s.spending = toArr(r.spending);
       s.shopping = Object.assign({}, d.shopping, r.shopping || {});
       s.shopping.atHome = s.shopping.atHome || {};
       s.shopping.bought = s.shopping.bought || {};
@@ -1715,6 +1834,37 @@
       saveStateAndSync(currentUser);
     }
 
+    // Finger/mouse drag on the card: release past 90px to swipe
+    function attachSwipeDrag() {
+      const card = document.getElementById("activeSwipeCard");
+      if (!card) return;
+      const id = card.querySelector("button[onclick^='handleSwipe']").getAttribute("onclick").match(/'([^']+)'/)[1];
+      let startX = null, dx = 0;
+      card.style.touchAction = "pan-y";
+      card.addEventListener("pointerdown", (e) => {
+        if (e.target.closest("button")) return;
+        startX = e.clientX; dx = 0;
+        card.style.transition = "none";
+        card.setPointerCapture(e.pointerId);
+      });
+      card.addEventListener("pointermove", (e) => {
+        if (startX === null) return;
+        dx = e.clientX - startX;
+        card.style.transform = `translateX(${dx}px) rotate(${dx / 18}deg)`;
+        card.style.borderColor = dx > 30 ? "#10b981" : dx < -30 ? "#f43f5e" : "";
+      });
+      const end = () => {
+        if (startX === null) return;
+        startX = null;
+        card.style.transition = "";
+        card.style.transform = "";
+        card.style.borderColor = "";
+        if (Math.abs(dx) > 90) handleSwipe(id, dx > 0 ? "right" : "left");
+      };
+      card.addEventListener("pointerup", end);
+      card.addEventListener("pointercancel", end);
+    }
+
     function neverShowRecipe(recipeId) {
       if (!confirm("Hide this meal for both of you? You can restore it later in Setup.")) return;
       state.hiddenRecipes[recipeId] = true;
@@ -1918,6 +2068,8 @@
           </div>
         `;
       }
+
+      attachSwipeDrag();
 
       // Render Matched Pool
       const poolList = document.getElementById("matchedPoolList");
@@ -2392,7 +2544,47 @@
       });
       const price = Number(state.settings && state.settings.deliveryPrice) || 13;
       const delivery = portions * price;
-      return { portions, cost, delivery, saved: delivery - cost, price };
+      const actual = weekSpent();
+      if (actual > 0) cost = actual; // real receipts beat the estimate
+      return { portions, cost, delivery, saved: delivery - cost, price, actual: actual > 0 };
+    }
+
+    /* ---- Receipts: just the amount, synced in the shared state ---- */
+    function weekSpent() {
+      const start = getWeekMonday().getTime();
+      return (state.spending || []).filter(e => e.ts >= start).reduce((n, e) => n + (Number(e.amount) || 0), 0);
+    }
+
+    function addSpend() {
+      const amt = Number(document.getElementById("spendAmount").value);
+      if (!amt || amt <= 0) { showToast("Type the receipt total first"); return; }
+      const note = document.getElementById("spendNote").value.trim();
+      state.spending.push({ id: "sp" + Date.now(), ts: Date.now(), amount: Math.round(amt * 100) / 100, note, by: currentUser });
+      state.spending = state.spending.slice(-200);
+      document.getElementById("spendAmount").value = "";
+      document.getElementById("spendNote").value = "";
+      saveStateAndSync(currentUser);
+      showToast("Saved " + fmtEur(amt));
+    }
+
+    function deleteSpend(id) {
+      state.spending = state.spending.filter(e => e.id !== id);
+      saveStateAndSync(currentUser);
+    }
+
+    function renderSpendCard() {
+      const start = getWeekMonday().getTime();
+      const mine = state.spending.filter(e => e.ts >= start).sort((a, b) => b.ts - a.ts);
+      const m = computeMoney(state.planNegotiation.currentSlots || []);
+      const total = weekSpent();
+      document.getElementById("spendSummary").innerHTML = total > 0
+        ? `This week: <strong class="text-white">${fmtEur(total)}</strong> spent vs <strong class="text-rose-300">${fmtEur(m.delivery)}</strong> if you'd ordered delivery. You saved <strong class="text-emerald-300">${fmtEur(Math.max(0, m.delivery - total))}</strong>.`
+        : "Nothing entered this week yet.";
+      document.getElementById("spendList").innerHTML = mine.map(e => `
+        <div class="flex items-center justify-between p-2 rounded-xl bg-slate-900/70 border border-slate-800 text-xs">
+          <span class="text-slate-300">${new Date(e.ts).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}${e.note ? " · " + esc(e.note) : ""} <span class="text-slate-500">${e.by === "fruzsi" ? "👩" : "👦"}</span></span>
+          <span class="flex items-center gap-2"><strong class="text-white">${fmtEur(e.amount)}</strong><button onclick="deleteSpend('${esc(e.id)}')" class="text-slate-500 px-1">✕</button></span>
+        </div>`).join("");
     }
 
     function setDeliveryPrice(val) {
@@ -2416,7 +2608,7 @@
         <div class="text-3xl font-extrabold text-white">${fmtEur(Math.max(0, m.saved))}</div>
         <div class="grid grid-cols-3 gap-2 mt-3 text-center">
           <div class="p-2 rounded-xl bg-slate-900/80 border border-slate-800">
-            <div class="text-[10px] text-slate-400">Cooking at home</div>
+            <div class="text-[10px] text-slate-400">${m.actual ? "Spent (receipts)" : "Cooking (estimate)"}</div>
             <div class="text-sm font-bold text-emerald-300">${fmtEur(m.cost)}</div>
           </div>
           <div class="p-2 rounded-xl bg-slate-900/80 border border-slate-800">
@@ -2944,6 +3136,7 @@
         desc.textContent = "1-Trip Mode: buy 100% of the week's groceries on your first cooking day and freeze whatever won't last.";
       }
 
+      renderSpendCard();
       const trips = buildShoppingTrips();
       const container = document.getElementById("shoppingTripsContainer");
       const locked = state.planNegotiation.status === "locked";
