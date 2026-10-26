@@ -1390,6 +1390,133 @@
       );
     })();
 
+    /********************************************************************
+     * 2d. 32 UNIQUE WORLD DISHES: cheap, filling, balanced macros
+     * (protein + carbs + fibre + healthy fats, not just protein)
+     ********************************************************************/
+    (function addWorldRecipes() {
+      const AISLE = { M: "Meat & Fish", D: "Dairy & Eggs", V: "Veggies & Fruit", G: "Dry Goods & Carbs", S: "Sauces & Spices" };
+      const mk = (id, name, equipment, mins, protein, carbs, fat, cost, steps, ings) => ({
+        id, name, equipment, prepMinutes: mins, prepTime: mins + " min",
+        calories: protein * 4 + carbs * 4 + fat * 9, protein, carbs, fat, costPerPortion: "€" + cost.toFixed(2),
+        tags: ings.map(i => i[0].toLowerCase()), steps,
+        ingredients: ings.map(i => ({ name: i[0], amountPerPortion: i[1], unit: i[2], aisle: AISLE[i[3]], shelfLifeDays: i[4] }))
+      });
+      DEFAULT_RECIPES.push(
+        // ---------- Hungarian classics ----------
+        mk("spinach-fozelek-eggs", "Spinach Főzelék with Fried Eggs & Boiled Potatoes (Vegetarian)", "Gas Stove + Pan", 25, 32, 72, 26, 1.10,
+          ["Boil diced potatoes for 12 mins.", "Simmer frozen spinach with a flour-and-milk roux, garlic and salt for 8 mins until thick.", "Serve the spinach over the potatoes with fried eggs and a squeeze of lemon."],
+          [["Frozen spinach", 200, "g", "V", 60], ["Potatoes", 300, "g", "V", 21], ["Eggs", 2, "pcs", "D", 18], ["Milk", 100, "ml", "D", 7], ["Flour", 20, "g", "G", 365], ["Garlic", 1, "set", "S", 21]]),
+        mk("rakott-krumpli", "Rakott Krumpli: Layered Potato, Egg & Sausage Bake", "Oven + Pan", 30, 34, 68, 36, 1.50,
+          ["Boil sliced potatoes and hard-boil the eggs, then slice the eggs.", "Layer potatoes, egg slices and sliced smoked sausage in a dish with sour cream between layers.", "Bake at 200°C for 15 mins until golden on top."],
+          [["Potatoes", 350, "g", "V", 21], ["Eggs", 2, "pcs", "D", 18], ["Smoked sausage (kolbász)", 70, "g", "M", 14], ["Sour cream", 60, "g", "D", 10], ["Paprika", 1, "set", "S", 90]]),
+        mk("lazy-stuffed-cabbage", "Lazy Stuffed Cabbage (Lusta Töltött Káposzta) One-Pot", "Gas Stove + Pan", 28, 38, 72, 24, 1.60,
+          ["Brown minced pork with onion and paprika.", "Add rice, sauerkraut, passata and 200 ml water, cover and simmer 18 mins until the rice is soft.", "Serve with a spoon of sour cream."],
+          [["Minced pork", 150, "g", "M", 2], ["Long-grain rice", 70, "g", "G", 180], ["Sauerkraut", 200, "g", "S", 90], ["Tomato passata", 100, "g", "S", 60], ["Yellow onion", 0.4, "pcs", "V", 21], ["Sour cream", 40, "g", "D", 10], ["Paprika", 1, "set", "S", 90]]),
+        mk("szekelygulyas", "Székelygulyás: Pork & Sauerkraut Stew with Sour Cream", "Gas Stove + Pan", 30, 38, 70, 28, 1.90,
+          ["Brown diced pork shoulder with onion and plenty of paprika.", "Add sauerkraut, diced potatoes and water to cover; simmer 22 mins.", "Top each bowl with sour cream."],
+          [["Pork shoulder (diced)", 170, "g", "M", 3], ["Sauerkraut", 200, "g", "S", 90], ["Potatoes", 250, "g", "V", 21], ["Yellow onion", 0.4, "pcs", "V", 21], ["Sour cream", 50, "g", "D", 10], ["Paprika", 1, "set", "S", 90]]),
+        mk("cabbage-pasta-kaposztas-teszta", "Káposztás Tészta: Sweet Fried Cabbage Pasta with Cottage Cheese (Vegetarian)", "Gas Stove + Pan", 25, 28, 100, 18, 0.90,
+          ["Boil the pasta.", "Slowly fry shredded cabbage and onion in oil with a pinch of sugar and lots of black pepper for 15 mins until golden.", "Toss with the pasta and top with cottage cheese."],
+          [["White cabbage", 250, "g", "V", 14], ["Pasta or egg noodles", 120, "g", "G", 180], ["Yellow onion", 0.3, "pcs", "V", 21], ["Cottage cheese", 80, "g", "D", 10], ["Sugar & black pepper", 1, "set", "S", 365]]),
+        mk("stuffed-peppers-toltott-paprika", "Stuffed Peppers (Töltött Paprika) with Rice & Mince", "Oven + Pan", 30, 36, 78, 22, 1.90,
+          ["Mix minced meat with rice, onion and paprika and stuff into hollowed peppers.", "Place in a dish, pour passata around them and cover with foil.", "Bake at 200°C for 30 mins."],
+          [["Bell pepper", 2, "pcs", "V", 7], ["Minced beef or pork", 140, "g", "M", 2], ["Long-grain rice", 70, "g", "G", 180], ["Tomato passata", 150, "g", "S", 60], ["Yellow onion", 0.3, "pcs", "V", 21], ["Paprika", 1, "set", "S", 90]]),
+
+        // ---------- Italian & Mediterranean ----------
+        mk("minestrone-beans-pasta", "Big Minestrone with White Beans & Pasta (Vegetarian)", "Gas Stove + Pan", 28, 28, 98, 16, 1.10,
+          ["Soften diced carrot, potato and zucchini in oil for 5 mins.", "Add passata, beans and 500 ml water, simmer 12 mins, then add the small pasta for the last 8.", "Serve with grated cheese on top."],
+          [["Canned white beans", 120, "g", "S", 180], ["Small soup pasta", 70, "g", "G", 180], ["Carrots", 80, "g", "V", 14], ["Potatoes", 150, "g", "V", 21], ["Tomato passata", 150, "g", "S", 60], ["Zucchini", 0.3, "pcs", "V", 7], ["Grated cheese", 30, "g", "D", 14]]),
+        mk("spanish-tortilla", "Spanish Potato Omelette (Tortilla Española) with Tomato Salad (Vegetarian)", "Gas Stove + Pan", 28, 30, 70, 28, 1.20,
+          ["Slowly fry sliced potatoes and onion in oil for 12 mins until soft.", "Mix with beaten eggs, pour back into the pan and cook 5 mins, then flip and cook 3 more.", "Serve in wedges with sliced tomato and bread."],
+          [["Potatoes", 300, "g", "V", 21], ["Eggs", 4, "pcs", "D", 18], ["Yellow onion", 0.4, "pcs", "V", 21], ["Tomatoes", 120, "g", "V", 6], ["Bread slices", 2, "pcs", "G", 5]]),
+        mk("polenta-bean-ragu", "Creamy Polenta with Tomato & Bean Ragù (Vegetarian)", "Gas Stove + Pan", 22, 30, 98, 18, 1.00,
+          ["Stir polenta into boiling salted water and cook 8 mins until thick; stir in cheese.", "Simmer onion, garlic, passata and beans for 10 mins.", "Spoon the ragù over the polenta."],
+          [["Polenta (cornmeal)", 100, "g", "G", 365], ["Canned white beans", 120, "g", "S", 180], ["Tomato passata", 150, "g", "S", 60], ["Grated cheese", 40, "g", "D", 14], ["Onion & garlic", 0.3, "pcs", "V", 21]]),
+        mk("sardine-tomato-spaghetti", "Sardine & Tomato Spaghetti with Lemon", "Gas Stove + Pan", 18, 36, 92, 20, 1.60,
+          ["Boil the spaghetti.", "Warm garlic in oil, add passata and sardines and break them up for 5 mins.", "Toss with the pasta and finish with lemon juice and pepper."],
+          [["Canned sardines in tomato", 120, "g", "M", 365], ["Spaghetti", 120, "g", "G", 180], ["Tomato passata", 100, "g", "S", 60], ["Garlic", 1, "set", "S", 21], ["Lemon", 0.3, "pcs", "V", 10]]),
+        mk("ratatouille-egg-bread", "Ratatouille with Fried Egg & Crusty Bread (Vegetarian)", "Gas Stove + Pan", 28, 28, 76, 26, 1.30,
+          ["Fry diced zucchini, eggplant and pepper in oil for 8 mins.", "Add passata and simmer 10 mins until soft and saucy.", "Top with fried eggs and cheese and serve with bread."],
+          [["Zucchini", 0.6, "pcs", "V", 7], ["Eggplant", 0.4, "pcs", "V", 7], ["Bell pepper", 0.5, "pcs", "V", 7], ["Tomato passata", 150, "g", "S", 60], ["Eggs", 2, "pcs", "D", 18], ["Bread slices", 3, "pcs", "G", 5], ["Grated cheese", 20, "g", "D", 14]]),
+
+        // ---------- Middle East ----------
+        mk("airfryer-falafel-pita", "Airfryer Falafel Patties with Yogurt Sauce & Flatbread (Vegetarian)", "Airfryer", 25, 28, 88, 20, 1.15,
+          ["Mash chickpeas with flour, grated onion, cumin and parsley into a thick mix and shape into patties.", "Airfry at 200°C for 12 mins, flipping once.", "Serve in warm flatbread with garlic yogurt sauce."],
+          [["Canned chickpeas", 150, "g", "S", 180], ["Flour", 30, "g", "G", 365], ["Yellow onion", 0.3, "pcs", "V", 21], ["Large tortilla wraps", 2, "pcs", "G", 30], ["Greek yogurt", 70, "g", "D", 10], ["Cumin & parsley", 1, "set", "S", 90]]),
+        mk("mujaddara-lentil-rice", "Mujaddara: Lentils, Rice & Caramelised Onions with Yogurt (Vegetarian)", "Rice Cooker + Gas Stove", 28, 30, 102, 16, 0.90,
+          ["Cook lentils and rice together in the Rice Cooker with cumin and salt.", "Fry thinly sliced onions in oil for 15 mins until dark and crispy.", "Pile the onions on top and serve with yogurt."],
+          [["Green or brown lentils", 80, "g", "G", 365], ["Long-grain rice", 70, "g", "G", 180], ["Yellow onion", 1, "pcs", "V", 21], ["Greek yogurt", 80, "g", "D", 10], ["Cumin", 1, "set", "S", 90]]),
+        mk("koshari-egyptian", "Koshari: Egyptian Rice, Lentils & Pasta with Spicy Tomato Sauce (Vegetarian)", "Gas Stove + Pan", 30, 28, 112, 12, 0.95,
+          ["Cook lentils, rice and macaroni (separate pots or one after the other).", "Simmer passata with garlic, cumin and chili for 10 mins.", "Layer rice, lentils, pasta and chickpeas and pour the sauce over."],
+          [["Green or brown lentils", 70, "g", "G", 365], ["Long-grain rice", 60, "g", "G", 180], ["Macaroni", 60, "g", "G", 180], ["Tomato passata", 200, "g", "S", 60], ["Canned chickpeas", 80, "g", "S", 180], ["Yellow onion", 0.5, "pcs", "V", 21], ["Cumin & chili", 1, "set", "S", 90]]),
+
+        // ---------- Asian ----------
+        mk("peanut-butter-noodles", "Peanut Butter Noodles with Crunchy Cabbage & Egg (Vegetarian)", "Gas Stove + Pan", 18, 30, 88, 28, 1.30,
+          ["Boil the noodles and drain.", "Stir-fry shredded cabbage and carrot for 4 mins, push aside and scramble the eggs.", "Toss everything with peanut butter loosened with soy sauce and hot water."],
+          [["Egg noodles", 100, "g", "G", 180], ["Peanut butter", 40, "g", "G", 180], ["White cabbage", 120, "g", "V", 14], ["Eggs", 2, "pcs", "D", 18], ["Soy sauce", 20, "ml", "S", 120], ["Carrots", 60, "g", "V", 14]]),
+        mk("chicken-congee", "Chicken & Egg Congee (Rice Porridge) with Spring Onion", "Rice Cooker", 15, 42, 88, 18, 1.35,
+          ["Put rice, chicken thigh pieces, ginger and 6x water into the Rice Cooker on the porridge or normal setting.", "Cook until the rice is creamy (about 40 mins, hands off).", "Stir in soy sauce, top with a soft-boiled or fried egg and spring onion."],
+          [["Chicken thigh fillet", 150, "g", "M", 2], ["Jasmine rice", 100, "g", "G", 180], ["Eggs", 2, "pcs", "D", 18], ["Ginger, soy & spring onion", 1, "set", "S", 14]]),
+        mk("oyakodon", "Oyakodon: Chicken & Egg Rice Bowl", "Gas Stove + Rice Cooker", 20, 46, 88, 18, 1.80,
+          ["Start rice in the Rice Cooker.", "Simmer sliced onion and chicken in soy sauce, honey and a splash of water for 8 mins.", "Pour beaten eggs over the top, cover for 1 min until just set, and slide over the rice."],
+          [["Chicken thigh fillet", 170, "g", "M", 2], ["Eggs", 3, "pcs", "D", 18], ["Jasmine rice", 110, "g", "G", 180], ["Yellow onion", 0.5, "pcs", "V", 21], ["Soy sauce & honey", 30, "ml", "S", 120]]),
+        mk("tomato-egg-stirfry", "Chinese Tomato & Egg Stir-Fry with Rice (Vegetarian)", "Rice Cooker + Gas Stove", 15, 26, 88, 22, 1.00,
+          ["Start rice in the Rice Cooker.", "Scramble the eggs softly and set aside.", "Fry chopped tomatoes with a pinch of sugar and soy until saucy, fold the eggs back in and serve over rice."],
+          [["Eggs", 3, "pcs", "D", 18], ["Tomatoes", 250, "g", "V", 6], ["Jasmine rice", 110, "g", "G", 180], ["Soy sauce & sugar", 15, "ml", "S", 120], ["Yellow onion", 0.2, "pcs", "V", 21]]),
+        mk("mapo-tofu-rice", "Spicy Mapo-Style Tofu with Minced Pork & Rice", "Rice Cooker + Gas Stove", 22, 40, 84, 22, 1.60,
+          ["Start rice in the Rice Cooker.", "Brown the minced pork with garlic and chili, add soy sauce and a little water.", "Gently fold in cubed tofu and simmer 6 mins; serve over rice."],
+          [["Firm tofu", 150, "g", "D", 10], ["Minced pork", 90, "g", "M", 2], ["Jasmine rice", 100, "g", "G", 180], ["Soy sauce & chili", 25, "ml", "S", 120], ["Garlic", 1, "set", "S", 21]]),
+
+        // ---------- Latin America ----------
+        mk("huevos-rancheros", "Huevos Rancheros: Eggs on Beans & Tortilla (Vegetarian)", "Gas Stove + Pan", 20, 34, 78, 26, 1.30,
+          ["Simmer beans with passata, onion and cumin for 8 mins.", "Warm tortillas in a dry pan and spoon the beans over.", "Top with fried eggs and cheese."],
+          [["Eggs", 3, "pcs", "D", 18], ["Large tortilla wraps", 2, "pcs", "G", 30], ["Red kidney beans (canned)", 120, "g", "S", 180], ["Tomato passata", 100, "g", "S", 60], ["Grated cheese", 30, "g", "D", 14], ["Yellow onion", 0.2, "pcs", "V", 21]]),
+        mk("picadillo-rice", "Picadillo: Mexican Mince with Potato & Peas over Rice", "Gas Stove + Pan", 28, 38, 92, 20, 1.70,
+          ["Cook rice (pan or Rice Cooker).", "Brown minced meat with onion and cumin, add diced potato, passata and water and simmer 15 mins.", "Stir in peas for the last 3 mins and serve over rice."],
+          [["Minced beef or turkey", 150, "g", "M", 2], ["Potatoes", 150, "g", "V", 21], ["Frozen peas", 60, "g", "V", 60], ["Tomato passata", 120, "g", "S", 60], ["Long-grain rice", 90, "g", "G", 180], ["Yellow onion", 0.3, "pcs", "V", 21], ["Cumin", 1, "set", "S", 90]]),
+        mk("black-bean-soup-rice", "Smoky Black Bean Soup with Rice & Cheese (Vegetarian)", "Gas Stove + Pan", 25, 28, 96, 18, 1.10,
+          ["Fry onion with smoked paprika and cumin.", "Add beans, passata and 400 ml water and simmer 15 mins, mashing some beans for body.", "Serve over rice with cheese and sour cream."],
+          [["Black beans (canned)", 200, "g", "S", 180], ["Long-grain rice", 60, "g", "G", 180], ["Yellow onion", 0.4, "pcs", "V", 21], ["Tomato passata", 100, "g", "S", 60], ["Grated cheese", 30, "g", "D", 14], ["Sour cream", 40, "g", "D", 10]]),
+
+        // ---------- India ----------
+        mk("aloo-gobi-rice", "Aloo Gobi: Spiced Potato & Cauliflower with Rice (Vegetarian)", "Gas Stove + Pan", 28, 26, 102, 18, 1.10,
+          ["Fry onion with curry powder for 3 mins.", "Add diced potato and cauliflower florets with a splash of water, cover and cook 15 mins; add peas at the end.", "Serve with rice and a spoon of yogurt."],
+          [["Cauliflower", 200, "g", "V", 7], ["Potatoes", 250, "g", "V", 21], ["Long-grain rice", 90, "g", "G", 180], ["Yellow onion", 0.4, "pcs", "V", 21], ["Greek yogurt", 60, "g", "D", 10], ["Frozen peas", 50, "g", "V", 60], ["Curry powder", 1, "set", "S", 90]]),
+
+        // ---------- British, German, Polish ----------
+        mk("turkey-lentil-shepherds-pie", "Turkey & Lentil Shepherd's Pie with Mashed Potato", "Oven + Pan", 30, 42, 78, 20, 1.65,
+          ["Boil potatoes and mash with a little milk and salt.", "Brown minced turkey with carrot, add lentils and passata and simmer 8 mins.", "Spread the mash over the mince in a dish, top with cheese and bake at 210°C for 12 mins."],
+          [["Minced turkey", 140, "g", "M", 2], ["Canned lentils", 80, "g", "S", 180], ["Potatoes", 300, "g", "V", 21], ["Carrots", 80, "g", "V", 14], ["Tomato passata", 80, "g", "S", 60], ["Grated cheese", 25, "g", "D", 14]]),
+        mk("loaded-beans-on-toast", "Loaded Beans on Toast with Fried Eggs & Cheese (Vegetarian)", "Gas Stove + Pan", 12, 36, 84, 22, 1.20,
+          ["Warm the baked beans in a pan.", "Toast the bread and fry the eggs.", "Pile beans on toast, top with eggs and melted cheese."],
+          [["Canned baked beans", 200, "g", "S", 180], ["Bread slices", 4, "pcs", "G", 5], ["Eggs", 2, "pcs", "D", 18], ["Grated cheese", 30, "g", "D", 14]]),
+        mk("pierogi-cabbage-bacon", "Pierogi with Fried Cabbage & Bacon", "Gas Stove + Pan", 22, 34, 92, 26, 1.70,
+          ["Boil the pierogi for 5 mins and drain.", "Fry diced bacon, onion and shredded cabbage for 10 mins until soft and golden.", "Add the pierogi to the pan for a minute and serve with sour cream."],
+          [["Pierogi (frozen, potato & cheese)", 250, "g", "G", 120], ["Diced bacon", 50, "g", "M", 14], ["White cabbage", 150, "g", "V", 14], ["Yellow onion", 0.3, "pcs", "V", 21], ["Sour cream", 40, "g", "D", 10]]),
+        mk("bauernfruhstuck", "Bauernfrühstück: Farmer's Potato, Ham & Egg Skillet", "Gas Stove + Pan", 25, 38, 64, 30, 1.40,
+          ["Boil sliced potatoes for 8 mins, drain and fry in a big pan until crisp.", "Add diced ham and onion and cook 4 mins.", "Pour beaten eggs over, cover and cook 4 mins until set."],
+          [["Potatoes", 350, "g", "V", 21], ["Lean ham", 80, "g", "M", 7], ["Eggs", 3, "pcs", "D", 18], ["Yellow onion", 0.4, "pcs", "V", 21]]),
+
+        // ---------- Oven & airfryer comfort ----------
+        mk("airfryer-black-bean-burgers", "Airfryer Black Bean & Oat Burgers with Yogurt Sauce (Vegetarian)", "Airfryer", 25, 26, 92, 18, 1.10,
+          ["Mash black beans with oats, an egg, cumin and paprika and shape into patties.", "Airfry at 190°C for 12 mins, flipping once.", "Serve in a bun with lettuce, tomato and yogurt sauce."],
+          [["Black beans (canned)", 150, "g", "S", 180], ["Rolled oats", 40, "g", "G", 180], ["Eggs", 1, "pcs", "D", 18], ["Burger buns", 1, "pcs", "G", 4], ["Greek yogurt", 50, "g", "D", 10], ["Lettuce", 30, "g", "V", 5], ["Tomatoes", 60, "g", "V", 6]]),
+        mk("stuffed-zucchini-boats", "Mince-Stuffed Zucchini Boats with Cheese & Potato Wedges", "Oven + Pan", 30, 42, 62, 26, 1.80,
+          ["Halve zucchini and scoop out the middle; toss potato wedges in oil and start roasting at 210°C.", "Brown mince with the scooped zucchini and passata, spoon into the boats and top with cheese.", "Bake alongside the wedges for 18 mins."],
+          [["Zucchini", 1, "pcs", "V", 7], ["Minced beef or turkey", 150, "g", "M", 2], ["Tomato passata", 80, "g", "S", 60], ["Grated cheese", 40, "g", "D", 14], ["Potatoes", 250, "g", "V", 21], ["Yellow onion", 0.2, "pcs", "V", 21]]),
+        mk("cauliflower-ham-gratin", "Cauliflower & Ham Cheese Gratin with Bread", "Oven + Pan", 28, 38, 60, 30, 1.50,
+          ["Boil cauliflower florets for 6 mins and drain.", "Mix with diced ham and cooking cream in a dish and top with cheese.", "Bake at 200°C for 15 mins and serve with bread."],
+          [["Cauliflower", 300, "g", "V", 7], ["Lean ham", 80, "g", "M", 7], ["Cooking cream (10–20%)", 60, "ml", "D", 12], ["Grated cheese", 50, "g", "D", 14], ["Bread slices", 2, "pcs", "G", 5]]),
+        mk("oven-meatloaf-roast-veg", "Oven Meatloaf with Roast Potatoes & Carrots", "Oven + Pan", 30, 42, 70, 28, 1.85,
+          ["Mix mince with egg, breadcrumbs, grated onion, paprika and salt and shape into a loaf.", "Surround with chunks of potato and carrot tossed in oil.", "Roast at 200°C for 30 mins."],
+          [["Minced pork or beef", 170, "g", "M", 2], ["Eggs", 0.5, "pcs", "D", 18], ["Breadcrumbs", 30, "g", "G", 180], ["Potatoes", 280, "g", "V", 21], ["Carrots", 100, "g", "V", 14], ["Yellow onion", 0.3, "pcs", "V", 21]]),
+        mk("sausage-white-bean-casserole", "Smoky Sausage & White Bean Casserole with Bread", "Gas Stove + Pan", 25, 34, 82, 26, 1.50,
+          ["Brown sliced smoked sausage with onion and carrot.", "Add beans and passata and simmer 15 mins until thick.", "Serve with bread to mop up the sauce."],
+          [["Smoked sausage (kolbász)", 100, "g", "M", 14], ["Canned white beans", 200, "g", "S", 180], ["Tomato passata", 150, "g", "S", 60], ["Yellow onion", 0.4, "pcs", "V", 21], ["Carrots", 60, "g", "V", 14], ["Bread slices", 2, "pcs", "G", 5]])
+      );
+    })();
+
     const DISLIKE_OPTIONS = [
       "Mushrooms", "Fish", "Tuna", "Seafood", "Pork", "Beef", "Turkey",
       "Beans", "Lentils", "Peas", "Corn", "Broccoli", "Spinach", "Eggplant",
@@ -2735,7 +2862,7 @@
       if (/turkey/.test(t)) return "turkey";
       if (/beef/.test(t)) return "beef";
       if (/pork|bacon|ham\b|sausage|kolb/.test(t)) return "pork";
-      if (/tuna|fish/.test(t)) return "fish";
+      if (/tuna|fish|sardine/.test(t)) return "fish";
       if (/\begg/.test(t)) return "egg";
       if (/lentil|chickpea|bean/.test(t)) return "legume";
       return "other";
@@ -2911,6 +3038,16 @@
         green = ["rgba(34,197,94,.36)", "rgba(21,128,61,.28)"], yellow = ["rgba(250,204,21,.34)", "rgba(161,98,7,.28)"],
         pink = ["rgba(236,72,153,.32)", "rgba(131,24,67,.28)"];
       if (/burger/.test(n)) return G("🍔", ...warm);
+      if (/pierogi/.test(n)) return G("🥟", ...yellow);
+      if (/falafel/.test(n)) return G("🧆", ...green);
+      if (/meatloaf/.test(n)) return G("🍖", ...red);
+      if (/gratin/.test(n)) return G("🧀", ...yellow);
+      if (/shepherd/.test(n)) return G("🥧", ...gold);
+      if (/polenta/.test(n)) return G("🌽", ...yellow);
+      if (/ratatouille/.test(n)) return G("🍆", ...green);
+      if (/stuffed (peppers|zucchini)|töltött paprika/.test(n)) return G("🫑", ...red);
+      if (/casserole/.test(n)) return G("🥘", ...warm);
+      if (/beans on toast/.test(n)) return G("🍞", ...warm);
       if (/pizza/.test(n)) return G("🍕", ...red);
       if (/sandwich|toastie|toast\b/.test(n)) return G("🥪", ...warm);
       if (/wrap|burrito|quesadilla|fajita/.test(n)) return G("🌯", ...gold);
@@ -2924,7 +3061,7 @@
       if (/fried rice|rice|pilaf|bowl|lecs/.test(n)) return G("🍚", ...gold);
       if (/potato|wedges/.test(n)) return G("🥔", ...yellow);
       if (/omelette|egg|shakshuka/.test(n)) return G("🍳", ...yellow);
-      if (/tuna|fish/.test(n) || /tuna|fish/.test(ing)) return G("🐟", ...blue);
+      if (/tuna|fish|sardine/.test(n) || /tuna|fish|sardine/.test(ing)) return G("🐟", ...blue);
       if (/chicken/.test(ing)) return G("🍗", ...gold);
       if (/sausage|bacon|ham\b|pork/.test(ing)) return G("🥓", ...red);
       if (/beef|turkey|minced/.test(ing)) return G("🥩", ...red);
@@ -3650,9 +3787,9 @@
      ********************************************************************/
     const DISLIKE_GROUPS = [
       { key: "meat", icon: "🥩", label: "Meat", items: ["Chicken", "Turkey", "Pork", "Beef", "Bacon", "Ham", "Sausage", "Minced meat", "Lamb", "Liver"] },
-      { key: "fish", icon: "🐟", label: "Fish & seafood", items: ["Fish", "Tuna", "Salmon", "Seafood", "Shrimp"] },
+      { key: "fish", icon: "🐟", label: "Fish & seafood", items: ["Fish", "Tuna", "Salmon", "Sardines", "Seafood", "Shrimp"] },
       { key: "dairy", icon: "🧀", label: "Dairy & eggs", items: ["Egg", "Cheese", "Feta", "Mozzarella", "Cottage Cheese", "Yogurt", "Skyr", "Sour Cream", "Cream", "Milk", "Butter"] },
-      { key: "veg", icon: "🥦", label: "Vegetables", items: ["Mushrooms", "Broccoli", "Spinach", "Zucchini", "Eggplant", "Tomato", "Cucumber", "Bell Pepper", "Onion", "Garlic", "Carrot", "Cabbage", "Cauliflower", "Lettuce", "Celery", "Corn", "Peas", "Green Beans", "Potato", "Sweet Potato", "Pumpkin", "Beetroot", "Olives", "Pickles"] },
+      { key: "veg", icon: "🥦", label: "Vegetables", items: ["Mushrooms", "Broccoli", "Spinach", "Zucchini", "Eggplant", "Tomato", "Cucumber", "Bell Pepper", "Onion", "Garlic", "Carrot", "Cabbage", "Cauliflower", "Lettuce", "Celery", "Corn", "Peas", "Green Beans", "Potato", "Sweet Potato", "Pumpkin", "Beetroot", "Sauerkraut", "Olives", "Pickles"] },
       { key: "legumes", icon: "🫘", label: "Beans & lentils", items: ["Beans", "Lentils", "Chickpeas", "Hummus", "Tofu"] },
       { key: "carbs", icon: "🍝", label: "Rice, pasta & bread", items: ["Rice", "Pasta", "Noodles", "Bread", "Tortilla", "Oats", "Couscous", "Bulgur", "Gnocchi"] },
       { key: "flavour", icon: "🌶", label: "Sauces & flavours", items: ["Soy Sauce", "Mayonnaise", "Mustard", "Ketchup", "Pesto", "Curry", "Spicy Food", "Sesame", "Cilantro", "Honey"] },
