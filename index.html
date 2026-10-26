@@ -1,0 +1,2049 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Laca & Fruzsi" />
+  <meta name="theme-color" content="#0f172a" />
+  <title>Laca & Fruzsi • Meal & Prep Sync</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Firebase Realtime Database Compat SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+
+  <style>
+    :root {
+      --safe-top: env(safe-area-inset-top, 16px);
+      --safe-bottom: env(safe-area-inset-bottom, 20px);
+    }
+    body {
+      background-color: #0b1120;
+      color: #f8fafc;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      overscroll-behavior-y: none;
+    }
+    .safe-pt { padding-top: calc(var(--safe-top) + 12px); }
+    .safe-pb { padding-bottom: calc(var(--safe-bottom) + 84px); }
+    .nav-pb { padding-bottom: calc(var(--safe-bottom) + 6px); }
+    .glass {
+      background: rgba(30, 41, 59, 0.78);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .swipe-card {
+      transition: transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.28s ease;
+    }
+    .swipe-left-anim {
+      transform: translateX(-130%) rotate(-14deg) !important;
+      opacity: 0 !important;
+    }
+    .swipe-right-anim {
+      transform: translateX(130%) rotate(14deg) !important;
+      opacity: 0 !important;
+    }
+    ::-webkit-scrollbar { width: 0px; background: transparent; }
+  </style>
+</head>
+<body class="min-h-screen antialiased selection:bg-emerald-500 selection:text-white">
+
+  <!-- PIN & PROFILE LOCK MODAL -->
+  <div id="authModal" class="fixed inset-0 z-50 bg-slate-950/95 backdrop-blur-xl flex items-center justify-center p-5 hidden">
+    <div class="w-full max-w-sm glass rounded-3xl p-6 shadow-2xl border border-slate-700/60">
+      <div class="text-center mb-5">
+        <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-600 mx-auto flex items-center justify-center text-2xl shadow-lg shadow-emerald-500/20 mb-3">
+          🍲
+        </div>
+        <h1 class="text-xl font-bold tracking-tight text-white">Laca & Fruzsi Kitchen</h1>
+        <p class="text-xs text-slate-400 mt-1">Connect to your shared Firebase meal planner</p>
+      </div>
+
+      <div class="mb-4">
+        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">1. Who holds this iPhone?</label>
+        <div class="grid grid-cols-2 gap-2.5">
+          <button onclick="selectAuthUser('laca')" id="authBtnLaca" class="py-3 px-4 rounded-2xl border-2 border-emerald-500 bg-emerald-500/15 text-white font-semibold flex items-center justify-center gap-2 transition">
+            <span>👦</span> <span>Laca</span>
+          </button>
+          <button onclick="selectAuthUser('fruzsi')" id="authBtnFruzsi" class="py-3 px-4 rounded-2xl border-2 border-slate-700 bg-slate-800/50 text-slate-300 font-semibold flex items-center justify-center gap-2 transition">
+            <span>👩</span> <span>Fruzsi</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="mb-5">
+        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">2. Secret Couple PIN</label>
+        <input id="pinInput" type="password" placeholder="Enter your Firebase Rules PIN..." class="w-full px-4 py-3 rounded-2xl bg-slate-900 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 text-center text-lg tracking-widest" />
+        <p class="text-[11px] text-slate-400 mt-1.5 text-center">Matches the room code inside your Firebase Realtime Database Rules.</p>
+      </div>
+
+      <div id="authError" class="hidden mb-4 p-3 rounded-xl bg-rose-500/15 border border-rose-500/40 text-xs text-rose-300 text-center"></div>
+
+      <button onclick="connectWithPin()" id="connectBtn" class="w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-bold text-sm shadow-lg shadow-emerald-500/25 transition">
+        Unlock & Start Live Sync
+      </button>
+    </div>
+  </div>
+
+  <!-- TOP HEADER -->
+  <header class="sticky top-0 z-30 glass safe-pt pb-3 px-4 border-b border-slate-800/80">
+    <div class="max-w-md mx-auto flex items-center justify-between gap-2">
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="font-extrabold text-base tracking-tight bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">Laca & Fruzsi</span>
+          <span id="syncBadge" onclick="openPinSettings()" class="cursor-pointer text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700 flex items-center gap-1">
+            <span id="syncDot" class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+            <span id="syncText">Connecting</span>
+          </span>
+        </div>
+        <p id="headerSub" class="text-[11px] text-slate-400">High-Protein • Big Portions • Low Cost</p>
+      </div>
+
+      <!-- User Switcher -->
+      <div class="flex bg-slate-900/90 p-1 rounded-2xl border border-slate-800">
+        <button onclick="switchUser('laca')" id="topBtnLaca" class="px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1">
+          <span>👦</span><span>Laca</span>
+        </button>
+        <button onclick="switchUser('fruzsi')" id="topBtnFruzsi" class="px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1">
+          <span>👩</span><span>Fruzsi</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN CONTENT CONTAINER -->
+  <main class="max-w-md mx-auto px-4 pt-4 safe-pb">
+
+    <!-- TAB 1: WEEK CALENDAR -->
+    <section id="tab-week" class="space-y-4">
+      <div class="glass rounded-3xl p-4">
+        <div class="flex items-center justify-between mb-2">
+          <div>
+            <h2 class="text-base font-bold text-white">Who is at the Apartment?</h2>
+            <p class="text-xs text-slate-400">Tap each day to set if you're both there, solo, or away.</p>
+          </div>
+          <span id="weekSummaryBadge" class="text-xs font-bold px-2.5 py-1 rounded-xl bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"></span>
+        </div>
+
+        <div id="calendarDaysList" class="space-y-2 mt-3"></div>
+      </div>
+
+      <!-- Smart Batch Cooking Preview -->
+      <div class="glass rounded-3xl p-4 border border-emerald-500/20">
+        <div class="flex items-center justify-between mb-2">
+          <h3 class="text-sm font-bold text-emerald-300 flex items-center gap-1.5">
+            <span>⚡</span><span>Smart Batch-Cooking Blocks</span>
+          </h3>
+          <span class="text-[11px] text-slate-400">Cook once for 2 days</span>
+        </div>
+        <p class="text-xs text-slate-300 mb-3">
+          Based on your week, the app packs consecutive days together (including 3-portion solo-to-couple carryovers) so you cook as few times as possible:
+        </p>
+        <div id="batchBlocksPreview" class="space-y-2"></div>
+        <button onclick="switchTab('swipe')" class="mt-3 w-full py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs shadow-lg shadow-emerald-500/20 transition">
+          Next: Swipe Meals for This Week →
+        </button>
+      </div>
+    </section>
+
+    <!-- TAB 2: TINDER SWIPE -->
+    <section id="tab-swipe" class="space-y-4 hidden">
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="text-base font-bold text-white">Meal Matcher</h2>
+          <p id="swipeStatusSub" class="text-xs text-slate-400">Swipe right on meals you're open to eating this week.</p>
+        </div>
+        <div class="flex gap-1.5">
+          <button onclick="openAddRecipeModal()" class="px-3 py-1.5 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-bold">
+            + Add Meal
+          </button>
+          <button onclick="resetWeeklySwipes()" class="px-2.5 py-1.5 rounded-xl bg-slate-800 border border-slate-700 text-slate-300 text-xs font-medium">
+            Reset
+          </button>
+        </div>
+      </div>
+
+      <!-- Swipe Card Container -->
+      <div id="swipeArea" class="relative min-h-[430px] flex flex-col justify-center"></div>
+
+      <!-- Matched Pool Preview -->
+      <div class="glass rounded-3xl p-4">
+        <div class="flex items-center justify-between mb-2">
+          <h3 class="text-sm font-bold text-white flex items-center gap-1.5">
+            <span>🔥</span><span>Matched & Liked Pool</span>
+          </h3>
+          <button onclick="generateInitialPlanFromSwipes()" class="text-xs font-bold px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950">
+            Build Recommended Plan →
+          </button>
+        </div>
+        <div id="matchedPoolList" class="space-y-2 mt-2"></div>
+      </div>
+    </section>
+
+    <!-- TAB 3: PING-PONG PLAN NEGOTIATION -->
+    <section id="tab-plan" class="space-y-4 hidden">
+      <!-- Approval / Ping-Pong Status Banner -->
+      <div id="planStatusCard" class="glass rounded-3xl p-4 border"></div>
+
+      <!-- Side-by-Side Comparison when a Counter-Proposal exists -->
+      <div id="comparisonContainer" class="hidden space-y-3"></div>
+
+      <!-- Active Weekly Meal Plan Editor -->
+      <div class="glass rounded-3xl p-4">
+        <div class="flex items-center justify-between mb-3">
+          <div>
+            <h2 class="text-base font-bold text-white">Weekly Meal Plan</h2>
+            <p class="text-xs text-slate-400">Swap meals, split 2-day batches, or scale portion sizes.</p>
+          </div>
+          <button onclick="generateInitialPlanFromSwipes()" class="text-xs font-semibold px-2.5 py-1.5 rounded-xl bg-slate-800 border border-slate-700 text-slate-300">
+            🔄 Auto-Fill
+          </button>
+        </div>
+
+        <div id="planSlotsList" class="space-y-3"></div>
+      </div>
+    </section>
+
+    <!-- TAB 4: SMART SHOPPING LIST -->
+    <section id="tab-shop" class="space-y-4 hidden">
+      <div class="glass rounded-3xl p-4">
+        <div class="flex items-center justify-between mb-2">
+          <div>
+            <h2 class="text-base font-bold text-white">Smart Shopping List</h2>
+            <p class="text-xs text-slate-400">Synced live while you walk through the store.</p>
+          </div>
+          <button onclick="clearShoppingChecks()" class="text-[11px] font-semibold px-2.5 py-1 rounded-xl bg-slate-800 text-slate-400 border border-slate-700">
+            Clear Ticks
+          </button>
+        </div>
+
+        <!-- Fresh vs Freezer Mode Toggle -->
+        <div class="grid grid-cols-2 gap-2 mt-3 bg-slate-900/90 p-1.5 rounded-2xl border border-slate-800">
+          <button onclick="setShoppingMode('fresh')" id="shopModeFresh" class="py-2 px-2.5 rounded-xl text-xs font-bold transition text-center">
+            🥩 2 Trips (Fresh Meat)
+          </button>
+          <button onclick="setShoppingMode('freezer')" id="shopModeFreezer" class="py-2 px-2.5 rounded-xl text-xs font-bold transition text-center">
+            ❄️ 1 Trip (Use Freezer)
+          </button>
+        </div>
+        <p id="shopModeDesc" class="text-[11px] text-slate-400 mt-2"></p>
+      </div>
+
+      <div id="shoppingTripsContainer" class="space-y-4"></div>
+    </section>
+
+    <!-- TAB 5: SETUP (DISLIKES, REMINDERS, IOS CALENDAR, SYNC) -->
+    <section id="tab-setup" class="space-y-4 hidden">
+      <!-- Dislike Picker -->
+      <div class="glass rounded-3xl p-4">
+        <div class="flex items-center justify-between mb-2">
+          <div>
+            <h2 class="text-base font-bold text-white">Disliked Ingredients</h2>
+            <p class="text-xs text-slate-400">Editing dislikes for <strong id="dislikeUserLabel" class="text-emerald-400">Laca</strong></p>
+          </div>
+        </div>
+        <p class="text-[11px] text-slate-400 mb-3">
+          When both of you are at the apartment, the app hides meals with <em>either</em> person's dislikes. On solo days, it only filters for the person eating!
+        </p>
+
+        <div id="dislikeChipsGrid" class="flex flex-wrap gap-1.5 mb-3"></div>
+
+        <div class="flex gap-2">
+          <input id="customDislikeInput" type="text" placeholder="Add custom dislike (e.g. celery)..." class="flex-1 px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white" />
+          <button onclick="addCustomDislike()" class="px-3.5 py-2 rounded-xl bg-emerald-500 text-slate-950 font-bold text-xs">Add</button>
+        </div>
+      </div>
+
+      <!-- Custom 2x/Day Notification Schedule + iOS Calendar Export -->
+      <div class="glass rounded-3xl p-4">
+        <div class="flex items-center justify-between mb-2">
+          <div>
+            <h2 class="text-base font-bold text-white">Daily Shopping Reminders</h2>
+            <p class="text-xs text-slate-400">Custom 2x/day times for your changing schedule</p>
+          </div>
+          <button onclick="requestWebNotifications()" class="px-2.5 py-1 rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[11px] font-bold">
+            🔔 Enable Alerts
+          </button>
+        </div>
+
+        <div id="reminderScheduleList" class="space-y-2 mt-3"></div>
+
+        <button onclick="exportToAppleCalendar()" class="mt-4 w-full py-3 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-500 text-slate-950 font-bold text-xs shadow-lg shadow-cyan-500/20 flex items-center justify-center gap-2">
+          <span>📅</span><span>1-Tap Sync to iPhone Calendar / Reminders (.ics)</span>
+        </button>
+        <p class="text-[11px] text-slate-400 mt-1.5 text-center">
+          Adds lock-screen alerts at your exact custom times with the shopping list attached.
+        </p>
+      </div>
+
+      <!-- Cloud Sync & App Version Controls -->
+      <div class="glass rounded-3xl p-4 space-y-3">
+        <h2 class="text-base font-bold text-white">Cloud Sync & App Updates</h2>
+        <div class="p-3 rounded-2xl bg-slate-900/90 border border-slate-800 text-xs space-y-1">
+          <div class="flex justify-between">
+            <span class="text-slate-400">Firebase Project:</span>
+            <span class="font-mono text-emerald-400">meal-planning-app-17d85</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-400">Active Endpoint:</span>
+            <span id="activeEndpointLabel" class="font-mono text-slate-300 truncate max-w-[190px]">Auto-detecting...</span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <button onclick="openPinSettings()" class="py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 border border-slate-700">
+            🔑 Change PIN / User
+          </button>
+          <button onclick="forceAppUpdate()" class="py-2.5 px-3 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-xs font-bold text-emerald-300 border border-emerald-500/30">
+            ⚡ Update App Version
+          </button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ADD CUSTOM MEAL MODAL -->
+  <div id="addRecipeModal" class="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4 hidden">
+    <div class="w-full max-w-md glass rounded-3xl p-5 border border-slate-700 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-base font-bold text-white">Add Our Own Meal</h3>
+        <button onclick="closeAddRecipeModal()" class="text-slate-400 text-sm px-2 py-1">✕</button>
+      </div>
+      <p class="text-xs text-slate-400 mb-3">
+        Just write the meal name and list a few key ingredients—the app automatically calculates grams, protein macros, supermarket aisles, and shelf-life!
+      </p>
+
+      <div class="space-y-3">
+        <div>
+          <label class="text-xs font-semibold text-slate-300">Meal Name</label>
+          <input id="newMealName" type="text" placeholder="e.g. Creamy Garlic Chicken Pasta" class="w-full mt-1 px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white" />
+        </div>
+        <div>
+          <label class="text-xs font-semibold text-slate-300">Equipment Used</label>
+          <select id="newMealEquip" class="w-full mt-1 px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white">
+            <option value="Airfryer + Rice Cooker">Airfryer + Rice Cooker</option>
+            <option value="Gas Stove + Pan">Gas Stove + Pan</option>
+            <option value="Oven + Pan">Oven + Pan</option>
+            <option value="Airfryer">Airfryer Only</option>
+            <option value="Rice Cooker + Pan">Rice Cooker + Pan</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-xs font-semibold text-slate-300">Main Ingredients / Short Notes (comma separated)</label>
+          <textarea id="newMealNotes" rows="3" placeholder="e.g. chicken breast, penne pasta, cooking cream, cheese, garlic, spinach" class="w-full mt-1 px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white"></textarea>
+        </div>
+        <button onclick="saveCustomRecipe()" class="w-full py-3 rounded-2xl bg-emerald-500 text-slate-950 font-bold text-xs">
+          ✨ Auto-Build Macros & Save to Our Pool
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- BOTTOM NAVIGATION BAR -->
+  <nav class="fixed bottom-0 inset-x-0 z-30 glass border-t border-slate-800/90 nav-pb pt-2 px-3">
+    <div class="max-w-md mx-auto grid grid-cols-5 gap-1">
+      <button onclick="switchTab('week')" id="nav-week" class="flex flex-col items-center py-1 rounded-xl text-emerald-400">
+        <span class="text-lg">📅</span>
+        <span class="text-[10px] font-bold mt-0.5">Week</span>
+      </button>
+      <button onclick="switchTab('swipe')" id="nav-swipe" class="flex flex-col items-center py-1 rounded-xl text-slate-400">
+        <span class="text-lg">🔥</span>
+        <span class="text-[10px] font-bold mt-0.5">Swipe</span>
+      </button>
+      <button onclick="switchTab('plan')" id="nav-plan" class="relative flex flex-col items-center py-1 rounded-xl text-slate-400">
+        <span class="text-lg">🤝</span>
+        <span class="text-[10px] font-bold mt-0.5">Plan</span>
+        <span id="planActionBadge" class="hidden absolute top-0.5 right-4 w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
+      </button>
+      <button onclick="switchTab('shop')" id="nav-shop" class="flex flex-col items-center py-1 rounded-xl text-slate-400">
+        <span class="text-lg">🛒</span>
+        <span class="text-[10px] font-bold mt-0.5">Shop</span>
+      </button>
+      <button onclick="switchTab('setup')" id="nav-setup" class="flex flex-col items-center py-1 rounded-xl text-slate-400">
+        <span class="text-lg">⚙️</span>
+        <span class="text-[10px] font-bold mt-0.5">Setup</span>
+      </button>
+    </div>
+  </nav>
+
+  <script>
+    /********************************************************************
+     * 1. FIREBASE CONFIGURATION FOR LACA & FRUZSI
+     * Project: meal-planning-app-17d85-default-rtdb
+     ********************************************************************/
+    const CANDIDATE_DB_URLS = [
+      "https://meal-planning-app-17d85-default-rtdb.europe-west1.firebasedatabase.app",
+      "https://meal-planning-app-17d85-default-rtdb.firebaseio.com"
+    ];
+
+    let activeDbUrl = localStorage.getItem("lf_active_db_url") || CANDIDATE_DB_URLS[0];
+    let secretPin = localStorage.getItem("lf_secret_pin") || "";
+    let currentUser = localStorage.getItem("lf_current_user") || "laca";
+    let currentTab = "week";
+    let firebaseRoomRef = null;
+    let isApplyingRemoteUpdate = false;
+
+    /********************************************************************
+     * 2. STARTER HIGH-PROTEIN, BUDGET, BIG-PORTION RECIPES
+     * Tailored for Airfryer, Rice Cooker, Oven, and Gas Stove
+     ********************************************************************/
+    const DEFAULT_RECIPES = [
+      {
+        id: "gyros-bowl",
+        name: "Crispy Airfryer Chicken Gyros & Garlic Rice Bowl",
+        equipment: "Airfryer + Rice Cooker",
+        prepTime: "22 min",
+        calories: 740,
+        protein: 58,
+        carbs: 78,
+        fat: 18,
+        costPerPortion: "€2.10",
+        tags: ["chicken", "garlic", "yogurt", "cucumber", "rice"],
+        steps: [
+          "Rinse jasmine/basmati rice and start the Rice Cooker with a pinch of salt.",
+          "Toss diced chicken thighs/breast in oil, gyros spice, and garlic. Airfry at 200°C for 16–18 mins until crispy.",
+          "Mix Greek yogurt with grated cucumber, garlic, salt & pepper for rapid tzatziki. Serve massive bowls."
+        ],
+        ingredients: [
+          { name: "Chicken breast / thigh fillet", amountPerPortion: 220, unit: "g", aisle: "Meat & Fish", shelfLifeDays: 2 },
+          { name: "Basmati or Jasmine rice", amountPerPortion: 110, unit: "g", aisle: "Dry Goods & Carbs", shelfLifeDays: 180 },
+          { name: "Greek yogurt (10% or Skyr)", amountPerPortion: 80, unit: "g", aisle: "Dairy & Eggs", shelfLifeDays: 10 },
+          { name: "Cucumber", amountPerPortion: 0.35, unit: "pcs", aisle: "Veggies & Fruit", shelfLifeDays: 6 },
+          { name: "Gyros seasoning & garlic", amountPerPortion: 1, unit: "set", aisle: "Sauces & Spices", shelfLifeDays: 90 }
+        ]
+      },
+      {
+        id: "bolognese-penne",
+        name: "High-Protein Turkey/Pork Bolognese Mountain",
+        equipment: "Gas Stove + Pan",
+        prepTime: "25 min",
+        calories: 790,
+        protein: 54,
+        carbs: 86,
+        fat: 22,
+        costPerPortion: "€1.95",
+        tags: ["minced meat", "pork", "turkey", "tomato", "pasta", "cheese", "onion", "garlic"],
+        steps: [
+          "Boil salted water in a large pot on the gas stove and cook penne/fusilli until al dente.",
+          "Brown minced meat with diced onion and garlic in a deep pan, then pour in passata and Italian herbs; simmer 12 mins.",
+          "Toss pasta directly into the meat sauce and top generously with grated Trappista/cheddar cheese."
+        ],
+        ingredients: [
+          { name: "Minced turkey or lean pork/beef", amountPerPortion: 200, unit: "g", aisle: "Meat & Fish", shelfLifeDays: 2 },
+          { name: "Durum Penne or Fusilli pasta", amountPerPortion: 120, unit: "g", aisle: "Dry Goods & Carbs", shelfLifeDays: 180 },
+          { name: "Tomato passata (500g carton)", amountPerPortion: 150, unit: "g", aisle: "Sauces & Spices", shelfLifeDays: 60 },
+          { name: "Grated cheese (Trappista/Gouda)", amountPerPortion: 40, unit: "g", aisle: "Dairy & Eggs", shelfLifeDays: 14 },
+          { name: "Yellow onion & garlic", amountPerPortion: 0.5, unit: "pcs", aisle: "Veggies & Fruit", shelfLifeDays: 21 }
+        ]
+      },
+      {
+        id: "teriyaki-chicken-rice",
+        name: "Sticky Honey-Soy Airfryer Chicken & Steamed Broccoli Rice",
+        equipment: "Airfryer + Rice Cooker",
+        prepTime: "20 min",
+        calories: 710,
+        protein: 56,
+        carbs: 82,
+        fat: 14,
+        costPerPortion: "€2.20",
+        tags: ["chicken", "soy sauce", "broccoli", "rice", "sesame"],
+        steps: [
+          "Put rice and water in the Rice Cooker; place broccoli florets in the steamer tray on top during the last 8 mins.",
+          "Coat chicken chunks in soy sauce, honey, garlic, and ginger. Airfry at 195°C for 15 mins.",
+          "Drizzle pan juices over the rice and broccoli."
+        ],
+        ingredients: [
+          { name: "Chicken breast fillet", amountPerPortion: 220, unit: "g", aisle: "Meat & Fish", shelfLifeDays: 2 },
+          { name: "Jasmine rice", amountPerPortion: 115, unit: "g", aisle: "Dry Goods & Carbs", shelfLifeDays: 180 },
+          { name: "Broccoli head", amountPerPortion: 120, unit: "g", aisle: "Veggies & Fruit", shelfLifeDays: 5 },
+          { name: "Soy sauce & honey", amountPerPortion: 25, unit: "ml", aisle: "Sauces & Spices", shelfLifeDays: 120 }
+        ]
+      },
+      {
+        id: "sheet-pan-sausage-potato",
+        name: "Oven Sheet-Pan Crispy Potatoes, Peppers & Protein Sausages",
+        equipment: "Oven",
+        prepTime: "35 min",
+        calories: 780,
+        protein: 46,
+        carbs: 72,
+        fat: 30,
+        costPerPortion: "€1.85",
+        tags: ["sausage", "pork", "potato", "bell pepper", "onion"],
+        steps: [
+          "Preheat oven to 210°C. Cube potatoes, slice bell peppers, red onions, and high-meat sausages.",
+          "Toss everything right on the baking tray with oil, smoked paprika, salt, and pepper.",
+          "Roast for 30 minutes (flipping once halfway) until potatoes are golden and crisp."
+        ],
+        ingredients: [
+          { name: "High-meat chicken/pork sausages", amountPerPortion: 180, unit: "g", aisle: "Meat & Fish", shelfLifeDays: 6 },
+          { name: "Potatoes", amountPerPortion: 320, unit: "g", aisle: "Veggies & Fruit", shelfLifeDays: 21 },
+          { name: "Bell peppers", amountPerPortion: 0.75, unit: "pcs", aisle: "Veggies & Fruit", shelfLifeDays: 6 },
+          { name: "Red onion", amountPerPortion: 0.5, unit: "pcs", aisle: "Veggies & Fruit", shelfLifeDays: 21 }
+        ]
+      },
+      {
+        id: "creamy-cajun-chicken-pasta",
+        name: "One-Pan Creamy Cajun Chicken & Corn Pasta",
+        equipment: "Gas Stove + Pan",
+        prepTime: "22 min",
+        calories: 760,
+        protein: 55,
+        carbs: 80,
+        fat: 21,
+        costPerPortion: "€2.15",
+        tags: ["chicken", "pasta", "cream", "corn", "cheese", "garlic"],
+        steps: [
+          "Boil pasta on the gas stove. Meanwhile, sear seasoned chicken strips in a wide pan until golden.",
+          "Add canned sweetcorn, garlic, paprika, and cooking cream (or light cream cheese) + a splash of pasta water.",
+          "Fold the drained pasta into the creamy skillet so every piece is coated."
+        ],
+        ingredients: [
+          { name: "Chicken breast fillet", amountPerPortion: 210, unit: "g", aisle: "Meat & Fish", shelfLifeDays: 2 },
+          { name: "Penne or Rigatoni pasta", amountPerPortion: 115, unit: "g", aisle: "Dry Goods & Carbs", shelfLifeDays: 180 },
+          { name: "Cooking cream (10–20%) or Skyr", amountPerPortion: 75, unit: "ml", aisle: "Dairy & Eggs", shelfLifeDays: 12 },
+          { name: "Sweetcorn (canned)", amountPerPortion: 70, unit: "g", aisle: "Sauces & Spices", shelfLifeDays: 180 },
+          { name: "Grated cheese", amountPerPortion: 30, unit: "g", aisle: "Dairy & Eggs", shelfLifeDays: 14 }
+        ]
+      },
+      {
+        id: "mexican-burrito-rice-bowl",
+        name: "Loaded Mexican Beef/Turkey & Bean Rice Cooker Fiesta Bowl",
+        equipment: "Rice Cooker + Gas Stove",
+        prepTime: "20 min",
+        calories: 810,
+        protein: 57,
+        carbs: 88,
+        fat: 20,
+        costPerPortion: "€2.05",
+        tags: ["minced meat", "beans", "corn", "rice", "sour cream", "cheese"],
+        steps: [
+          "Cook rice in the Rice Cooker with a spoonful of tomato paste and taco seasoning.",
+          "Brown minced meat in a pan on the stove, then toss in drained red kidney beans and sweetcorn for 4 mins.",
+          "Layer fluffy spiced rice, taco meat, grated cheese, and a dollop of sour cream / Greek yogurt."
+        ],
+        ingredients: [
+          { name: "Minced beef or turkey", amountPerPortion: 190, unit: "g", aisle: "Meat & Fish", shelfLifeDays: 2 },
+          { name: "Long-grain or Jasmine rice", amountPerPortion: 110, unit: "g", aisle: "Dry Goods & Carbs", shelfLifeDays: 180 },
+          { name: "Red kidney beans (canned)", amountPerPortion: 80, unit: "g", aisle: "Sauces & Spices", shelfLifeDays: 180 },
+          { name: "Sweetcorn (canned)", amountPerPortion: 60, unit: "g", aisle: "Sauces & Spices", shelfLifeDays: 180 },
+          { name: "Sour cream or Greek yogurt", amountPerPortion: 50, unit: "g", aisle: "Dairy & Eggs", shelfLifeDays: 10 },
+          { name: "Grated cheese", amountPerPortion: 35, unit: "g", aisle: "Dairy & Eggs", shelfLifeDays: 14 }
+        ]
+      },
+      {
+        id: "airfryer-meatballs-mash",
+        name: "Juicy Airfryer Garlic Meatballs & Creamy Tomato Rice",
+        equipment: "Airfryer + Rice Cooker",
+        prepTime: "24 min",
+        calories: 750,
+        protein: 52,
+        carbs: 76,
+        fat: 23,
+        costPerPortion: "€1.95",
+        tags: ["minced meat", "pork", "egg", "tomato", "rice", "garlic"],
+        steps: [
+          "Mix minced meat with an egg, breadcrumbs/oats, garlic, salt, and pepper; roll into bite-size balls.",
+          "Airfry meatballs at 195°C for 14 mins while rice cooks in the Rice Cooker.",
+          "Warm tomato passata with a pinch of oregano and basil; pour over meatballs and rice."
+        ],
+        ingredients: [
+          { name: "Minced pork & beef / turkey", amountPerPortion: 210, unit: "g", aisle: "Meat & Fish", shelfLifeDays: 2 },
+          { name: "Rice", amountPerPortion: 110, unit: "g", aisle: "Dry Goods & Carbs", shelfLifeDays: 180 },
+          { name: "Tomato passata", amountPerPortion: 130, unit: "g", aisle: "Sauces & Spices", shelfLifeDays: 60 },
+          { name: "Eggs", amountPerPortion: 0.5, unit: "pcs", aisle: "Dairy & Eggs", shelfLifeDays: 18 }
+        ]
+      },
+      {
+        id: "crispy-airfryer-thighs-wedges",
+        name: "Paprika Airfryer Chicken Thighs & Oven Potato Wedges",
+        equipment: "Airfryer + Oven",
+        prepTime: "28 min",
+        calories: 770,
+        protein: 53,
+        carbs: 74,
+        fat: 24,
+        costPerPortion: "€1.90",
+        tags: ["chicken", "potato", "garlic", "yogurt"],
+        steps: [
+          "Cut potatoes into wedges, toss with oil & salt, and bake in the Oven at 210°C for 25 mins.",
+          "Season boneless chicken thighs with Hungarian paprika, garlic powder, and salt; Airfry at 200°C for 18 mins.",
+          "Serve with a quick garlic yogurt dip."
+        ],
+        ingredients: [
+          { name: "Boneless chicken thighs", amountPerPortion: 230, unit: "g", aisle: "Meat & Fish", shelfLifeDays: 2 },
+          { name: "Potatoes", amountPerPortion: 330, unit: "g", aisle: "Veggies & Fruit", shelfLifeDays: 21 },
+          { name: "Greek yogurt", amountPerPortion: 60, unit: "g", aisle: "Dairy & Eggs", shelfLifeDays: 10 }
+        ]
+      },
+      {
+        id: "tuna-corn-protein-pasta",
+        name: "12-Minute Creamy Tuna, Sweetcorn & Cheese Power Pasta",
+        equipment: "Gas Stove + Pan",
+        prepTime: "12 min",
+        calories: 690,
+        protein: 49,
+        carbs: 79,
+        fat: 16,
+        costPerPortion: "€1.80",
+        tags: ["tuna", "fish", "pasta", "corn", "cheese", "sour cream"],
+        steps: [
+          "Boil fusilli or penne on the gas stove until tender.",
+          "Stir drained canned tuna, sweetcorn, sour cream/Greek yogurt, garlic powder, and black pepper right into the warm pot.",
+          "Melt grated cheese on top and serve immediately—perfect ultra-lazy backup meal with long-shelf-life ingredients."
+        ],
+        ingredients: [
+          { name: "Canned tuna chunks (in brine/oil)", amountPerPortion: 130, unit: "g", aisle: "Meat & Fish", shelfLifeDays: 365 },
+          { name: "Durum pasta", amountPerPortion: 120, unit: "g", aisle: "Dry Goods & Carbs", shelfLifeDays: 180 },
+          { name: "Sweetcorn (canned)", amountPerPortion: 75, unit: "g", aisle: "Sauces & Spices", shelfLifeDays: 180 },
+          { name: "Sour cream or Greek yogurt", amountPerPortion: 60, unit: "g", aisle: "Dairy & Eggs", shelfLifeDays: 10 },
+          { name: "Grated cheese", amountPerPortion: 35, unit: "g", aisle: "Dairy & Eggs", shelfLifeDays: 14 }
+        ]
+      },
+      {
+        id: "egg-fried-rice-chicken",
+        name: "High-Protein Chicken & 4-Egg Golden Fried Rice",
+        equipment: "Rice Cooker + Gas Stove",
+        prepTime: "20 min",
+        calories: 760,
+        protein: 59,
+        carbs: 80,
+        fat: 19,
+        costPerPortion: "€2.00",
+        tags: ["chicken", "egg", "rice", "peas", "soy sauce", "garlic"],
+        steps: [
+          "Cook rice in the Rice Cooker.",
+          "Sear diced chicken breast in a hot pan on the gas stove, push to one side, and scramble eggs in the pan.",
+          "Toss in the cooked rice, green peas/carrots, and soy sauce; stir-fry on high heat for 3 minutes."
+        ],
+        ingredients: [
+          { name: "Chicken breast fillet", amountPerPortion: 190, unit: "g", aisle: "Meat & Fish", shelfLifeDays: 2 },
+          { name: "Eggs", amountPerPortion: 1.5, unit: "pcs", aisle: "Dairy & Eggs", shelfLifeDays: 18 },
+          { name: "Jasmine rice", amountPerPortion: 115, unit: "g", aisle: "Dry Goods & Carbs", shelfLifeDays: 180 },
+          { name: "Frozen peas & carrots mix", amountPerPortion: 80, unit: "g", aisle: "Veggies & Fruit", shelfLifeDays: 60 },
+          { name: "Soy sauce", amountPerPortion: 20, unit: "ml", aisle: "Sauces & Spices", shelfLifeDays: 120 }
+        ]
+      },
+      {
+        id: "oven-baked-cheesy-pasta",
+        name: "Oven-Baked Cheesy Chicken & Broccoli Pasta Gratin",
+        equipment: "Gas Stove + Oven",
+        prepTime: "30 min",
+        calories: 800,
+        protein: 58,
+        carbs: 81,
+        fat: 24,
+        costPerPortion: "€2.25",
+        tags: ["chicken", "broccoli", "pasta", "cheese", "cream"],
+        steps: [
+          "Boil pasta for 7 mins on the gas stove, adding broccoli florets in the last 3 mins.",
+          "Mix par-cooked pasta and broccoli in an oven dish with diced chicken, garlic, cooking cream, and salt/pepper.",
+          "Blanket with grated cheese and bake at 200°C for 18 minutes until bubbling and golden."
+        ],
+        ingredients: [
+          { name: "Chicken breast fillet", amountPerPortion: 210, unit: "g", aisle: "Meat & Fish", shelfLifeDays: 2 },
+          { name: "Penne pasta", amountPerPortion: 115, unit: "g", aisle: "Dry Goods & Carbs", shelfLifeDays: 180 },
+          { name: "Broccoli", amountPerPortion: 110, unit: "g", aisle: "Veggies & Fruit", shelfLifeDays: 5 },
+          { name: "Cooking cream (10–20%)", amountPerPortion: 80, unit: "ml", aisle: "Dairy & Eggs", shelfLifeDays: 12 },
+          { name: "Grated cheese", amountPerPortion: 50, unit: "g", aisle: "Dairy & Eggs", shelfLifeDays: 14 }
+        ]
+      },
+      {
+        id: "pork-tenderloin-brassoi",
+        name: "Airfryer 'Brassói' Garlic Pork & Crispy Potato Cubes",
+        equipment: "Airfryer + Gas Stove",
+        prepTime: "26 min",
+        calories: 775,
+        protein: 51,
+        carbs: 72,
+        fat: 25,
+        costPerPortion: "€2.05",
+        tags: ["pork", "potato", "garlic", "peas"],
+        steps: [
+          "Toss cubed potatoes in a teaspoon of oil and salt; Airfry at 200°C for 18–20 mins until super crispy.",
+          "Sear cubed lean pork loin/thigh in a pan with lots of crushed garlic, paprika, black pepper, and a splash of water.",
+          "Toss the crispy Airfryer potatoes and green peas right into the garlicky pan juices."
+        ],
+        ingredients: [
+          { name: "Lean pork loin or thigh", amountPerPortion: 220, unit: "g", aisle: "Meat & Fish", shelfLifeDays: 2 },
+          { name: "Potatoes", amountPerPortion: 320, unit: "g", aisle: "Veggies & Fruit", shelfLifeDays: 21 },
+          { name: "Green peas (canned or frozen)", amountPerPortion: 75, unit: "g", aisle: "Veggies & Fruit", shelfLifeDays: 60 },
+          { name: "Garlic bulb", amountPerPortion: 0.25, unit: "pcs", aisle: "Veggies & Fruit", shelfLifeDays: 30 }
+        ]
+      }
+    ];
+
+    const DISLIKE_OPTIONS = [
+      "Mushrooms", "Fish", "Tuna", "Seafood", "Pork", "Beef", "Turkey",
+      "Beans", "Lentils", "Peas", "Corn", "Broccoli", "Spinach", "Eggplant",
+      "Zucchini", "Olives", "Tomato", "Cucumber", "Bell Pepper", "Onion",
+      "Garlic", "Cottage Cheese", "Sour Cream", "Yogurt", "Cheese", "Egg",
+      "Mayonnaise", "Mustard", "Spicy Food", "Soy Sauce", "Sesame", "Cilantro"
+    ];
+
+    const DAY_KEYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
+    const DAY_LABELS = {
+      mon: "Monday", tue: "Tuesday", wed: "Wednesday",
+      thu: "Thursday", fri: "Friday", sat: "Saturday", sun: "Sunday"
+    };
+    const DAY_SHORT = {
+      mon: "Mon", tue: "Tue", wed: "Wed", thu: "Thu", fri: "Fri", sat: "Sat", sun: "Sun"
+    };
+
+    /********************************************************************
+     * 3. SHARED APPLICATION STATE
+     ********************************************************************/
+    function createDefaultState() {
+      return {
+        updatedAt: Date.now(),
+        updatedBy: "laca",
+        calendar: {
+          mon: "both",
+          tue: "both",
+          wed: "laca",
+          thu: "both",
+          fri: "both",
+          sat: "away",
+          sun: "away"
+        },
+        dislikes: {
+          laca: [],
+          fruzsi: []
+        },
+        swipes: {
+          laca: {},
+          fruzsi: {}
+        },
+        customRecipes: [],
+        recipeMultipliers: {},
+        planNegotiation: {
+          status: "draft", // "draft" | "proposed" | "locked"
+          proposedBy: "laca",
+          acceptedBy: { laca: false, fruzsi: false },
+          previousSlots: null,
+          currentSlots: []
+        },
+        shopping: {
+          mode: "fresh", // "fresh" | "freezer"
+          atHome: {},
+          bought: {}
+        },
+        reminders: {
+          mon: ["13:00", "17:30"],
+          tue: ["12:30", "17:30"],
+          wed: ["13:00", "18:00"],
+          thu: ["13:00", "17:00"],
+          fri: ["12:00", "16:30"],
+          sat: ["10:30", "16:00"],
+          sun: ["11:00", "17:00"]
+        }
+      };
+    }
+
+    let state = loadLocalState();
+
+    function loadLocalState() {
+      try {
+        const raw = localStorage.getItem("lf_shared_state_v2");
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          return Object.assign(createDefaultState(), parsed);
+        }
+      } catch (e) {}
+      const initial = createDefaultState();
+      initial.planNegotiation.currentSlots = buildBatchSlotsFromCalendar(initial.calendar, initial);
+      return initial;
+    }
+
+    function saveStateAndSync(triggerBy = currentUser) {
+      state.updatedAt = Date.now();
+      state.updatedBy = triggerBy;
+      localStorage.setItem("lf_shared_state_v2", JSON.stringify(state));
+
+      if (!isApplyingRemoteUpdate && firebaseRoomRef) {
+        firebaseRoomRef.set(state).catch((err) => {
+          console.warn("Firebase write error:", err);
+          updateSyncBadge("error", "Sync Error");
+        });
+      }
+      renderAll();
+    }
+
+    /********************************************************************
+     * 4. FIREBASE REALTIME CONNECTION & PIN VERIFICATION
+     ********************************************************************/
+    function selectAuthUser(user) {
+      currentUser = user;
+      localStorage.setItem("lf_current_user", user);
+      const btnLaca = document.getElementById("authBtnLaca");
+      const btnFruzsi = document.getElementById("authBtnFruzsi");
+      if (user === "laca") {
+        btnLaca.className = "py-3 px-4 rounded-2xl border-2 border-emerald-500 bg-emerald-500/15 text-white font-semibold flex items-center justify-center gap-2 transition";
+        btnFruzsi.className = "py-3 px-4 rounded-2xl border-2 border-slate-700 bg-slate-800/50 text-slate-300 font-semibold flex items-center justify-center gap-2 transition";
+      } else {
+        btnFruzsi.className = "py-3 px-4 rounded-2xl border-2 border-emerald-500 bg-emerald-500/15 text-white font-semibold flex items-center justify-center gap-2 transition";
+        btnLaca.className = "py-3 px-4 rounded-2xl border-2 border-slate-700 bg-slate-800/50 text-slate-300 font-semibold flex items-center justify-center gap-2 transition";
+      }
+      renderTopUserToggle();
+    }
+
+    function openPinSettings() {
+      document.getElementById("pinInput").value = secretPin;
+      selectAuthUser(currentUser);
+      document.getElementById("authError").classList.add("hidden");
+      document.getElementById("authModal").classList.remove("hidden");
+    }
+
+    async function connectWithPin() {
+      const pinVal = document.getElementById("pinInput").value.trim();
+      const errBox = document.getElementById("authError");
+      const btn = document.getElementById("connectBtn");
+
+      if (!pinVal) {
+        errBox.textContent = "Please enter the Secret PIN you set in your Firebase Rules.";
+        errBox.classList.remove("hidden");
+        return;
+      }
+
+      btn.textContent = "Connecting to Firebase...";
+      btn.disabled = true;
+      errBox.classList.add("hidden");
+
+      const probeResult = await probeFirebaseUrls(pinVal);
+
+      btn.textContent = "Unlock & Start Live Sync";
+      btn.disabled = false;
+
+      if (!probeResult.ok) {
+        errBox.textContent = probeResult.message;
+        errBox.classList.remove("hidden");
+        updateSyncBadge("error", "PIN Error");
+        return;
+      }
+
+      secretPin = pinVal;
+      activeDbUrl = probeResult.url;
+      localStorage.setItem("lf_secret_pin", secretPin);
+      localStorage.setItem("lf_active_db_url", activeDbUrl);
+      document.getElementById("authModal").classList.add("hidden");
+
+      startRealtimeListener();
+    }
+
+    async function probeFirebaseUrls(pin) {
+      let saw401 = false;
+      for (const baseUrl of CANDIDATE_DB_URLS) {
+        try {
+          const res = await fetch(`${baseUrl}/rooms/${encodeURIComponent(pin)}.json`, {
+            method: "GET",
+            cache: "no-store"
+          });
+          if (res.status === 200) {
+            return { ok: true, url: baseUrl };
+          }
+          if (res.status === 401 || res.status === 403) {
+            saw401 = true;
+          }
+        } catch (e) {}
+      }
+      if (saw401) {
+        return {
+          ok: false,
+          message: "Permission Denied (401): That PIN doesn't match the PIN inside your Firebase Realtime Database Rules tab."
+        };
+      }
+      return {
+        ok: true,
+        url: CANDIDATE_DB_URLS[0]
+      };
+    }
+
+    function startRealtimeListener() {
+      if (!secretPin) {
+        openPinSettings();
+        return;
+      }
+      updateSyncBadge("connecting", "Syncing...");
+      document.getElementById("activeEndpointLabel").textContent = activeDbUrl.replace("https://", "");
+
+      try {
+        if (!firebase.apps.length) {
+          firebase.initializeApp({ databaseURL: activeDbUrl });
+        }
+        const db = firebase.database();
+        if (firebaseRoomRef) firebaseRoomRef.off();
+
+        firebaseRoomRef = db.ref("rooms/" + secretPin);
+
+        firebaseRoomRef.on("value", (snapshot) => {
+          const remote = snapshot.val();
+          updateSyncBadge("online", "Live Synced");
+          if (remote && typeof remote === "object") {
+            isApplyingRemoteUpdate = true;
+            state = Object.assign(createDefaultState(), remote);
+            // Ensure nested objects exist since Firebase strips empty arrays/objects
+            state.dislikes = Object.assign({ laca: [], fruzsi: [] }, remote.dislikes || {});
+            state.dislikes.laca = state.dislikes.laca || [];
+            state.dislikes.fruzsi = state.dislikes.fruzsi || [];
+            state.swipes = Object.assign({ laca: {}, fruzsi: {} }, remote.swipes || {});
+            state.swipes.laca = state.swipes.laca || {};
+            state.swipes.fruzsi = state.swipes.fruzsi || {};
+            state.customRecipes = remote.customRecipes || [];
+            state.recipeMultipliers = remote.recipeMultipliers || {};
+            state.shopping = Object.assign({ mode: "fresh", atHome: {}, bought: {} }, remote.shopping || {});
+            state.shopping.atHome = state.shopping.atHome || {};
+            state.shopping.bought = state.shopping.bought || {};
+            state.planNegotiation = Object.assign({
+              status: "draft",
+              proposedBy: "laca",
+              acceptedBy: { laca: false, fruzsi: false },
+              previousSlots: null,
+              currentSlots: []
+            }, remote.planNegotiation || {});
+            state.planNegotiation.acceptedBy = Object.assign({ laca: false, fruzsi: false }, (remote.planNegotiation && remote.planNegotiation.acceptedBy) || {});
+            state.planNegotiation.currentSlots = (remote.planNegotiation && remote.planNegotiation.currentSlots) || buildBatchSlotsFromCalendar(state.calendar, state);
+
+            localStorage.setItem("lf_shared_state_v2", JSON.stringify(state));
+            renderAll();
+            isApplyingRemoteUpdate = false;
+          } else {
+            // Initialize room with default state
+            saveStateAndSync(currentUser);
+          }
+        }, (err) => {
+          console.warn("Realtime listener error:", err);
+          updateSyncBadge("error", "Check PIN");
+        });
+      } catch (e) {
+        console.warn("Firebase init error:", e);
+        updateSyncBadge("error", "Offline");
+      }
+    }
+
+    function updateSyncBadge(status, label) {
+      const dot = document.getElementById("syncDot");
+      const txt = document.getElementById("syncText");
+      txt.textContent = label;
+      if (status === "online") {
+        dot.className = "w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399]";
+      } else if (status === "connecting") {
+        dot.className = "w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse";
+      } else {
+        dot.className = "w-1.5 h-1.5 rounded-full bg-rose-500";
+      }
+    }
+
+    /********************************************************************
+     * 5. HELPER FUNCTIONS: RECIPES, DISLIKES & BATCH BLOCKS
+     ********************************************************************/
+    function getAllRecipes() {
+      return [...(state.customRecipes || []), ...DEFAULT_RECIPES];
+    }
+
+    function getRecipeById(id) {
+      return getAllRecipes().find(r => r.id === id) || DEFAULT_RECIPES[0];
+    }
+
+    function recipeMatchesDislikes(recipe, whoMode) {
+      // whoMode: "both" | "laca" | "fruzsi"
+      const lacaDis = (state.dislikes?.laca || []).map(x => x.toLowerCase());
+      const fruzsiDis = (state.dislikes?.fruzsi || []).map(x => x.toLowerCase());
+      let activeDislikes = [];
+      if (whoMode === "laca") activeDislikes = lacaDis;
+      else if (whoMode === "fruzsi") activeDislikes = fruzsiDis;
+      else activeDislikes = [...new Set([...lacaDis, ...fruzsiDis])];
+
+      if (!activeDislikes.length) return false;
+      const searchable = (
+        recipe.name + " " +
+        (recipe.tags || []).join(" ") + " " +
+        (recipe.ingredients || []).map(i => i.name).join(" ")
+      ).toLowerCase();
+
+      return activeDislikes.some(dis => searchable.includes(dis));
+    }
+
+    function getPersonCountForDay(dayState) {
+      if (dayState === "both") return 2;
+      if (dayState === "laca" || dayState === "fruzsi") return 1;
+      return 0;
+    }
+
+    /**
+     * Packs the 7-day calendar into 2-day batch meals wherever possible
+     * (including 3-portion Solo -> Both or Both -> Solo carryovers!)
+     */
+    function buildBatchSlotsFromCalendar(calendarObj, currentState = state) {
+      const blocks = [];
+      let i = 0;
+
+      while (i < DAY_KEYS.length) {
+        const d1 = DAY_KEYS[i];
+        const s1 = calendarObj[d1] || "away";
+
+        if (s1 === "away") {
+          i++;
+          continue;
+        }
+
+        const d2 = i + 1 < DAY_KEYS.length ? DAY_KEYS[i + 1] : null;
+        const s2 = d2 ? (calendarObj[d2] || "away") : "away";
+
+        // Can we batch d1 and d2 into a 2-day cook?
+        // Only prevent batching if one day is strictly Laca and the next is strictly Fruzsi
+        const canPair = d2 && s2 !== "away" && !(
+          (s1 === "laca" && s2 === "fruzsi") ||
+          (s1 === "fruzsi" && s2 === "laca")
+        );
+
+        if (canPair) {
+          const basePortions = getPersonCountForDay(s1) + getPersonCountForDay(s2);
+          const whoConstraint = (s1 === "both" || s2 === "both") ? "both" : s1;
+          blocks.push({
+            id: `slot-${d1}-${d2}`,
+            days: [d1, d2],
+            whoConstraint,
+            basePortions,
+            isBatch: true
+          });
+          i += 2;
+        } else {
+          const basePortions = getPersonCountForDay(s1);
+          blocks.push({
+            id: `slot-${d1}`,
+            days: [d1],
+            whoConstraint: s1,
+            basePortions,
+            isBatch: false
+          });
+          i += 1;
+        }
+      }
+
+      // Assign best matched/liked recipes without repeating
+      const usedRecipes = new Set();
+      return blocks.map((b, idx) => {
+        const chosen = pickBestRecipeForConstraint(b.whoConstraint, usedRecipes, currentState, idx);
+        usedRecipes.add(chosen.id);
+        const savedMult = (currentState.recipeMultipliers && currentState.recipeMultipliers[chosen.id]) || 1.0;
+        return {
+          ...b,
+          recipeId: chosen.id,
+          multiplier: savedMult
+        };
+      });
+    }
+
+    function pickBestRecipeForConstraint(whoConstraint, usedSet, currentState, fallbackIdx = 0) {
+      const all = getAllRecipes().filter(r => !recipeMatchesDislikes(r, whoConstraint));
+      const pool = all.length ? all : getAllRecipes();
+
+      const lacaSwipes = currentState.swipes?.laca || {};
+      const fruzsiSwipes = currentState.swipes?.fruzsi || {};
+
+      const scored = pool.map(r => {
+        let score = 0;
+        if (whoConstraint === "both") {
+          if (lacaSwipes[r.id] === "right" && fruzsiSwipes[r.id] === "right") score = 100;
+          else if (lacaSwipes[r.id] === "right" || fruzsiSwipes[r.id] === "right") score = 50;
+          else if (lacaSwipes[r.id] !== "left" && fruzsiSwipes[r.id] !== "left") score = 20;
+        } else if (whoConstraint === "laca") {
+          if (lacaSwipes[r.id] === "right") score = 90;
+          else if (lacaSwipes[r.id] !== "left") score = 25;
+        } else if (whoConstraint === "fruzsi") {
+          if (fruzsiSwipes[r.id] === "right") score = 90;
+          else if (fruzsiSwipes[r.id] !== "left") score = 25;
+        }
+        return { recipe: r, score };
+      }).sort((a, b) => b.score - a.score);
+
+      const unused = scored.find(item => !usedSet.has(item.recipe.id));
+      return (unused ? unused.recipe : scored[fallbackIdx % scored.length].recipe);
+    }
+
+    /********************************************************************
+     * 6. UI NAVIGATION & TOP USER TOGGLE
+     ********************************************************************/
+    function switchUser(user) {
+      currentUser = user;
+      localStorage.setItem("lf_current_user", user);
+      renderAll();
+    }
+
+    function renderTopUserToggle() {
+      const btnLaca = document.getElementById("topBtnLaca");
+      const btnFruzsi = document.getElementById("topBtnFruzsi");
+      if (currentUser === "laca") {
+        btnLaca.className = "px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-500 text-slate-950 shadow transition flex items-center gap-1";
+        btnFruzsi.className = "px-3 py-1.5 rounded-xl text-xs font-bold text-slate-400 hover:text-white transition flex items-center gap-1";
+      } else {
+        btnFruzsi.className = "px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-500 text-slate-950 shadow transition flex items-center gap-1";
+        btnLaca.className = "px-3 py-1.5 rounded-xl text-xs font-bold text-slate-400 hover:text-white transition flex items-center gap-1";
+      }
+    }
+
+    function switchTab(tab) {
+      currentTab = tab;
+      ["week", "swipe", "plan", "shop", "setup"].forEach(t => {
+        document.getElementById(`tab-${t}`).classList.toggle("hidden", t !== tab);
+        const navBtn = document.getElementById(`nav-${t}`);
+        if (t === tab) {
+          navBtn.className = "relative flex flex-col items-center py-1 rounded-xl text-emerald-400 scale-105 transition";
+        } else {
+          navBtn.className = "relative flex flex-col items-center py-1 rounded-xl text-slate-400 hover:text-slate-200 transition";
+        }
+      });
+      renderAll();
+    }
+
+    /********************************************************************
+     * 7. RENDER TAB 1: WEEK CALENDAR & BATCH BLOCKS
+     ********************************************************************/
+    function setDayStatus(dayKey, status) {
+      state.calendar[dayKey] = status;
+      // Rebuild slots while preserving negotiated choices where possible
+      state.planNegotiation.currentSlots = buildBatchSlotsFromCalendar(state.calendar, state);
+      state.planNegotiation.status = "draft";
+      state.planNegotiation.acceptedBy = { laca: false, fruzsi: false };
+      saveStateAndSync(currentUser);
+    }
+
+    function renderWeekTab() {
+      const list = document.getElementById("calendarDaysList");
+      let activeDaysCount = 0;
+
+      list.innerHTML = DAY_KEYS.map(dayKey => {
+        const val = state.calendar[dayKey] || "away";
+        if (val !== "away") activeDaysCount++;
+
+        const btnClass = (target) => val === target
+          ? "bg-emerald-500 text-slate-950 font-bold border-emerald-400 shadow-sm"
+          : "bg-slate-900/80 text-slate-400 border-slate-800 hover:text-slate-200";
+
+        return `
+          <div class="p-3 rounded-2xl bg-slate-900/50 border border-slate-800/90 flex flex-col gap-2">
+            <div class="flex items-center justify-between">
+              <span class="text-sm font-bold text-white">${DAY_LABELS[dayKey]}</span>
+              <span class="text-[11px] font-medium text-slate-400">
+                ${val === "both" ? "👫 2 People (Laca + Fruzsi)" : val === "laca" ? "👦 Solo (Only Laca)" : val === "fruzsi" ? "👩 Solo (Only Fruzsi)" : "✈️ Away / Parents"}
+              </span>
+            </div>
+            <div class="grid grid-cols-4 gap-1.5">
+              <button onclick="setDayStatus('${dayKey}','both')" class="py-1.5 rounded-xl text-[11px] border transition ${btnClass('both')}">👫 Both</button>
+              <button onclick="setDayStatus('${dayKey}','laca')" class="py-1.5 rounded-xl text-[11px] border transition ${btnClass('laca')}">👦 Laca</button>
+              <button onclick="setDayStatus('${dayKey}','fruzsi')" class="py-1.5 rounded-xl text-[11px] border transition ${btnClass('fruzsi')}">👩 Fruzsi</button>
+              <button onclick="setDayStatus('${dayKey}','away')" class="py-1.5 rounded-xl text-[11px] border transition ${btnClass('away')}">✈️ Away</button>
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      const previewSlots = buildBatchSlotsFromCalendar(state.calendar, state);
+      document.getElementById("weekSummaryBadge").textContent = `${activeDaysCount} eat days • ${previewSlots.length} cooks`;
+
+      const previewContainer = document.getElementById("batchBlocksPreview");
+      if (!previewSlots.length) {
+        previewContainer.innerHTML = `<div class="p-3 rounded-2xl bg-slate-900/60 text-xs text-slate-400 text-center">All days marked Away—no cooking needed!</div>`;
+      } else {
+        previewContainer.innerHTML = previewSlots.map((slot, idx) => {
+          const dayNames = slot.days.map(d => DAY_SHORT[d]).join(" + ");
+          const whoText = slot.whoConstraint === "both" ? "Laca & Fruzsi" : (slot.whoConstraint === "laca" ? "Only Laca" : "Only Fruzsi");
+          return `
+            <div class="p-2.5 rounded-2xl bg-slate-900/80 border border-slate-800 flex items-center justify-between">
+              <div class="flex items-center gap-2.5">
+                <span class="w-6 h-6 rounded-lg bg-emerald-500/20 text-emerald-300 font-bold text-xs flex items-center justify-center">#${idx + 1}</span>
+                <div>
+                  <div class="text-xs font-bold text-white">Cook on ${DAY_SHORT[slot.days[0]]} (${dayNames})</div>
+                  <div class="text-[11px] text-slate-400">${whoText}</div>
+                </div>
+              </div>
+              <span class="text-xs font-bold px-2.5 py-1 rounded-xl bg-slate-800 text-emerald-300 border border-slate-700">
+                ${slot.basePortions} big portions
+              </span>
+            </div>
+          `;
+        }).join("");
+      }
+    }
+
+    /********************************************************************
+     * 8. RENDER TAB 2: TINDER SWIPE & MATCH POOL
+     ********************************************************************/
+    function handleSwipe(recipeId, direction) {
+      const card = document.getElementById("activeSwipeCard");
+      if (card) {
+        card.classList.add(direction === "right" ? "swipe-right-anim" : "swipe-left-anim");
+      }
+      setTimeout(() => {
+        if (!state.swipes[currentUser]) state.swipes[currentUser] = {};
+        state.swipes[currentUser][recipeId] = direction;
+        saveStateAndSync(currentUser);
+      }, 220);
+    }
+
+    function resetWeeklySwipes() {
+      state.swipes = { laca: {}, fruzsi: {} };
+      saveStateAndSync(currentUser);
+    }
+
+    function renderSwipeTab() {
+      const userLabel = currentUser === "laca" ? "Laca" : "Fruzsi";
+      const mySwipes = state.swipes[currentUser] || {};
+      const otherUser = currentUser === "laca" ? "fruzsi" : "laca";
+      const otherSwipes = state.swipes[otherUser] || {};
+
+      // Filter out recipes disliked by the current user
+      const available = getAllRecipes().filter(r => !recipeMatchesDislikes(r, currentUser));
+      const unswiped = available.filter(r => !mySwipes[r.id]);
+
+      document.getElementById("swipeStatusSub").textContent =
+        `Swiping as ${userLabel} • ${unswiped.length} meals left to rate`;
+
+      const area = document.getElementById("swipeArea");
+
+      if (!unswiped.length) {
+        area.innerHTML = `
+          <div class="glass rounded-3xl p-6 text-center space-y-3 border border-emerald-500/30">
+            <div class="text-4xl">🎉</div>
+            <h3 class="text-base font-bold text-white">${userLabel} finished swiping!</h3>
+            <p class="text-xs text-slate-400">
+              Switch to ${otherUser === "laca" ? "Laca" : "Fruzsi"} on her phone or build your Recommended Meal Plan below.
+            </p>
+            <div class="flex gap-2 justify-center pt-2">
+              <button onclick="generateInitialPlanFromSwipes()" class="px-4 py-2.5 rounded-2xl bg-emerald-500 text-slate-950 font-bold text-xs">
+                Go to Meal Plan →
+              </button>
+              <button onclick="resetWeeklySwipes()" class="px-4 py-2.5 rounded-2xl bg-slate-800 text-slate-300 font-semibold text-xs">
+                Swipe Again
+              </button>
+            </div>
+          </div>
+        `;
+      } else {
+        const top = unswiped[0];
+        const partnerLiked = otherSwipes[top.id] === "right";
+        const mult = state.recipeMultipliers[top.id] || 1.0;
+
+        area.innerHTML = `
+          <div id="activeSwipeCard" class="swipe-card glass rounded-3xl p-5 border border-slate-700/80 shadow-2xl flex flex-col justify-between space-y-4">
+            <div>
+              <div class="flex items-center justify-between gap-2 mb-2">
+                <span class="text-[11px] font-bold px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                  🍳 ${top.equipment}
+                </span>
+                <span class="text-[11px] font-semibold text-slate-400">⏱ ${top.prepTime} • ~${top.costPerPortion}/portion</span>
+              </div>
+
+              ${partnerLiked ? `
+                <div class="mb-2 inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-pink-500/20 border border-pink-500/40 text-pink-300 text-[11px] font-bold">
+                  💘 ${otherUser === "laca" ? "Laca" : "Fruzsi"} already swiped RIGHT!
+                </div>
+              ` : ""}
+
+              <h3 class="text-lg font-extrabold text-white leading-snug">${top.name}</h3>
+
+              <!-- Macros Bar -->
+              <div class="grid grid-cols-4 gap-2 my-3 p-2.5 rounded-2xl bg-slate-900/90 border border-slate-800 text-center">
+                <div>
+                  <div class="text-[10px] text-slate-400">Protein</div>
+                  <div class="text-sm font-extrabold text-emerald-400">${Math.round(top.protein * mult)}g</div>
+                </div>
+                <div>
+                  <div class="text-[10px] text-slate-400">Calories</div>
+                  <div class="text-sm font-bold text-white">${Math.round(top.calories * mult)}</div>
+                </div>
+                <div>
+                  <div class="text-[10px] text-slate-400">Carbs</div>
+                  <div class="text-sm font-bold text-slate-200">${Math.round(top.carbs * mult)}g</div>
+                </div>
+                <div>
+                  <div class="text-[10px] text-slate-400">Fat</div>
+                  <div class="text-sm font-bold text-slate-200">${Math.round(top.fat * mult)}g</div>
+                </div>
+              </div>
+
+              <!-- Ingredients per 1 big portion -->
+              <div class="mb-3">
+                <div class="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+                  Main Ingredients (per 1 portion ${mult !== 1 ? `• ${mult}x memory` : ""})
+                </div>
+                <div class="flex flex-wrap gap-1.5">
+                  ${top.ingredients.map(ing => `
+                    <span class="text-xs px-2.5 py-1 rounded-xl bg-slate-800/90 text-slate-200 border border-slate-700/70">
+                      ${ing.name}: <strong>${Math.round(ing.amountPerPortion * mult * 10) / 10}${ing.unit}</strong>
+                    </span>
+                  `).join("")}
+                </div>
+              </div>
+
+              <!-- Quick Steps -->
+              <div class="space-y-1 text-xs text-slate-300 bg-slate-900/50 p-3 rounded-2xl border border-slate-800/80">
+                ${top.steps.map((s, idx) => `<div><strong class="text-emerald-400">${idx + 1}.</strong> ${s}</div>`).join("")}
+              </div>
+            </div>
+
+            <!-- Swipe Buttons -->
+            <div class="grid grid-cols-2 gap-3 pt-2">
+              <button onclick="handleSwipe('${top.id}', 'left')" class="py-3.5 rounded-2xl bg-slate-800 hover:bg-rose-500/20 border border-slate-700 hover:border-rose-500/40 text-rose-300 font-bold text-sm flex items-center justify-center gap-2 transition active:scale-95">
+                <span>✕</span><span>Not This Week</span>
+              </button>
+              <button onclick="handleSwipe('${top.id}', 'right')" class="py-3.5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 font-extrabold text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/25 transition active:scale-95">
+                <span>❤️</span><span>Want to Eat!</span>
+              </button>
+            </div>
+          </div>
+        `;
+      }
+
+      // Render Matched Pool
+      const poolList = document.getElementById("matchedPoolList");
+      const lacaR = state.swipes?.laca || {};
+      const fruzsiR = state.swipes?.fruzsi || {};
+
+      const matches = getAllRecipes().filter(r => lacaR[r.id] === "right" || fruzsiR[r.id] === "right");
+      if (!matches.length) {
+        poolList.innerHTML = `<div class="text-xs text-slate-400 py-2 text-center">Swipe right on meals above to build your weekly pool!</div>`;
+      } else {
+        poolList.innerHTML = matches.map(r => {
+          const both = lacaR[r.id] === "right" && fruzsiR[r.id] === "right";
+          const who = both ? "💘 Both Matched" : (lacaR[r.id] === "right" ? "👦 Laca Liked" : "👩 Fruzsi Liked");
+          return `
+            <div class="p-2.5 rounded-2xl bg-slate-900/80 border ${both ? "border-emerald-500/40" : "border-slate-800"} flex items-center justify-between gap-2">
+              <div>
+                <div class="text-xs font-bold text-white">${r.name}</div>
+                <div class="text-[11px] text-slate-400">${r.equipment} • ${r.protein}g protein</div>
+              </div>
+              <span class="shrink-0 text-[10px] font-bold px-2 py-1 rounded-lg ${both ? "bg-emerald-500/20 text-emerald-300" : "bg-slate-800 text-slate-300"}">
+                ${who}
+              </span>
+            </div>
+          `;
+        }).join("");
+      }
+    }
+
+    function generateInitialPlanFromSwipes() {
+      const freshSlots = buildBatchSlotsFromCalendar(state.calendar, state);
+      state.planNegotiation = {
+        status: "proposed",
+        proposedBy: currentUser,
+        acceptedBy: {
+          laca: currentUser === "laca",
+          fruzsi: currentUser === "fruzsi"
+        },
+        previousSlots: null,
+        currentSlots: freshSlots
+      };
+      saveStateAndSync(currentUser);
+      switchTab("plan");
+    }
+
+    /********************************************************************
+     * 9. ADD CUSTOM RECIPE ("Write name + a few notes")
+     ********************************************************************/
+    function openAddRecipeModal() {
+      document.getElementById("newMealName").value = "";
+      document.getElementById("newMealNotes").value = "";
+      document.getElementById("addRecipeModal").classList.remove("hidden");
+    }
+
+    function closeAddRecipeModal() {
+      document.getElementById("addRecipeModal").classList.add("hidden");
+    }
+
+    function inferIngredientDetails(rawToken) {
+      const t = rawToken.toLowerCase().trim();
+      if (t.includes("chicken") || t.includes("turkey") || t.includes("pork") || t.includes("beef") || t.includes("meat") || t.includes("sausage")) {
+        return { name: rawToken.trim(), amountPerPortion: 210, unit: "g", aisle: "Meat & Fish", shelfLifeDays: 2, p: 44, c: 0, f: 9 };
+      }
+      if (t.includes("tuna") || t.includes("salmon") || t.includes("fish")) {
+        return { name: rawToken.trim(), amountPerPortion: 140, unit: "g", aisle: "Meat & Fish", shelfLifeDays: 180, p: 34, c: 0, f: 6 };
+      }
+      if (t.includes("rice") || t.includes("pasta") || t.includes("penne") || t.includes("spaghetti") || t.includes("noodle") || t.includes("oats")) {
+        return { name: rawToken.trim(), amountPerPortion: 115, unit: "g", aisle: "Dry Goods & Carbs", shelfLifeDays: 180, p: 11, c: 82, f: 2 };
+      }
+      if (t.includes("potato")) {
+        return { name: rawToken.trim(), amountPerPortion: 320, unit: "g", aisle: "Veggies & Fruit", shelfLifeDays: 21, p: 6, c: 58, f: 1 };
+      }
+      if (t.includes("cheese") || t.includes("yogurt") || t.includes("cream") || t.includes("milk") || t.includes("skyr")) {
+        return { name: rawToken.trim(), amountPerPortion: 65, unit: "g", aisle: "Dairy & Eggs", shelfLifeDays: 12, p: 9, c: 4, f: 10 };
+      }
+      if (t.includes("egg")) {
+        return { name: "Eggs", amountPerPortion: 1.5, unit: "pcs", aisle: "Dairy & Eggs", shelfLifeDays: 18, p: 11, c: 1, f: 9 };
+      }
+      if (t.includes("bean") || t.includes("corn") || t.includes("lentil") || t.includes("tomato") || t.includes("sauce") || t.includes("passata")) {
+        return { name: rawToken.trim(), amountPerPortion: 90, unit: "g", aisle: "Sauces & Spices", shelfLifeDays: 90, p: 5, c: 14, f: 1 };
+      }
+      return { name: rawToken.trim(), amountPerPortion: 90, unit: "g", aisle: "Veggies & Fruit", shelfLifeDays: 6, p: 2, c: 7, f: 0 };
+    }
+
+    function saveCustomRecipe() {
+      const name = document.getElementById("newMealName").value.trim();
+      const equip = document.getElementById("newMealEquip").value;
+      const notes = document.getElementById("newMealNotes").value.trim();
+
+      if (!name) return;
+
+      const tokens = notes
+        ? notes.split(",").map(s => s.trim()).filter(Boolean)
+        : ["Chicken breast", "Rice", "Broccoli"];
+
+      const parsedIngs = tokens.map(inferIngredientDetails);
+      let totalP = 0, totalC = 0, totalF = 0;
+      parsedIngs.forEach(i => { totalP += i.p; totalC += i.c; totalF += i.f; });
+      if (totalP < 35) totalP = 48;
+      if (totalC < 40) totalC = 72;
+      if (totalF < 10) totalF = 18;
+      const kcal = Math.round(totalP * 4 + totalC * 4 + totalF * 9);
+
+      const newRec = {
+        id: "custom-" + Date.now(),
+        name,
+        equipment: equip,
+        prepTime: "20 min",
+        calories: kcal,
+        protein: totalP,
+        carbs: totalC,
+        fat: totalF,
+        costPerPortion: "€2.00",
+        tags: tokens.map(t => t.toLowerCase()),
+        steps: [
+          `Prep ${tokens.slice(0, 2).join(" and ")} for ${equip}.`,
+          `Cook main protein and carbs until golden and tender.`,
+          `Combine remaining ingredients (${tokens.slice(2).join(", ") || "seasonings"}) and portion into big bowls.`
+        ],
+        ingredients: parsedIngs.map(i => ({
+          name: i.name.charAt(0).toUpperCase() + i.name.slice(1),
+          amountPerPortion: i.amountPerPortion,
+          unit: i.unit,
+          aisle: i.aisle,
+          shelfLifeDays: i.shelfLifeDays
+        }))
+      };
+
+      if (!state.customRecipes) state.customRecipes = [];
+      state.customRecipes.unshift(newRec);
+      if (!state.swipes[currentUser]) state.swipes[currentUser] = {};
+      state.swipes[currentUser][newRec.id] = "right";
+
+      closeAddRecipeModal();
+      saveStateAndSync(currentUser);
+    }
+
+    /********************************************************************
+     * 10. RENDER TAB 3: PING-PONG PLAN NEGOTIATION & PORTION MEMORY
+     ********************************************************************/
+    function recordCounterProposal(mutatorFn) {
+      const currentCopy = JSON.parse(JSON.stringify(state.planNegotiation.currentSlots || []));
+      state.planNegotiation.previousSlots = currentCopy;
+      mutatorFn(state.planNegotiation.currentSlots);
+      state.planNegotiation.status = "proposed";
+      state.planNegotiation.proposedBy = currentUser;
+      state.planNegotiation.acceptedBy = {
+        laca: currentUser === "laca",
+        fruzsi: currentUser === "fruzsi"
+      };
+      saveStateAndSync(currentUser);
+    }
+
+    function changeSlotRecipe(slotIdx, newRecipeId) {
+      recordCounterProposal((slots) => {
+        slots[slotIdx].recipeId = newRecipeId;
+      });
+    }
+
+    function setSlotMultiplier(slotIdx, multValue) {
+      recordCounterProposal((slots) => {
+        const slot = slots[slotIdx];
+        slot.multiplier = multValue;
+        state.recipeMultipliers[slot.recipeId] = multValue;
+      });
+    }
+
+    function bumpRecipePermanentPortion(recipeId) {
+      const currentMult = state.recipeMultipliers[recipeId] || 1.0;
+      const bumped = Math.min(2.0, Math.round((currentMult + 0.2) * 100) / 100);
+      state.recipeMultipliers[recipeId] = bumped;
+      (state.planNegotiation.currentSlots || []).forEach(s => {
+        if (s.recipeId === recipeId) s.multiplier = bumped;
+      });
+      saveStateAndSync(currentUser);
+    }
+
+    function toggleSlotBatchSplit(slotIdx) {
+      recordCounterProposal((slots) => {
+        const slot = slots[slotIdx];
+        if (slot.days.length === 2) {
+          // Split 2-day batch into two 1-day meals
+          const [d1, d2] = slot.days;
+          const s1 = state.calendar[d1] || "both";
+          const s2 = state.calendar[d2] || "both";
+          const secondRecipe = pickBestRecipeForConstraint(s2, new Set([slot.recipeId]), state, slotIdx + 1);
+          const firstHalf = {
+            id: `slot-${d1}`,
+            days: [d1],
+            whoConstraint: s1,
+            basePortions: getPersonCountForDay(s1),
+            isBatch: false,
+            recipeId: slot.recipeId,
+            multiplier: slot.multiplier || 1.0
+          };
+          const secondHalf = {
+            id: `slot-${d2}`,
+            days: [d2],
+            whoConstraint: s2,
+            basePortions: getPersonCountForDay(s2),
+            isBatch: false,
+            recipeId: secondRecipe.id,
+            multiplier: state.recipeMultipliers[secondRecipe.id] || 1.0
+          };
+          slots.splice(slotIdx, 1, firstHalf, secondHalf);
+        } else if (slotIdx + 1 < slots.length && slots[slotIdx + 1].days.length === 1) {
+          // Merge with next 1-day slot into a 2-day batch
+          const nextSlot = slots[slotIdx + 1];
+          const d1 = slot.days[0];
+          const d2 = nextSlot.days[0];
+          slots.splice(slotIdx, 2, {
+            id: `slot-${d1}-${d2}`,
+            days: [d1, d2],
+            whoConstraint: "both",
+            basePortions: slot.basePortions + nextSlot.basePortions,
+            isBatch: true,
+            recipeId: slot.recipeId,
+            multiplier: slot.multiplier || 1.0
+          });
+        }
+      });
+    }
+
+    function acceptCurrentPlan() {
+      state.planNegotiation.acceptedBy[currentUser] = true;
+      if (state.planNegotiation.acceptedBy.laca && state.planNegotiation.acceptedBy.fruzsi) {
+        state.planNegotiation.status = "locked";
+        state.planNegotiation.previousSlots = null;
+      }
+      saveStateAndSync(currentUser);
+    }
+
+    function revertToPreviousPlan() {
+      if (!state.planNegotiation.previousSlots) return;
+      state.planNegotiation.currentSlots = JSON.parse(JSON.stringify(state.planNegotiation.previousSlots));
+      state.planNegotiation.previousSlots = null;
+      state.planNegotiation.acceptedBy = { laca: true, fruzsi: true };
+      state.planNegotiation.status = "locked";
+      saveStateAndSync(currentUser);
+    }
+
+    function renderPlanTab() {
+      if (!state.planNegotiation.currentSlots || !state.planNegotiation.currentSlots.length) {
+        state.planNegotiation.currentSlots = buildBatchSlotsFromCalendar(state.calendar, state);
+      }
+
+      const neg = state.planNegotiation;
+      const lacaOk = !!neg.acceptedBy?.laca;
+      const fruzsiOk = !!neg.acceptedBy?.fruzsi;
+      const bothLocked = lacaOk && fruzsiOk;
+      const userLabel = currentUser === "laca" ? "Laca" : "Fruzsi";
+      const otherLabel = currentUser === "laca" ? "Fruzsi" : "Laca";
+      const myAccepted = neg.acceptedBy?.[currentUser];
+
+      // Show ping notification dot on bottom nav if waiting on currentUser
+      const badge = document.getElementById("planActionBadge");
+      badge.classList.toggle("hidden", bothLocked || myAccepted);
+
+      const statusCard = document.getElementById("planStatusCard");
+      if (bothLocked) {
+        statusCard.className = "glass rounded-3xl p-4 border border-emerald-500/50 bg-emerald-500/10";
+        statusCard.innerHTML = `
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="text-xs font-extrabold uppercase tracking-wider text-emerald-300">🎉 Weekly Plan Locked In!</div>
+              <div class="text-sm font-bold text-white mt-0.5">Both Laca & Fruzsi accepted this plan.</div>
+            </div>
+            <button onclick="switchTab('shop')" class="px-3.5 py-2 rounded-xl bg-emerald-500 text-slate-950 font-bold text-xs shadow">
+              Open Shop List →
+            </button>
+          </div>
+        `;
+      } else {
+        statusCard.className = "glass rounded-3xl p-4 border border-amber-500/40";
+        statusCard.innerHTML = `
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-extrabold uppercase tracking-wider text-amber-300">🤝 Ping-Pong Plan Approval</span>
+            <div class="flex gap-1.5 text-[11px] font-bold">
+              <span class="px-2 py-0.5 rounded-lg ${lacaOk ? "bg-emerald-500/20 text-emerald-300" : "bg-slate-800 text-slate-400"}">
+                👦 Laca: ${lacaOk ? "✅ Accepted" : "⏳ Pending"}
+              </span>
+              <span class="px-2 py-0.5 rounded-lg ${fruzsiOk ? "bg-emerald-500/20 text-emerald-300" : "bg-slate-800 text-slate-400"}">
+                👩 Fruzsi: ${fruzsiOk ? "✅ Accepted" : "⏳ Pending"}
+              </span>
+            </div>
+          </div>
+          <p class="text-xs text-slate-300 mb-3">
+            ${myAccepted
+              ? `You (${userLabel}) accepted this version. Waiting for ${otherLabel} to accept or counter-propose on her phone.`
+              : `${otherLabel} proposed a plan update! Review below and either accept it or swap a meal to send a counter-offer.`}
+          </p>
+          <div class="flex gap-2">
+            ${!myAccepted ? `
+              <button onclick="acceptCurrentPlan()" class="flex-1 py-2.5 rounded-xl bg-emerald-500 text-slate-950 font-extrabold text-xs shadow-lg shadow-emerald-500/20">
+                ✅ Accept as ${userLabel}
+              </button>
+            ` : `
+              <button onclick="switchTab('shop')" class="flex-1 py-2.5 rounded-xl bg-slate-800 text-emerald-300 font-bold text-xs border border-emerald-500/30">
+                Preview Shopping List →
+              </button>
+            `}
+          </div>
+        `;
+      }
+
+      // Render Card 1 (Previous) vs Card 2 (Proposed) if previousSlots exists
+      const compBox = document.getElementById("comparisonContainer");
+      if (neg.previousSlots && neg.previousSlots.length && !bothLocked) {
+        compBox.classList.remove("hidden");
+        const proposerName = neg.proposedBy === "laca" ? "Laca" : "Fruzsi";
+        compBox.innerHTML = `
+          <div class="glass rounded-3xl p-4 border border-cyan-500/40 space-y-3">
+            <div class="text-xs font-bold text-cyan-300">⚡ Counter-Proposal Comparison (${proposerName} changed the plan)</div>
+            <div class="grid grid-cols-2 gap-2.5">
+              <div class="p-3 rounded-2xl bg-slate-900/90 border border-slate-800">
+                <div class="text-[11px] font-bold text-slate-400 mb-1.5">Card 1: Previous Plan</div>
+                <div class="space-y-1 text-[11px] text-slate-300">
+                  ${neg.previousSlots.map(s => `<div>• <strong>${s.days.map(d => DAY_SHORT[d]).join("+")}:</strong> ${getRecipeById(s.recipeId).name}</div>`).join("")}
+                </div>
+                <button onclick="revertToPreviousPlan()" class="mt-2.5 w-full py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-[11px] border border-slate-700">
+                  Accept Original
+                </button>
+              </div>
+              <div class="p-3 rounded-2xl bg-emerald-950/30 border border-emerald-500/40">
+                <div class="text-[11px] font-bold text-emerald-300 mb-1.5">Card 2: ${proposerName}'s New Plan</div>
+                <div class="space-y-1 text-[11px] text-white">
+                  ${neg.currentSlots.map(s => `<div>• <strong>${s.days.map(d => DAY_SHORT[d]).join("+")}:</strong> ${getRecipeById(s.recipeId).name}</div>`).join("")}
+                </div>
+                <button onclick="acceptCurrentPlan()" class="mt-2.5 w-full py-2 rounded-xl bg-emerald-500 text-slate-950 font-extrabold text-[11px]">
+                  Accept New Proposal
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      } else {
+        compBox.classList.add("hidden");
+      }
+
+      // Render Editable Plan Slots
+      const slotsList = document.getElementById("planSlotsList");
+      const allRecipes = getAllRecipes();
+
+      slotsList.innerHTML = (neg.currentSlots || []).map((slot, idx) => {
+        const rec = getRecipeById(slot.recipeId);
+        const mult = slot.multiplier || 1.0;
+        const effectivePortions = Math.round(slot.basePortions * mult * 10) / 10;
+        const dayTitle = slot.days.map(d => DAY_LABELS[d]).join(" + ");
+        const canSplitOrMerge = slot.days.length === 2 || (idx + 1 < neg.currentSlots.length && neg.currentSlots[idx + 1].days.length === 1);
+
+        return `
+          <div class="p-3.5 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-2.5">
+            <div class="flex items-center justify-between gap-2">
+              <div>
+                <span class="text-xs font-extrabold uppercase tracking-wider text-emerald-400">
+                  🍳 Cook on ${DAY_LABELS[slot.days[0]]}
+                </span>
+                <div class="text-xs text-slate-400">Covers: ${dayTitle} (${slot.basePortions} base portions)</div>
+              </div>
+              ${canSplitOrMerge ? `
+                <button onclick="toggleSlotBatchSplit(${idx})" class="text-[11px] font-semibold px-2.5 py-1 rounded-xl bg-slate-800 text-slate-300 border border-slate-700">
+                  ${slot.days.length === 2 ? "✂️ Split into 1-Day Meals" : "🔗 Merge into 2-Day Batch"}
+                </button>
+              ` : ""}
+            </div>
+
+            <!-- Meal Selector Dropdown -->
+            <div>
+              <select onchange="changeSlotRecipe(${idx}, this.value)" class="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-xs font-bold text-white">
+                ${allRecipes.map(r => `
+                  <option value="${r.id}" ${r.id === rec.id ? "selected" : ""}>
+                    ${r.name} (${r.equipment} • ${r.protein}g P)
+                  </option>
+                `).join("")}
+              </select>
+            </div>
+
+            <!-- Portion Multiplier & Appetite Memory -->
+            <div class="flex items-center justify-between gap-2 pt-1">
+              <div class="flex items-center gap-1">
+                ${[1.0, 1.25, 1.5].map(m => `
+                  <button onclick="setSlotMultiplier(${idx}, ${m})" class="px-2.5 py-1 rounded-lg text-[11px] font-bold border transition ${mult === m ? "bg-emerald-500 text-slate-950 border-emerald-400" : "bg-slate-800 text-slate-300 border-slate-700"}">
+                    ${m}x ${m === 1 ? "Normal" : m === 1.25 ? "Big" : "Huge"}
+                  </button>
+                `).join("")}
+              </div>
+
+              <button onclick="bumpRecipePermanentPortion('${rec.id}')" class="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
+                📈 Next time +20% (${effectivePortions}p)
+              </button>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    /********************************************************************
+     * 11. RENDER TAB 4: SHELF-LIFE SHOPPING SPLITTER & AISLE GROUPING
+     ********************************************************************/
+    function setShoppingMode(mode) {
+      state.shopping.mode = mode;
+      saveStateAndSync(currentUser);
+    }
+
+    function toggleShopItem(type, key) {
+      if (!state.shopping[type]) state.shopping[type] = {};
+      state.shopping[type][key] = !state.shopping[type][key];
+      saveStateAndSync(currentUser);
+    }
+
+    function clearShoppingChecks() {
+      state.shopping.atHome = {};
+      state.shopping.bought = {};
+      saveStateAndSync(currentUser);
+    }
+
+    function buildShoppingTrips() {
+      const slots = state.planNegotiation.currentSlots || [];
+      const mode = state.shopping.mode || "fresh";
+
+      // Day index 0..6: Mon=0, Tue=1, Wed=2, Thu=3, Fri=4, Sat=5, Sun=6
+      const mondayMap = {};
+      const thursdayMap = {};
+
+      slots.forEach(slot => {
+        const rec = getRecipeById(slot.recipeId);
+        const mult = slot.multiplier || 1.0;
+        const totalPortions = slot.basePortions * mult;
+        const firstDayIdx = DAY_KEYS.indexOf(slot.days[0]);
+        const isLateWeek = firstDayIdx >= 3; // Thursday (3) or later
+
+        (rec.ingredients || []).forEach(ing => {
+          const amount = Math.round(ing.amountPerPortion * totalPortions * 10) / 10;
+          const isPerishableMeat = ing.shelfLifeDays <= 3;
+
+          // If mode is "fresh" AND meal is cooked Thu–Sun AND ingredient is perishable meat -> put in Wed/Thu trip!
+          // Everything else (including Thu–Sun rice, pasta, canned goods, cheese, long-life veggies) goes into Monday's trip so you go to the store as little as possible!
+          const targetTrip = (mode === "fresh" && isLateWeek && isPerishableMeat) ? thursdayMap : mondayMap;
+          const freezeTag = (mode === "freezer" && isLateWeek && isPerishableMeat);
+
+          const mapKey = `${ing.name.toLowerCase()}__${ing.unit}`;
+          if (!targetTrip[mapKey]) {
+            targetTrip[mapKey] = {
+              key: mapKey + (targetTrip === thursdayMap ? "__thu" : "__mon"),
+              name: ing.name,
+              amount: 0,
+              unit: ing.unit,
+              aisle: ing.aisle || "Other",
+              usedFor: new Set(),
+              freezeOnMonday: false
+            };
+          }
+          targetTrip[mapKey].amount = Math.round((targetTrip[mapKey].amount + amount) * 10) / 10;
+          targetTrip[mapKey].usedFor.add(DAY_SHORT[slot.days[0]]);
+          if (freezeTag) targetTrip[mapKey].freezeOnMonday = true;
+        });
+      });
+
+      return {
+        mondayItems: Object.values(mondayMap),
+        thursdayItems: Object.values(thursdayMap)
+      };
+    }
+
+    function renderShoppingTripCard(title, subtitle, badgeText, items) {
+      if (!items.length) return "";
+
+      const aislesOrder = ["Meat & Fish", "Dairy & Eggs", "Veggies & Fruit", "Dry Goods & Carbs", "Sauces & Spices"];
+      const grouped = {};
+      items.forEach(item => {
+        const a = item.aisle || "Other";
+        if (!grouped[a]) grouped[a] = [];
+        grouped[a].push(item);
+      });
+
+      const aisleIcons = {
+        "Meat & Fish": "🥩",
+        "Dairy & Eggs": "🧀",
+        "Veggies & Fruit": "🥦",
+        "Dry Goods & Carbs": "🍚",
+        "Sauces & Spices": "🥫"
+      };
+
+      const sectionsHtml = [...aislesOrder, ...Object.keys(grouped).filter(k => !aislesOrder.includes(k))]
+        .filter(a => grouped[a] && grouped[a].length)
+        .map(aisle => `
+          <div class="space-y-1.5">
+            <div class="text-xs font-extrabold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5 pt-2">
+              <span>${aisleIcons[aisle] || "🛍"}</span><span>${aisle}</span>
+            </div>
+            ${grouped[aisle].map(item => {
+              const isHome = !!state.shopping.atHome?.[item.key];
+              const isBought = !!state.shopping.bought?.[item.key];
+              const done = isHome || isBought;
+              return `
+                <div class="p-2.5 rounded-2xl border transition flex items-center justify-between gap-2 ${done ? "bg-slate-900/30 border-slate-800/60 opacity-55" : "bg-slate-900/90 border-slate-800"}">
+                  <div class="min-w-0 flex-1">
+                    <div class="text-xs font-bold ${done ? "line-through text-slate-400" : "text-white"} flex items-center gap-1.5 flex-wrap">
+                      <span>${item.name}</span>
+                      <span class="text-emerald-300 font-extrabold">${item.amount} ${item.unit}</span>
+                      ${item.freezeOnMonday ? `<span class="text-[10px] px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">❄️ Freeze Mon</span>` : ""}
+                    </div>
+                    <div class="text-[10px] text-slate-400">For ${[...item.usedFor].join(", ")} cook</div>
+                  </div>
+                  <div class="flex items-center gap-1.5 shrink-0">
+                    <button onclick="toggleShopItem('atHome', '${item.key}')" class="px-2 py-1.5 rounded-xl text-[10px] font-bold border transition ${isHome ? "bg-amber-500/25 text-amber-300 border-amber-500/40" : "bg-slate-800 text-slate-400 border-slate-700"}">
+                      🏠 Home
+                    </button>
+                    <button onclick="toggleShopItem('bought', '${item.key}')" class="px-2.5 py-1.5 rounded-xl text-[10px] font-bold border transition ${isBought ? "bg-emerald-500 text-slate-950 border-emerald-400" : "bg-slate-800 text-slate-200 border-slate-700"}">
+                      ${isBought ? "✓ Bought" : "🛒 Buy"}
+                    </button>
+                  </div>
+                </div>
+              `;
+            }).join("")}
+          </div>
+        `).join("");
+
+      return `
+        <div class="glass rounded-3xl p-4 space-y-2 border border-slate-800">
+          <div class="flex items-center justify-between">
+            <div>
+              <h3 class="text-sm font-extrabold text-white">${title}</h3>
+              <p class="text-[11px] text-slate-400">${subtitle}</p>
+            </div>
+            <span class="text-[11px] font-bold px-2.5 py-1 rounded-xl bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+              ${badgeText}
+            </span>
+          </div>
+          ${sectionsHtml}
+        </div>
+      `;
+    }
+
+    function renderShopTab() {
+      const mode = state.shopping.mode || "fresh";
+      const btnFresh = document.getElementById("shopModeFresh");
+      const btnFreezer = document.getElementById("shopModeFreezer");
+      const desc = document.getElementById("shopModeDesc");
+
+      if (mode === "fresh") {
+        btnFresh.className = "py-2 px-2.5 rounded-xl text-xs font-bold bg-emerald-500 text-slate-950 shadow transition text-center";
+        btnFreezer.className = "py-2 px-2.5 rounded-xl text-xs font-bold text-slate-400 transition text-center";
+        desc.textContent = "All long-life items for Thursday–Sunday are pulled into Monday's trip so you only grab fresh meat on Wednesday/Thursday.";
+      } else {
+        btnFreezer.className = "py-2 px-2.5 rounded-xl text-xs font-bold bg-emerald-500 text-slate-950 shadow transition text-center";
+        btnFresh.className = "py-2 px-2.5 rounded-xl text-xs font-bold text-slate-400 transition text-center";
+        desc.textContent = "1-Trip Mode: Buy 100% of the week's groceries on Monday and put Thursday–Sunday meats into the freezer.";
+      }
+
+      const { mondayItems, thursdayItems } = buildShoppingTrips();
+      const container = document.getElementById("shoppingTripsContainer");
+
+      let html = renderShoppingTripCard(
+        "🛒 Buy on Monday (Main Weekly Haul)",
+        "Covers Mon–Wed meals + all non-perishable items for the whole week",
+        `${mondayItems.length} items`,
+        mondayItems
+      );
+
+      if (thursdayItems.length) {
+        html += renderShoppingTripCard(
+          "🥩 Buy on Wednesday / Thursday (Quick Fresh Run)",
+          "Fresh meat & short-life items needed for Thursday–Sunday meals",
+          `${thursdayItems.length} items`,
+          thursdayItems
+        );
+      }
+
+      container.innerHTML = html || `<div class="glass rounded-3xl p-5 text-center text-xs text-slate-400">No ingredients needed yet—build your weekly plan first!</div>`;
+    }
+
+    /********************************************************************
+     * 12. RENDER TAB 5: SETUP, DISLIKES, REMINDERS & IOS .ICS EXPORT
+     ********************************************************************/
+    function toggleDislike(item) {
+      if (!state.dislikes[currentUser]) state.dislikes[currentUser] = [];
+      const arr = state.dislikes[currentUser];
+      const idx = arr.indexOf(item);
+      if (idx >= 0) arr.splice(idx, 1);
+      else arr.push(item);
+      saveStateAndSync(currentUser);
+    }
+
+    function addCustomDislike() {
+      const inp = document.getElementById("customDislikeInput");
+      const val = inp.value.trim();
+      if (!val) return;
+      if (!state.dislikes[currentUser]) state.dislikes[currentUser] = [];
+      if (!state.dislikes[currentUser].includes(val)) {
+        state.dislikes[currentUser].push(val);
+      }
+      inp.value = "";
+      saveStateAndSync(currentUser);
+    }
+
+    function updateReminderTime(dayKey, index, newTime) {
+      if (!state.reminders[dayKey]) state.reminders[dayKey] = ["13:00", "17:30"];
+      state.reminders[dayKey][index] = newTime;
+      saveStateAndSync(currentUser);
+    }
+
+    function requestWebNotifications() {
+      if (!("Notification" in window)) {
+        alert("Tip: Use the '1-Tap Sync to iPhone Calendar (.ics)' button below for native iOS lock-screen alerts!");
+        return;
+      }
+      Notification.requestPermission().then(p => {
+        if (p === "granted") {
+          new Notification("Laca & Fruzsi Kitchen", {
+            body: "Daily grocery & meal-prep reminders enabled!"
+          });
+        }
+      });
+    }
+
+    function exportToAppleCalendar() {
+      const { mondayItems, thursdayItems } = buildShoppingTrips();
+      const monSummary = mondayItems
+        .filter(i => !state.shopping.atHome?.[i.key] && !state.shopping.bought?.[i.key])
+        .map(i => `${i.name} (${i.amount}${i.unit})`)
+        .join(", ") || "Check app for weekly list";
+
+      const thuSummary = thursdayItems
+        .filter(i => !state.shopping.atHome?.[i.key] && !state.shopping.bought?.[i.key])
+        .map(i => `${i.name} (${i.amount}${i.unit})`)
+        .join(", ") || "Fresh meat top-up";
+
+      const now = new Date();
+      const dayOfWeek = (now.getDay() + 6) % 7; // Mon=0..Sun=6
+      const mondayDate = new Date(now);
+      mondayDate.setDate(now.getDate() - dayOfWeek);
+
+      let icsLines = [
+        "BEGIN:VCALENDAR",
+        "VERSION:2.0",
+        "PRODID:-//LacaFruzsi//MealPlanner//EN",
+        "CALSCALE:GREGORIAN"
+      ];
+
+      DAY_KEYS.forEach((dayKey, dIdx) => {
+        const times = state.reminders?.[dayKey] || ["13:00", "17:30"];
+        const eventDate = new Date(mondayDate);
+        eventDate.setDate(mondayDate.getDate() + dIdx);
+
+        const y = eventDate.getFullYear();
+        const m = String(eventDate.getMonth() + 1).padStart(2, "0");
+        const d = String(eventDate.getDate()).padStart(2, "0");
+
+        times.forEach((tStr, tIdx) => {
+          if (!tStr) return;
+          const [hh, mm] = tStr.split(":");
+          const dtStart = `${y}${m}${d}T${hh}${mm}00`;
+          const dtEnd = `${y}${m}${d}T${hh}${String(Math.min(59, Number(mm) + 15)).padStart(2, "0")}00`;
+          const listNote = dIdx >= 2 && thursdayItems.length ? thuSummary : monSummary;
+
+          icsLines.push(
+            "BEGIN:VEVENT",
+            `UID:lf-${dayKey}-${tIdx}-${Date.now()}@lacafruzsi.app`,
+            `DTSTAMP:${y}${m}${d}T080000Z`,
+            `DTSTART:${dtStart}`,
+            `DTEND:${dtEnd}`,
+            `SUMMARY:🛒 Laca & Fruzsi Meal & Grocery Check`,
+            `DESCRIPTION:Don't order food! Items to grab: ${listNote}`,
+            "BEGIN:VALARM",
+            "TRIGGER:-PT0M",
+            "ACTION:DISPLAY",
+            "DESCRIPTION:Laca & Fruzsi Kitchen Reminder",
+            "END:VALARM",
+            "END:VEVENT"
+          );
+        });
+      });
+
+      icsLines.push("END:VCALENDAR");
+      const blob = new Blob([icsLines.join("\r\n")], { type: "text/calendar;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "laca-fruzsi-reminders.ics";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+
+    function forceAppUpdate() {
+      const cleanUrl = window.location.href.split("?")[0];
+      window.location.href = `${cleanUrl}?v=${Date.now()}`;
+    }
+
+    function renderSetupTab() {
+      const userLabel = currentUser === "laca" ? "Laca" : "Fruzsi";
+      document.getElementById("dislikeUserLabel").textContent = userLabel;
+
+      const myDislikes = state.dislikes?.[currentUser] || [];
+      const allOptions = [...new Set([...DISLIKE_OPTIONS, ...myDislikes])];
+
+      document.getElementById("dislikeChipsGrid").innerHTML = allOptions.map(item => {
+        const active = myDislikes.includes(item);
+        return `
+          <button onclick="toggleDislike('${item.replace(/'/g, "\\'")}')" class="px-2.5 py-1.5 rounded-xl text-xs font-semibold border transition ${
+            active
+              ? "bg-rose-500/25 text-rose-300 border-rose-500/50"
+              : "bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200"
+          }">
+            ${active ? "✕ " : ""}${item}
+          </button>
+        `;
+      }).join("");
+
+      const remList = document.getElementById("reminderScheduleList");
+      remList.innerHTML = DAY_KEYS.map(dayKey => {
+        const times = state.reminders?.[dayKey] || ["13:00", "17:30"];
+        return `
+          <div class="flex items-center justify-between p-2 rounded-xl bg-slate-900/70 border border-slate-800">
+            <span class="text-xs font-bold text-slate-200 w-24">${DAY_LABELS[dayKey]}</span>
+            <div class="flex items-center gap-2">
+              <input type="time" value="${times[0] || '13:00'}" onchange="updateReminderTime('${dayKey}', 0, this.value)" class="px-2 py-1 rounded-lg bg-slate-950 border border-slate-700 text-xs text-emerald-300" />
+              <input type="time" value="${times[1] || '17:30'}" onchange="updateReminderTime('${dayKey}', 1, this.value)" class="px-2 py-1 rounded-lg bg-slate-950 border border-slate-700 text-xs text-emerald-300" />
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    /********************************************************************
+     * 13. MASTER RENDER & INIT
+     ********************************************************************/
+    function renderAll() {
+      renderTopUserToggle();
+      renderWeekTab();
+      renderSwipeTab();
+      renderPlanTab();
+      renderShopTab();
+      renderSetupTab();
+    }
+
+    window.addEventListener("DOMContentLoaded", () => {
+      renderAll();
+      if (!secretPin) {
+        openPinSettings();
+      } else {
+        startRealtimeListener();
+      }
+    });
+  </script>
+</body>
+</html>
