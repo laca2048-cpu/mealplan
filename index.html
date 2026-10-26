@@ -205,6 +205,9 @@
       <!-- Approval / Ping-Pong Status Banner -->
       <div id="planStatusCard" class="glass rounded-3xl p-4 border"></div>
 
+      <!-- Week at a glance -->
+      <div id="weekStrip" class="glass rounded-3xl p-4"></div>
+
       <!-- Money Saved Tracker -->
       <div id="moneyCard" class="glass rounded-3xl p-4 border border-amber-500/30"></div>
       <div id="historyCard" class="glass rounded-3xl p-4 border border-slate-800"></div>
@@ -267,6 +270,37 @@
 
       <div id="shoppingTripsContainer" class="space-y-4"></div>
 
+      <!-- At home: live stock, barcode scan -->
+      <details class="glass rounded-3xl border border-cyan-500/30">
+        <summary class="p-4 flex items-center justify-between">
+          <div>
+            <div class="text-sm font-bold text-white">🏠 What we have at home</div>
+            <div id="homeStockSub" class="text-[11px] text-slate-400">Nothing yet</div>
+          </div>
+          <span class="chev text-slate-400">▾</span>
+        </summary>
+        <div class="px-4 pb-4">
+          <div class="grid grid-cols-2 gap-2">
+            <button onclick="openScanner()" class="py-3 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-500 text-slate-950 font-extrabold text-xs">📷 Scan barcode</button>
+            <button onclick="toggleManualStock()" class="py-3 rounded-2xl bg-slate-800 border border-slate-700 text-slate-200 font-bold text-xs">✏️ Add by hand</button>
+          </div>
+          <div id="manualStockForm" class="hidden mt-3">
+            <div class="flex gap-2">
+              <input id="pantryName" type="text" placeholder="e.g. chicken" class="flex-1 min-w-0 px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white" />
+              <input id="pantryAmount" type="number" inputmode="decimal" placeholder="1000" class="w-20 px-2 py-2 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white" />
+              <select id="pantryUnit" class="px-2 py-2 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white"><option value="g">g</option><option value="ml">ml</option><option value="pcs">pcs</option></select>
+              <button onclick="addPantryItem()" class="px-3 py-2 rounded-xl bg-emerald-500 text-slate-950 font-bold text-xs">Add</button>
+            </div>
+          </div>
+          <div id="pantryList" class="space-y-2 mt-3"></div>
+          <p class="text-[11px] text-slate-400 mt-3">Stock drops by itself when you tap ✓ Cooked on the Plan tab. Scan a product again to mark it finished. The app plans meals with it and takes it off your list.</p>
+          <div class="flex items-center justify-between mt-2 text-xs text-slate-300">
+            <span>Max meals per week with the same item</span>
+            <select id="pantryMaxSelect" onchange="setPantryMax(this.value)" class="px-2 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-xs text-white"><option value="1">1</option><option value="2">2</option><option value="3">3</option></select>
+          </div>
+        </div>
+      </details>
+
       <!-- Grocery Spending (type in what the receipt said) -->
       <div class="glass rounded-3xl p-4 border border-amber-500/30">
         <h3 class="text-sm font-extrabold text-white">🧾 What did you actually spend?</h3>
@@ -318,31 +352,6 @@
           <div id="reminderScheduleList" class="space-y-2"></div>
           <button onclick="exportToAppleCalendar()" class="w-full py-3 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-500 text-slate-950 font-bold text-xs">📅 Add to iPhone Calendar (.ics)</button>
           <button onclick="requestWebNotifications()" class="w-full py-2.5 rounded-2xl bg-slate-800 border border-slate-700 text-slate-200 font-semibold text-xs">🔔 Allow alerts while the app is open</button>
-        </div>
-      </details>
-
-      <details class="glass rounded-3xl border border-cyan-500/20">
-        <summary class="p-4 flex items-center justify-between">
-          <div>
-            <div class="text-sm font-bold text-white">🧊 Pantry & freezer</div>
-            <div class="text-[11px] text-slate-400">What we already have at home</div>
-          </div>
-          <span class="chev text-slate-400">▾</span>
-        </summary>
-        <div class="px-4 pb-4">
-          <p class="text-xs text-slate-400 mb-3">The app leans toward meals using it and takes it off your shopping list, but never fills the week with one ingredient.</p>
-          <div class="flex gap-2">
-            <input id="pantryName" type="text" placeholder="e.g. chicken" class="flex-1 min-w-0 px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white" />
-            <input id="pantryAmount" type="number" inputmode="decimal" placeholder="3000" class="w-20 px-2 py-2 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white" />
-            <select id="pantryUnit" class="px-2 py-2 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white"><option value="g">g</option><option value="ml">ml</option><option value="pcs">pcs</option></select>
-            <button onclick="addPantryItem()" class="px-3 py-2 rounded-xl bg-emerald-500 text-slate-950 font-bold text-xs">Add</button>
-          </div>
-          <div id="pantryList" class="space-y-2 mt-3"></div>
-          <div class="flex items-center justify-between mt-3 text-xs text-slate-300">
-            <span>Max meals per week with the same item</span>
-            <select id="pantryMaxSelect" onchange="setPantryMax(this.value)" class="px-2 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-xs text-white"><option value="1">1</option><option value="2">2</option><option value="3">3</option></select>
-          </div>
-          <p class="text-[10px] text-slate-500 mt-1">The rest stays for next week. Used amounts are removed when you tap Start New Week.</p>
         </div>
       </details>
 
@@ -432,6 +441,19 @@
         <button onclick="closeTour()" class="px-4 py-3 rounded-2xl bg-slate-800 border border-slate-700 text-slate-300 font-bold text-xs">Skip</button>
         <button id="tourNext" onclick="tourNext()" class="flex-1 py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 font-extrabold text-sm">Next →</button>
       </div>
+    </div>
+  </div>
+
+  <!-- BARCODE SCANNER -->
+  <div id="scanModal" class="fixed inset-0 z-[58] bg-slate-950/95 backdrop-blur-xl flex items-center justify-center p-4 hidden">
+    <div class="w-full max-w-sm glass rounded-3xl p-5 border border-slate-700 max-h-[92vh] overflow-y-auto">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-base font-bold text-white">📷 Scan a product</h3>
+        <button onclick="closeScanner()" class="text-slate-400 text-sm px-2 py-1">✕</button>
+      </div>
+      <div id="scanStatus" class="text-xs text-slate-400 mb-2">Point the camera at the barcode.</div>
+      <div id="scanReader" class="rounded-2xl overflow-hidden"></div>
+      <div id="scanResult" class="mt-3"></div>
     </div>
   </div>
 
@@ -1434,6 +1456,7 @@
         spending: [],
         pantry: [],
         availability: null,
+        products: {},
         availabilitySent: { laca: true, fruzsi: true },
         planNegotiation: {
           status: "draft",
@@ -1484,6 +1507,7 @@
       s.history = toArr(r.history);
       s.spending = toArr(r.spending);
       s.pantry = toArr(r.pantry);
+      s.products = r.products || {};
       // per-person availability; older saves are converted from the shared calendar
       s.availability = { laca: {}, fruzsi: {} };
       DAY_KEYS.forEach(dk => {
@@ -2079,7 +2103,6 @@
       if (!confirm("Start a new week? Swipes, plan approval and shopping ticks will be cleared.")) return;
       const neg = state.planNegotiation;
       if (neg.status === "locked" && (neg.currentSlots || []).length) {
-        deductPantry();
         const m = computeMoney(neg.currentSlots);
         state.history.push({
           week: weekLabel(),
@@ -2174,6 +2197,7 @@
         const mult = state.recipeMultipliers[top.id] || 1.0;
         area.innerHTML = `
           <div id="activeSwipeCard" class="swipe-card glass rounded-3xl p-5 border border-slate-700/80 shadow-2xl space-y-3">
+            ${heroHtml(top, 120)}
             ${pantryBadge(top)}
             <h3 class="text-xl font-extrabold text-white leading-snug">${esc(top.name)}</h3>
             <div class="flex flex-wrap gap-1.5">
@@ -2783,15 +2807,18 @@
       const amount = Number(document.getElementById("pantryAmount").value);
       const unit = document.getElementById("pantryUnit").value;
       if (!name || !amount || amount <= 0) { showToast("Type an item and an amount"); return; }
-      state.pantry.push({ id: "pt" + Date.now(), name, amount, unit });
+      addStock({ name, label: name, amount, unit });
       document.getElementById("pantryName").value = "";
       document.getElementById("pantryAmount").value = "";
-      state.planNegotiation.currentSlots = buildBatchSlotsFromCalendar(state.calendar, state);
-      state.planNegotiation.status = "draft";
-      state.planNegotiation.acceptedBy = { laca: false, fruzsi: false };
-      state.planNegotiation.previousSlots = null;
+      // only re-plan while the plan isn't locked, so adding groceries never undoes an agreed plan
+      if (state.planNegotiation.status !== "locked") {
+        state.planNegotiation.currentSlots = buildBatchSlotsFromCalendar(state.calendar, state);
+        state.planNegotiation.status = "draft";
+        state.planNegotiation.acceptedBy = { laca: false, fruzsi: false };
+        state.planNegotiation.previousSlots = null;
+      }
       saveStateAndSync(currentUser);
-      showToast(`${name} added. Plan refreshed to use it`);
+      showToast(`${name} added to what we have at home`);
     }
 
     function setPantryAmount(id, val) {
@@ -2819,6 +2846,8 @@
 
     function renderPantry() {
       const used = buildShoppingTrips().pantryUsed || {};
+      const stocked = state.pantry.filter(p => Number(p.amount) > 0).length;
+      document.getElementById("homeStockSub").textContent = stocked ? `${stocked} item${stocked === 1 ? "" : "s"} in stock` : "Nothing yet. Scan or add what you buy";
       const sel = document.getElementById("pantryMaxSelect");
       if (sel) sel.value = String(state.settings.pantryMax || 2);
       const fmt = (n, u) => (u === "g" && n >= 1000) ? `${Math.round(n) / 1000} kg` : `${Math.round(n)} ${u}`;
@@ -2827,7 +2856,7 @@
         return `
         <div class="p-2.5 rounded-2xl bg-slate-900/80 border border-slate-800 flex items-center justify-between gap-2">
           <div class="min-w-0">
-            <div class="text-xs font-bold text-white truncate">${esc(p.name)}</div>
+            <div class="text-xs font-bold text-white truncate">${esc(p.label || p.name)}${p.label && p.label.toLowerCase() !== p.name.toLowerCase() ? ` <span class="text-slate-500 font-normal">· counts as ${esc(p.name)}</span>` : ""}</div>
             <div class="text-[11px] ${u ? "text-cyan-300" : "text-slate-400"}">${u ? `This plan uses ${fmt(u, p.unit)} → ${fmt(Math.max(0, p.amount - u), p.unit)} left after` : "Not used by this week's plan"}</div>
           </div>
           <div class="flex items-center gap-1.5 shrink-0">
@@ -2836,7 +2865,7 @@
             <button onclick="removePantryItem('${esc(p.id)}')" class="text-slate-500 px-1">✕</button>
           </div>
         </div>`;
-      }).join("") : `<div class="text-xs text-slate-400">Empty. Add what's in your freezer or cupboard, e.g. "chicken 3000 g".</div>`;
+      }).join("") : `<div class="text-xs text-slate-400">Empty. Scan a product or add what you have, e.g. "chicken 3000 g".</div>`;
     }
 
     /* ---- Weekly history chart ---- */
@@ -2859,6 +2888,283 @@
             </div>`).join("")}
         </div>
         <div class="flex gap-3 mt-2 text-[10px] text-slate-400"><span><span class="inline-block w-2 h-2 rounded bg-rose-400/70"></span> delivery</span><span><span class="inline-block w-2 h-2 rounded bg-emerald-400"></span> what you spent</span></div>`;
+    }
+
+    /* ---- Stock at home: merge, live deduction ---- */
+    function addStock(it) {
+      const key = it.name.toLowerCase().trim();
+      const ex = state.pantry.find(x => x.name.toLowerCase().trim() === key && x.unit === it.unit);
+      if (ex) {
+        ex.amount = Math.round((Number(ex.amount) + Number(it.amount)) * 10) / 10;
+        if (it.label && !ex.label) ex.label = it.label;
+      } else {
+        state.pantry.push({ id: "pt" + Date.now() + Math.floor(Math.random() * 99), name: it.name.trim(), label: it.label || it.name, amount: Number(it.amount), unit: it.unit });
+      }
+    }
+
+    function slotPantryTake(slot) {
+      const take = {};
+      const total = slot.basePortions * (slot.multiplier || 1);
+      (getRecipeById(slot.recipeId).ingredients || []).forEach(ing => {
+        let need = ing.amountPerPortion * total;
+        pantryItemsFor(ing).forEach(pt => {
+          if (need <= 0) return;
+          const have = (Number(pt.amount) || 0) - (take[pt.id] || 0);
+          const t = Math.min(have, need);
+          if (t > 0) { take[pt.id] = (take[pt.id] || 0) + t; need -= t; }
+        });
+      });
+      return take;
+    }
+
+    function toggleManualStock() { document.getElementById("manualStockForm").classList.toggle("hidden"); }
+
+    /* ---- Barcode scanning: free html5-qrcode + free Open Food Facts lookup ---- */
+    let scanner = null, scanBusy = false;
+    const SCAN_LIB = "https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js";
+    const KEYWORD_GUESS = [
+      ["chicken", /chicken|csirke|poultry/], ["turkey", /turkey|pulyka/], ["pork", /pork|sert[eé]s|disznó/], ["beef", /beef|marha/],
+      ["sausage", /sausage|kolb[aá]sz|virsli/], ["bacon", /bacon|szalonna/], ["ham", /\bham\b|sonka/], ["tuna", /tuna|tonhal/], ["fish", /\bfish\b|hal\b|salmon/],
+      ["egg", /\beggs?\b|toj[aá]s/], ["rice", /\brice\b|rizs/], ["pasta", /pasta|t[eé]szta|penne|spaghetti|fusilli|macaroni|tagliatelle/],
+      ["potato", /potato|burgonya|krumpli/], ["cheese", /cheese|sajt/], ["cottage cheese", /cottage|t[uú]r[oó]/], ["yogurt", /yogh?urt|joghurt|skyr/],
+      ["milk", /\bmilk\b|\btej\b/], ["cream", /cream|tejsz[ií]n/], ["bread", /bread|keny[eé]r|toast/], ["tortilla", /tortilla|wrap/],
+      ["tomato", /tomato|paradicsom|passata/], ["oats", /\boats?\b|zab/], ["lentils", /lentil|lencse/], ["chickpeas", /chickpea|csicseribors/],
+      ["beans", /beans?\b|bab\b/], ["corn", /sweetcorn|corn\b|kukorica/], ["peas", /\bpeas\b|bors[oó]/], ["onion", /onion|hagyma/],
+      ["carrot", /carrot|s[aá]rgar[eé]pa/], ["cabbage", /cabbage|k[aá]poszta/], ["mushrooms", /mushroom|gomba/], ["spinach", /spinach|spen[oó]t/],
+      ["broccoli", /broccoli|brokkoli/], ["flour", /flour|liszt/], ["noodles", /noodle|metélt/], ["couscous", /couscous/]
+    ];
+
+    function guessKeyword(text) {
+      const t = String(text || "").toLowerCase();
+      const hit = KEYWORD_GUESS.find(k => k[1].test(t));
+      return hit ? hit[0] : "";
+    }
+
+    function parseQuantity(q) {
+      const m = String(q || "").toLowerCase().replace(",", ".").match(/([\d.]+)\s*(kg|g|l|ml|cl|dl|pcs|db)?/);
+      if (!m) return null;
+      const n = parseFloat(m[1]);
+      if (!n) return null;
+      const u = m[2];
+      if (u === "kg") return { amount: n * 1000, unit: "g" };
+      if (u === "g") return { amount: n, unit: "g" };
+      if (u === "l") return { amount: n * 1000, unit: "ml" };
+      if (u === "dl") return { amount: n * 100, unit: "ml" };
+      if (u === "cl") return { amount: n * 10, unit: "ml" };
+      if (u === "ml") return { amount: n, unit: "ml" };
+      if (u === "pcs" || u === "db") return { amount: n, unit: "pcs" };
+      return null;
+    }
+
+    function bkey(code) { return /^\d{6,14}$/.test(code) ? code : "q" + safeKey(code).slice(0, 40); }
+
+    async function lookupBarcode(code) {
+      const known = state.products[bkey(code)];
+      if (known) return Object.assign({ known: true }, known);
+      try {
+        const r = await fetch(`https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(code)}.json?fields=product_name,brands,quantity,product_quantity,product_quantity_unit,categories_tags`);
+        const j = await r.json();
+        if (j.status === 1 && j.product) {
+          const pr = j.product;
+          const label = [pr.brands ? String(pr.brands).split(",")[0] : "", pr.product_name || ""].filter(Boolean).join(" ").trim();
+          let q = parseQuantity(pr.quantity);
+          if (!q && pr.product_quantity) q = parseQuantity(pr.product_quantity + " " + (pr.product_quantity_unit || "g"));
+          const keyword = guessKeyword(label + " " + (pr.categories_tags || []).join(" "));
+          return { label: label || "Unknown product", keyword, amount: q ? q.amount : "", unit: q ? q.unit : "g" };
+        }
+      } catch (e) {}
+      return null;
+    }
+
+    function loadScript(url) {
+      return new Promise((resolve, reject) => {
+        if (window.Html5Qrcode) return resolve();
+        const sc = document.createElement("script");
+        sc.src = url; sc.onload = resolve; sc.onerror = () => reject(new Error("load failed"));
+        document.head.appendChild(sc);
+      });
+    }
+
+    async function stopScanner() {
+      if (!scanner) return;
+      try { await scanner.stop(); scanner.clear(); } catch (e) {}
+      scanner = null;
+    }
+
+    async function openScanner() {
+      scanBusy = false;
+      document.getElementById("scanModal").classList.remove("hidden");
+      document.getElementById("scanResult").innerHTML = "";
+      document.getElementById("scanReader").classList.remove("hidden");
+      const status = document.getElementById("scanStatus");
+      status.textContent = "Starting camera…";
+      try {
+        await loadScript(SCAN_LIB);
+        await stopScanner();
+        scanner = new Html5Qrcode("scanReader", { verbose: false, experimentalFeatures: { useBarCodeDetectorIfSupported: true } });
+        await scanner.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 260, height: 150 } }, onScanned, () => {});
+        status.textContent = "Point the camera at the barcode.";
+      } catch (e) {
+        status.innerHTML = "Camera not available. Allow camera access for this app in iPhone Settings → Safari, or close this and tap <strong>Add by hand</strong>.";
+      }
+    }
+
+    async function closeScanner() {
+      await stopScanner();
+      document.getElementById("scanModal").classList.add("hidden");
+    }
+
+    async function onScanned(text) {
+      if (scanBusy) return;
+      scanBusy = true;
+      await stopScanner();
+      document.getElementById("scanReader").classList.add("hidden");
+      document.getElementById("scanStatus").textContent = "Looking it up…";
+      const info = await lookupBarcode(text);
+      renderScanResult(text, info);
+    }
+
+    function renderScanResult(code, info) {
+      const inp = "w-full mt-1 px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white";
+      const i = info || { label: "", keyword: "", amount: "", unit: "g" };
+      const stock = i.keyword ? state.pantry.find(x => x.name.toLowerCase().trim() === i.keyword.toLowerCase().trim() && x.unit === i.unit) : null;
+      document.getElementById("scanStatus").textContent = info
+        ? (info.known ? "We know this one from before." : "Found it! Check the details.")
+        : "Not in the free product list. Type it once and the app remembers this barcode.";
+      document.getElementById("scanResult").innerHTML = `
+        <div class="space-y-2.5">
+          <div><label class="text-[11px] font-semibold text-slate-400">Product</label><input id="scanLabel" type="text" value="${esc(i.label)}" class="${inp}" /></div>
+          <div>
+            <label class="text-[11px] font-semibold text-slate-400">What is it? <span class="text-slate-500">(one word recipes use: chicken, rice, cheese…)</span></label>
+            <input id="scanKeyword" type="text" value="${esc(i.keyword)}" placeholder="e.g. chicken" class="${inp}" />
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div><label class="text-[11px] font-semibold text-slate-400">Amount in the pack</label><input id="scanAmount" type="number" inputmode="decimal" value="${i.amount}" class="${inp}" /></div>
+            <div><label class="text-[11px] font-semibold text-slate-400">Unit</label>
+              <select id="scanUnit" class="${inp}">${["g", "ml", "pcs"].map(u => `<option ${u === i.unit ? "selected" : ""}>${u}</option>`).join("")}</select></div>
+          </div>
+          ${stock ? `<div class="p-2.5 rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-xs text-cyan-200">At home now: <strong>${Math.round(stock.amount)} ${esc(stock.unit)}</strong></div>` : ""}
+          <button onclick="confirmScanAdd('${esc(code)}')" class="w-full py-3 rounded-2xl bg-emerald-500 text-slate-950 font-extrabold text-sm">➕ Add to what we have at home</button>
+          ${stock ? `<button onclick="scanFinish('${esc(code)}')" class="w-full py-3 rounded-2xl bg-rose-500/15 border border-rose-500/40 text-rose-300 font-bold text-sm">✓ Finished one pack (remove it)</button>` : ""}
+          <button onclick="openScanner()" class="w-full py-2.5 rounded-2xl bg-slate-800 border border-slate-700 text-slate-200 font-semibold text-xs">📷 Scan another</button>
+        </div>`;
+    }
+
+    function scanFields() {
+      return {
+        label: document.getElementById("scanLabel").value.trim(),
+        keyword: document.getElementById("scanKeyword").value.trim(),
+        amount: Number(document.getElementById("scanAmount").value),
+        unit: document.getElementById("scanUnit").value
+      };
+    }
+
+    function confirmScanAdd(code) {
+      const f = scanFields();
+      if (!f.keyword || !f.amount) { showToast("Add a one-word name and an amount"); return; }
+      addStock({ name: f.keyword, label: f.label || f.keyword, amount: f.amount, unit: f.unit });
+      state.products[bkey(code)] = { label: f.label || f.keyword, keyword: f.keyword, amount: f.amount, unit: f.unit };
+      saveStateAndSync(currentUser);
+      document.getElementById("scanModal").classList.add("hidden");
+      showToast(`${f.label || f.keyword} added ✅`);
+    }
+
+    function scanFinish(code) {
+      const f = scanFields();
+      const item = state.pantry.find(x => x.name.toLowerCase().trim() === f.keyword.toLowerCase().trim() && x.unit === f.unit);
+      if (!item) { showToast("Not in stock"); return; }
+      const left = Math.round((Number(item.amount) - (f.amount || Number(item.amount))) * 10) / 10;
+      if (left <= 0.5) state.pantry = state.pantry.filter(x => x.id !== item.id); else item.amount = left;
+      saveStateAndSync(currentUser);
+      document.getElementById("scanModal").classList.add("hidden");
+      showToast(left <= 0.5 ? `${f.label || f.keyword} finished and removed` : `${Math.round(left)} ${f.unit} left`);
+    }
+
+    /* ---- Food pictures: free emoji art, real photos optional ---- */
+    // Add a recipe id here once its photo exists as img/<id>.jpg in the repo
+    const PHOTO_IDS = new Set([]);
+
+    function foodStyle(rec) {
+      const n = rec.name.toLowerCase();
+      const ing = (rec.ingredients || []).map(i => i.name.toLowerCase()).join(" ");
+      const G = (emoji, a, b) => ({ emoji, a, b });
+      const warm = ["rgba(249,115,22,.40)", "rgba(124,45,18,.30)"], red = ["rgba(239,68,68,.38)", "rgba(127,29,29,.30)"],
+        gold = ["rgba(245,158,11,.38)", "rgba(146,64,14,.30)"], blue = ["rgba(14,165,233,.38)", "rgba(30,64,175,.30)"],
+        green = ["rgba(34,197,94,.36)", "rgba(21,128,61,.28)"], yellow = ["rgba(250,204,21,.34)", "rgba(161,98,7,.28)"],
+        pink = ["rgba(236,72,153,.32)", "rgba(131,24,67,.28)"];
+      if (/burger/.test(n)) return G("🍔", ...warm);
+      if (/pizza/.test(n)) return G("🍕", ...red);
+      if (/sandwich|toastie|toast\b/.test(n)) return G("🥪", ...warm);
+      if (/wrap|burrito|quesadilla|fajita/.test(n)) return G("🌯", ...gold);
+      if (/pancake|palacsinta/.test(n)) return G("🥞", ...pink);
+      if (/soup|stew/.test(n)) return G("🥣", ...warm);
+      if (/salad/.test(n)) return G("🥗", ...green);
+      if (/curry|dal\b/.test(n)) return G("🍛", ...gold);
+      if (/noodle|stir-fry/.test(n)) return G("🍜", ...gold);
+      if (/pasta|penne|bolognese|gnocchi|mac &|macaroni|csusza/.test(n)) return G("🍝", ...yellow);
+      if (/skyr|oat/.test(n)) return G("🥣", ...pink);
+      if (/fried rice|rice|pilaf|bowl|lecs/.test(n)) return G("🍚", ...gold);
+      if (/potato|wedges/.test(n)) return G("🥔", ...yellow);
+      if (/omelette|egg|shakshuka/.test(n)) return G("🍳", ...yellow);
+      if (/tuna|fish/.test(n) || /tuna|fish/.test(ing)) return G("🐟", ...blue);
+      if (/chicken/.test(ing)) return G("🍗", ...gold);
+      if (/sausage|bacon|ham\b|pork/.test(ing)) return G("🥓", ...red);
+      if (/beef|turkey|minced/.test(ing)) return G("🥩", ...red);
+      if (!/(chicken|beef|pork|turkey|fish|tuna|sausage|bacon|ham|minced)/.test(ing)) return G("🥦", ...green);
+      return G("🍽", ...warm);
+    }
+
+    function heroHtml(rec, h) {
+      const st = foodStyle(rec);
+      const photo = PHOTO_IDS.has(rec.id) ? `<img src="img/${esc(rec.id)}.jpg" alt="" loading="lazy" class="absolute inset-0 w-full h-full object-cover" />` : "";
+      return `<div class="relative rounded-2xl overflow-hidden flex items-center justify-center" style="height:${h}px;background:linear-gradient(135deg,${st.a},${st.b})">
+        <span style="font-size:${Math.round(h * 0.55)}px;line-height:1">${st.emoji}</span>${photo}</div>`;
+    }
+
+    /* ---- Week at a glance ---- */
+    function focusSlot(slotId) {
+      openCook.add(slotId);
+      renderPlanTab();
+      const el = document.getElementById("slot-" + slotId);
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+
+    function renderWeekStrip() {
+      const slots = state.planNegotiation.currentSlots || [];
+      const today = todayIdx();
+      const who = (w) => w === "both" ? "👫" : w === "laca" ? "👦" : w === "fruzsi" ? "👩" : "";
+      const dayCell = (dk, i) => `<div class="w-10 shrink-0 text-center pt-2.5"><div class="text-[11px] font-extrabold ${i === today ? "text-emerald-300" : "text-slate-300"}">${DAY_SHORT[dk]}</div>${i === today ? '<div class="text-[8px] font-bold text-emerald-400">TODAY</div>' : ""}</div>`;
+      const cookCard = (slot, label) => {
+        const rec = getRecipeById(slot.recipeId), st = foodStyle(rec);
+        return `<button onclick="focusSlot('${esc(slot.id)}')" class="flex-1 min-w-0 flex items-center gap-3 p-2.5 rounded-2xl text-left border border-white/10 ${slot.cooked ? "opacity-50" : ""}" style="background:linear-gradient(135deg,${st.a},${st.b})">
+          <span class="w-12 h-12 shrink-0 rounded-xl bg-black/25 flex items-center justify-center text-3xl">${st.emoji}</span>
+          <span class="min-w-0 flex-1">
+            <span class="block text-xs font-bold text-white leading-tight ${slot.cooked ? "line-through" : ""}" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esc(rec.name)}</span>
+            <span class="block text-[10px] text-white/70 mt-1">${label} · ${who(slot.whoConstraint)} ${slot.basePortions}p · ⏱ ${esc(rec.prepTime)}</span>
+          </span>
+          ${slot.cooked ? '<span class="text-lg">✅</span>' : ""}
+        </button>`;
+      };
+      const rows = DAY_KEYS.map((dk, i) => {
+        const cook = slots.find(x => !x.extra && x.days[0] === dk);
+        const carry = slots.find(x => !x.extra && x.days[1] === dk);
+        let body;
+        if (cook) body = cookCard(cook, "🍳 Cook");
+        else if (carry) {
+          const rec = getRecipeById(carry.recipeId), st = foodStyle(rec);
+          body = `<div class="flex-1 min-w-0 flex items-center gap-3 p-2.5 rounded-2xl border border-white/5 bg-slate-900/60 ${carry.cooked ? "opacity-50" : ""}">
+            <span class="w-12 h-12 shrink-0 rounded-xl bg-slate-800 flex items-center justify-center text-2xl opacity-80">${st.emoji}</span>
+            <span class="min-w-0"><span class="block text-xs font-semibold text-slate-300 truncate">↳ Leftovers: ${esc(rec.name)}</span><span class="block text-[10px] text-slate-500 mt-0.5">${who(state.calendar[dk])} no cooking today</span></span></div>`;
+        } else {
+          body = `<div class="flex-1 flex items-center gap-3 p-2.5 rounded-2xl border border-slate-800 bg-slate-900/40 opacity-60"><span class="w-12 h-12 shrink-0 rounded-xl bg-slate-800 flex items-center justify-center text-2xl">✈️</span><span class="text-xs text-slate-500">Away. Nothing to cook</span></div>`;
+        }
+        return `<div class="flex gap-2">${dayCell(dk, i)}${body}</div>`;
+      }).join("");
+      const extras = slots.filter(x => x.extra).map(x => `<div class="flex gap-2"><div class="w-10 shrink-0 text-center pt-3 text-[11px] font-extrabold text-cyan-300">➕</div>${cookCard(x, "Extra cook")}</div>`).join("");
+      document.getElementById("weekStrip").innerHTML = `
+        <div class="text-sm font-extrabold text-white mb-3">🗓 Your week at a glance</div>
+        <div class="space-y-1.5">${rows}${extras}</div>
+        <p class="text-[10px] text-slate-500 mt-2">Tap a meal to see its recipe.</p>`;
     }
 
     function setDeliveryPrice(val) {
@@ -3029,6 +3335,7 @@
 
       renderMoneyCard();
       renderHistoryCard();
+      renderWeekStrip();
 
       const statusCard = document.getElementById("planStatusCard");
       if (bothLocked) {
@@ -3141,13 +3448,13 @@
         const btn = (on, onclick, label) => `<button onclick="${onclick}" class="py-2 rounded-xl text-xs font-bold border transition ${on ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40" : "bg-slate-800 text-slate-200 border-slate-700"}">${label}</button>`;
 
         return `
-          <div class="p-3.5 rounded-2xl bg-slate-900/80 border ${changed ? "border-amber-500/50" : "border-slate-800"} ${slot.cooked ? "opacity-60" : ""} space-y-2.5">
+          <div id="slot-${slot.id}" class="p-3.5 rounded-2xl bg-slate-900/80 border ${changed ? "border-amber-500/50" : "border-slate-800"} ${slot.cooked ? "opacity-60" : ""} space-y-2.5">
             <div>
               <div class="text-[11px] font-extrabold uppercase tracking-wider text-emerald-400">
                 ${dayTitle}
                 ${changed ? `<span class="ml-1 text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-amber-400 text-slate-950 align-middle">CHANGED</span>` : ""}
               </div>
-              <div class="text-sm font-bold text-white leading-snug ${slot.cooked ? "line-through" : ""}">${esc(rec.name)}</div>
+              <div class="text-sm font-bold text-white leading-snug ${slot.cooked ? "line-through" : ""}">${foodStyle(rec).emoji} ${esc(rec.name)}</div>
               <div class="text-[11px] text-slate-400 mt-0.5">⏱ ${esc(rec.prepTime)} · 🍽 ${effectivePortions} portions · 💪 ${Math.round(rec.protein * mult)}g protein</div>
             </div>
 
@@ -3193,7 +3500,18 @@
     function toggleCooked(idx) {
       const slot = state.planNegotiation.currentSlots[idx];
       if (!slot) return;
-      slot.cooked = !slot.cooked;
+      if (!slot.cooked) {
+        // eating it: take what it used out of the stock at home
+        const take = slotPantryTake(slot);
+        state.pantry.forEach(pt => { if (take[pt.id]) pt.amount = Math.max(0, Math.round((Number(pt.amount) - take[pt.id]) * 10) / 10); });
+        slot.pantryTaken = take;
+        slot.cooked = true;
+      } else {
+        const take = slot.pantryTaken || {};
+        state.pantry.forEach(pt => { if (take[pt.id]) pt.amount = Math.round((Number(pt.amount) + take[pt.id]) * 10) / 10; });
+        slot.pantryTaken = null;
+        slot.cooked = false;
+      }
       saveStateAndSync(currentUser);
     }
 
