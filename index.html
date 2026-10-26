@@ -221,6 +221,7 @@
 
       <!-- Money Saved Tracker -->
       <div id="moneyCard" class="glass rounded-3xl p-4 border border-amber-500/30"></div>
+      <div id="historyCard" class="glass rounded-3xl p-4 border border-slate-800"></div>
 
       <!-- Side-by-Side Comparison when a Counter-Proposal exists -->
       <div id="comparisonContainer" class="hidden space-y-3"></div>
@@ -342,6 +343,24 @@
           <input id="deliveryPriceInput" type="number" inputmode="decimal" min="1" step="0.5" onchange="setDeliveryPrice(this.value)" class="w-24 px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white" />
           <span class="text-xs text-slate-400">per delivered portion</span>
         </div>
+      </div>
+
+      <!-- Pantry / freezer -->
+      <div class="glass rounded-3xl p-4 border border-cyan-500/30">
+        <h2 class="text-base font-bold text-white">🧊 Pantry & Freezer</h2>
+        <p class="text-xs text-slate-400 mb-3">Tell the app what you already own. It leans toward those meals and removes the amount from your shopping list, but never fills the whole week with one ingredient.</p>
+        <div class="flex gap-2">
+          <input id="pantryName" type="text" placeholder="e.g. chicken" class="flex-1 min-w-0 px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white" />
+          <input id="pantryAmount" type="number" inputmode="decimal" placeholder="3000" class="w-20 px-2 py-2 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white" />
+          <select id="pantryUnit" class="px-2 py-2 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white"><option value="g">g</option><option value="ml">ml</option><option value="pcs">pcs</option></select>
+          <button onclick="addPantryItem()" class="px-3 py-2 rounded-xl bg-emerald-500 text-slate-950 font-bold text-xs">Add</button>
+        </div>
+        <div id="pantryList" class="space-y-2 mt-3"></div>
+        <div class="flex items-center justify-between mt-3 text-xs text-slate-300">
+          <span>Max meals per week using the same pantry item</span>
+          <select id="pantryMaxSelect" onchange="setPantryMax(this.value)" class="px-2 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-xs text-white"><option value="1">1</option><option value="2">2</option><option value="3">3</option></select>
+        </div>
+        <p class="text-[10px] text-slate-500 mt-1">The rest of the stock stays for next week. Amounts are deducted when you tap Start New Week.</p>
       </div>
 
       <!-- Custom meals manager -->
@@ -1300,9 +1319,10 @@
         customRecipes: [],
         recipeMultipliers: {},
         hiddenRecipes: {},
-        settings: { deliveryPrice: 13 },
+        settings: { deliveryPrice: 13, pantryMax: 2 },
         history: [],
         spending: [],
+        pantry: [],
         planNegotiation: {
           status: "draft",
           proposedBy: "laca",
@@ -1351,6 +1371,7 @@
       s.settings = Object.assign({}, d.settings, r.settings || {});
       s.history = toArr(r.history);
       s.spending = toArr(r.spending);
+      s.pantry = toArr(r.pantry);
       s.shopping = Object.assign({}, d.shopping, r.shopping || {});
       s.shopping.atHome = s.shopping.atHome || {};
       s.shopping.bought = s.shopping.bought || {};
@@ -1665,10 +1686,12 @@
       }
 
       const usedRecipes = new Set();
+      const ctx = newPantryCtx(currentState);
       return blocks.map((b, idx) => {
-        const chosen = pickBestRecipeForConstraint(b.whoConstraint, usedRecipes, currentState, idx);
+        const chosen = pickBestRecipeForConstraint(b.whoConstraint, usedRecipes, currentState, idx, { ctx, portions: b.basePortions });
         usedRecipes.add(chosen.id);
         const savedMult = (currentState.recipeMultipliers && currentState.recipeMultipliers[chosen.id]) || 1.0;
+        consumePantryCtx(chosen, b.basePortions * savedMult, ctx);
         return {
           ...b,
           recipeId: chosen.id,
@@ -1677,7 +1700,7 @@
       });
     }
 
-    function pickBestRecipeForConstraint(whoConstraint, usedSet, currentState, fallbackIdx = 0) {
+    function pickBestRecipeForConstraint(whoConstraint, usedSet, currentState, fallbackIdx = 0, extra = null) {
       const active = getActiveRecipes();
       const all = active.filter(r => !recipeMatchesDislikes(r, whoConstraint));
       const pool = all.length ? all : active;
@@ -1697,6 +1720,18 @@
         } else if (whoConstraint === "fruzsi") {
           if (fruzsiSwipes[r.id] === "right") score = 90;
           else if (fruzsiSwipes[r.id] !== "left") score = 25;
+        }
+        if (score > 0) {
+          // variety: every repeat of the same main protein this week costs points
+          const prot = mainProtein(r);
+          if (prot !== "other") {
+            const same = [...usedSet].filter(id => mainProtein(getRecipeById(id)) === prot).length;
+            score -= 45 * same;
+          }
+          // pantry: gentle nudge toward food you already own (capped per item)
+          if (extra && extra.ctx) {
+            score += pantryBonus(r, extra.portions * ((currentState.recipeMultipliers && currentState.recipeMultipliers[r.id]) || 1), extra.ctx);
+          }
         }
         return { recipe: r, score };
       }).sort((a, b) => b.score - a.score);
@@ -1899,6 +1934,7 @@
       if (!confirm("Start a new week? Swipes, plan approval and shopping ticks will be cleared.")) return;
       const neg = state.planNegotiation;
       if (neg.status === "locked" && (neg.currentSlots || []).length) {
+        deductPantry();
         const m = computeMoney(neg.currentSlots);
         state.history.push({
           week: weekLabel(),
@@ -2011,6 +2047,7 @@
                 </div>
               ` : ""}
 
+              ${pantryBadge(top)}
               <h3 class="text-lg font-extrabold text-white leading-snug">${esc(top.name)}</h3>
 
               <!-- Macros Bar -->
@@ -2587,6 +2624,144 @@
         </div>`).join("");
     }
 
+    /* ---- Pantry / freezer ---- */
+    function mainProtein(rec) {
+      const t = (rec.ingredients || []).map(i => i.name.toLowerCase()).join(" | ");
+      if (/chicken/.test(t)) return "chicken";
+      if (/turkey/.test(t)) return "turkey";
+      if (/beef/.test(t)) return "beef";
+      if (/pork|bacon|ham\b|sausage|kolb/.test(t)) return "pork";
+      if (/tuna|fish/.test(t)) return "fish";
+      if (/\begg/.test(t)) return "egg";
+      if (/lentil|chickpea|bean/.test(t)) return "legume";
+      return "other";
+    }
+
+    function pantryItemsFor(ing) {
+      const n = String(ing.name).toLowerCase();
+      return (state.pantry || []).filter(p => p.name && p.name.trim() && p.unit === ing.unit && n.includes(p.name.toLowerCase().trim()));
+    }
+
+    function recipeUsesPantry(rec) {
+      return (rec.ingredients || []).some(i => pantryItemsFor(i).some(p => Number(p.amount) > 0));
+    }
+
+    function pantryBadge(rec) {
+      const names = [...new Set((rec.ingredients || []).flatMap(i => pantryItemsFor(i).filter(p => Number(p.amount) > 0).map(p => p.name)))];
+      return names.length ? `<div class="mb-2 inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 text-[11px] font-bold">🧊 Uses your ${esc(names.join(", "))}</div>` : "";
+    }
+
+    function newPantryCtx(st) {
+      const left = {}, count = {};
+      (st.pantry || []).forEach(p => { left[p.id] = Number(p.amount) || 0; count[p.id] = 0; });
+      return { left, count, cap: Number(st.settings && st.settings.pantryMax) || 2 };
+    }
+
+    function pantryBonus(rec, portions, ctx) {
+      let bonus = 0;
+      (rec.ingredients || []).forEach(i => {
+        const need = i.amountPerPortion * portions;
+        pantryItemsFor(i).forEach(p => {
+          if ((ctx.left[p.id] || 0) >= need * 0.7 && (ctx.count[p.id] || 0) < ctx.cap) bonus = 45;
+        });
+      });
+      return bonus;
+    }
+
+    function consumePantryCtx(rec, portions, ctx) {
+      const hit = new Set();
+      (rec.ingredients || []).forEach(i => {
+        const need = i.amountPerPortion * portions;
+        pantryItemsFor(i).forEach(p => {
+          if (ctx.left[p.id] > 0) { ctx.left[p.id] = Math.max(0, ctx.left[p.id] - need); hit.add(p.id); }
+        });
+      });
+      hit.forEach(id => { ctx.count[id] = (ctx.count[id] || 0) + 1; });
+    }
+
+    function addPantryItem() {
+      const name = document.getElementById("pantryName").value.trim();
+      const amount = Number(document.getElementById("pantryAmount").value);
+      const unit = document.getElementById("pantryUnit").value;
+      if (!name || !amount || amount <= 0) { showToast("Type an item and an amount"); return; }
+      state.pantry.push({ id: "pt" + Date.now(), name, amount, unit });
+      document.getElementById("pantryName").value = "";
+      document.getElementById("pantryAmount").value = "";
+      state.planNegotiation.currentSlots = buildBatchSlotsFromCalendar(state.calendar, state);
+      state.planNegotiation.status = "draft";
+      state.planNegotiation.acceptedBy = { laca: false, fruzsi: false };
+      state.planNegotiation.previousSlots = null;
+      saveStateAndSync(currentUser);
+      showToast(`${name} added. Plan refreshed to use it`);
+    }
+
+    function setPantryAmount(id, val) {
+      const p = state.pantry.find(x => x.id === id);
+      if (!p) return;
+      p.amount = Math.max(0, Number(val) || 0);
+      saveStateAndSync(currentUser);
+    }
+
+    function removePantryItem(id) {
+      state.pantry = state.pantry.filter(x => x.id !== id);
+      saveStateAndSync(currentUser);
+    }
+
+    function setPantryMax(val) {
+      state.settings.pantryMax = Number(val) || 2;
+      saveStateAndSync(currentUser);
+    }
+
+    // After a locked week ends, what the plan took from the pantry is gone
+    function deductPantry() {
+      const used = buildShoppingTrips().pantryUsed || {};
+      state.pantry.forEach(p => { if (used[p.id]) p.amount = Math.max(0, Math.round((Number(p.amount) - used[p.id]) * 10) / 10); });
+    }
+
+    function renderPantry() {
+      const used = buildShoppingTrips().pantryUsed || {};
+      const sel = document.getElementById("pantryMaxSelect");
+      if (sel) sel.value = String(state.settings.pantryMax || 2);
+      const fmt = (n, u) => (u === "g" && n >= 1000) ? `${Math.round(n) / 1000} kg` : `${Math.round(n)} ${u}`;
+      document.getElementById("pantryList").innerHTML = state.pantry.length ? state.pantry.map(p => {
+        const u = used[p.id] || 0;
+        return `
+        <div class="p-2.5 rounded-2xl bg-slate-900/80 border border-slate-800 flex items-center justify-between gap-2">
+          <div class="min-w-0">
+            <div class="text-xs font-bold text-white truncate">${esc(p.name)}</div>
+            <div class="text-[11px] ${u ? "text-cyan-300" : "text-slate-400"}">${u ? `This plan uses ${fmt(u, p.unit)} → ${fmt(Math.max(0, p.amount - u), p.unit)} left after` : "Not used by this week's plan"}</div>
+          </div>
+          <div class="flex items-center gap-1.5 shrink-0">
+            <input type="number" inputmode="decimal" value="${p.amount}" onchange="setPantryAmount('${esc(p.id)}', this.value)" class="w-20 px-2 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-xs text-white" />
+            <span class="text-[11px] text-slate-400">${esc(p.unit)}</span>
+            <button onclick="removePantryItem('${esc(p.id)}')" class="text-slate-500 px-1">✕</button>
+          </div>
+        </div>`;
+      }).join("") : `<div class="text-xs text-slate-400">Empty. Add what's in your freezer or cupboard, e.g. "chicken 3000 g".</div>`;
+    }
+
+    /* ---- Weekly history chart ---- */
+    function renderHistoryCard() {
+      const rows = (state.history || []).slice(-7).map(h => ({ label: String(h.week || "").replace("Week of ", ""), spent: Number(h.cost) || 0, delivery: (Number(h.cost) || 0) + (Number(h.saved) || 0) }));
+      const m = computeMoney(state.planNegotiation.currentSlots || []);
+      rows.push({ label: "now", spent: m.cost, delivery: m.delivery, now: true });
+      const max = Math.max(...rows.map(r => Math.max(r.spent, r.delivery)), 1);
+      document.getElementById("historyCard").innerHTML = `
+        <div class="text-xs font-extrabold uppercase tracking-wider text-slate-300 mb-2">📊 Spent vs delivery, week by week</div>
+        <div class="space-y-1.5">
+          ${rows.map(r => `
+            <div class="flex items-center gap-2">
+              <span class="w-12 text-[10px] ${r.now ? "text-amber-300 font-bold" : "text-slate-400"} shrink-0">${esc(r.label)}</span>
+              <div class="flex-1 space-y-0.5">
+                <div class="h-2 rounded bg-rose-400/70" style="width:${Math.max(2, r.delivery / max * 100)}%"></div>
+                <div class="h-2 rounded bg-emerald-400" style="width:${Math.max(2, r.spent / max * 100)}%"></div>
+              </div>
+              <span class="w-14 text-right text-[10px] text-emerald-300 font-bold shrink-0">+${fmtEur(Math.max(0, r.delivery - r.spent)).replace(".00", "")}</span>
+            </div>`).join("")}
+        </div>
+        <div class="flex gap-3 mt-2 text-[10px] text-slate-400"><span><span class="inline-block w-2 h-2 rounded bg-rose-400/70"></span> delivery</span><span><span class="inline-block w-2 h-2 rounded bg-emerald-400"></span> what you spent</span></div>`;
+    }
+
     function setDeliveryPrice(val) {
       const n = Number(val);
       if (!n || n < 1) return;
@@ -2693,12 +2868,13 @@
       const who = slot.whoConstraint;
       const L = state.swipes.laca || {};
       const F = state.swipes.fruzsi || {};
-      const groups = { both: [], liked: [], other: [] };
+      const groups = { pantry: [], both: [], liked: [], other: [] };
       let hiddenByDislike = 0;
 
       getActiveRecipes().forEach(r => {
         if (r.id === slot.recipeId) return;
         if (recipeMatchesDislikes(r, who)) { hiddenByDislike++; return; }
+        if (recipeUsesPantry(r)) { groups.pantry.push(r); return; }
         const l = L[r.id] === "right", f = F[r.id] === "right";
         if (who === "both") {
           if (l && f) groups.both.push(r); else if (l || f) groups.liked.push(r); else groups.other.push(r);
@@ -2713,6 +2889,7 @@
       const group = (label, list) => list.length ? `<optgroup label="${label}">${list.map(opt).join("")}</optgroup>` : "";
       const html = `
         <optgroup label="✅ Current pick"><option value="${esc(cur.id)}" selected>${esc(cur.name)} (${esc(cur.prepTime)} • ${esc(cur.equipment)})</option></optgroup>
+        ${group("🧊 Uses your pantry / freezer", groups.pantry)}
         ${group("💘 Both matched", groups.both)}
         ${group(who === "both" ? "👍 Liked by one of you" : "👍 You liked these", groups.liked)}
         ${group("🍽 Other safe meals", groups.other)}`;
@@ -2736,6 +2913,7 @@
       badge.classList.toggle("hidden", bothLocked || myAccepted);
 
       renderMoneyCard();
+      renderHistoryCard();
 
       const statusCard = document.getElementById("planStatusCard");
       if (bothLocked) {
@@ -2937,7 +3115,24 @@
           needs.push({ ing, amount: ing.amountPerPortion * total, cookIdx, cookDay: slot.days[0] });
         });
       });
-      if (!needs.length) return [];
+      const emptyResult = () => { const e = []; e.pantryUsed = {}; e.pantryList = []; return e; };
+      if (!needs.length) return emptyResult();
+
+      // Take what you already own out of the list (earliest cook day first)
+      const stock = {};
+      const pantryUsed = {};
+      (state.pantry || []).forEach(p => { stock[p.id] = Number(p.amount) || 0; });
+      needs.sort((a, b) => a.cookIdx - b.cookIdx);
+      needs.forEach(n => {
+        pantryItemsFor(n.ing).forEach(p => {
+          const take = Math.min(stock[p.id] || 0, n.amount);
+          if (take > 0) { stock[p.id] -= take; n.amount -= take; pantryUsed[p.id] = (pantryUsed[p.id] || 0) + take; }
+        });
+      });
+      const buyNeeds = needs.filter(n => n.amount > 0.05);
+      needs.splice(0, needs.length, ...buyNeeds);
+      const pantryList = (state.pantry || []).filter(p => pantryUsed[p.id]).map(p => ({ name: p.name, amount: Math.round(pantryUsed[p.id]), unit: p.unit }));
+      if (!needs.length) { const e = emptyResult(); e.pantryUsed = pantryUsed; e.pantryList = pantryList; return e; }
 
       const firstCook = Math.min(...needs.map(n => n.cookIdx));
       needs.forEach(n => {
@@ -2979,7 +3174,10 @@
         if (n.cookIdx - trip.dayIdx >= n.shelf) item.freezeFor.add(DAY_SHORT[n.cookDay]);
       });
 
-      return trips.map(t => ({ dayIdx: t.dayIdx, dayKey: t.dayKey, items: Object.values(t.map) }));
+      const result = trips.map(t => ({ dayIdx: t.dayIdx, dayKey: t.dayKey, items: Object.values(t.map) }));
+      result.pantryUsed = pantryUsed;
+      result.pantryList = pantryList;
+      return result;
     }
 
     function isItemDone(item) {
@@ -3146,6 +3344,14 @@
           The plan isn't locked yet, so this list can still change. Accept the plan on the Plan tab first.
         </div>`;
       html += trips.map((t, i) => renderShoppingTripCard(t, i)).join("");
+      if (trips.pantryList && trips.pantryList.length) {
+        html += `
+        <div class="glass rounded-3xl p-4 border border-cyan-500/30">
+          <h3 class="text-sm font-extrabold text-white">🧊 Take from your pantry / freezer</h3>
+          <p class="text-[11px] text-slate-400 mb-2">Already at home, so it isn't on the shopping list.</p>
+          ${trips.pantryList.map(i => `<div class="flex justify-between text-xs py-1 border-b border-slate-800/70"><span class="text-slate-200">${esc(i.name)}</span><strong class="text-cyan-300">${i.amount >= 1000 && i.unit === "g" ? i.amount / 1000 + " kg" : i.amount + " " + esc(i.unit)}</strong></div>`).join("")}
+        </div>`;
+      }
 
       container.innerHTML = html || `<div class="glass rounded-3xl p-5 text-center text-xs text-slate-400">No ingredients needed yet. Build your weekly plan first!</div>`;
     }
@@ -3350,7 +3556,17 @@
       } catch (e) {}
     }
 
-    function forceAppUpdate() {
+    async function forceAppUpdate() {
+      try {
+        if ("serviceWorker" in navigator) {
+          const regs = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(regs.map(r => r.unregister()));
+        }
+        if (window.caches) {
+          const keys = await caches.keys();
+          await Promise.all(keys.map(k => caches.delete(k)));
+        }
+      } catch (e) {}
       const cleanUrl = window.location.href.split("?")[0];
       window.location.href = `${cleanUrl}?v=${Date.now()}`;
     }
@@ -3389,6 +3605,7 @@
         `;
       }).join("");
 
+      renderPantry();
       const priceEl = document.getElementById("deliveryPriceInput");
       if (priceEl && document.activeElement !== priceEl) priceEl.value = state.settings.deliveryPrice;
 
@@ -3513,6 +3730,9 @@
     window.addEventListener("DOMContentLoaded", () => {
       renderAll();
       setInterval(() => { renderReminderBanner(); maybeFireNotification(); }, 30000);
+      if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
+        navigator.serviceWorker.register("sw.js").catch(() => {});
+      }
       if (!secretPin) {
         openPinSettings();
       } else {
