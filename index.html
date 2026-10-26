@@ -7,6 +7,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Laca & Fruzsi" />
   <meta name="theme-color" content="#0f172a" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
   <title>Laca & Fruzsi • Meal & Prep Sync</title>
 
   <!-- Tailwind CSS -->
@@ -49,6 +51,13 @@
       opacity: 0 !important;
     }
     ::-webkit-scrollbar { width: 0px; height: 0px; background: transparent; }
+    /* iOS Safari cannot focus inputs inside a user-select:none body */
+    input, textarea, select { -webkit-user-select: text; user-select: text; }
+    .toast {
+      position: fixed; left: 50%; bottom: calc(var(--safe-bottom) + 84px); transform: translateX(-50%) translateY(20px);
+      opacity: 0; pointer-events: none; transition: all .25s ease; z-index: 60;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
   </style>
 </head>
 <body class="min-h-screen antialiased selection:bg-emerald-500 selection:text-white">
@@ -61,7 +70,7 @@
           🍲
         </div>
         <h1 class="text-xl font-bold tracking-tight text-white">Laca & Fruzsi Kitchen</h1>
-        <p class="text-xs text-slate-400 mt-1">Connect to your shared Firebase meal planner</p>
+        <p class="text-xs text-slate-400 mt-1">Pick who you are and enter the PIN you both share. It stays on this phone.</p>
       </div>
 
       <div class="mb-4">
@@ -101,7 +110,7 @@
             <span id="syncText">Connecting</span>
           </span>
         </div>
-        <p class="text-[11px] text-slate-400">28 Fast, Cheap, High-Protein Meals</p>
+        <p id="headerSub" class="text-[11px] text-slate-400">Fast, Cheap, High-Protein Meals</p>
       </div>
 
       <!-- User Switcher -->
@@ -116,11 +125,17 @@
     </div>
   </header>
 
+  <!-- IN-APP REMINDER BANNER -->
+  <div id="reminderBanner" class="hidden max-w-md mx-auto px-4 pt-3"></div>
+
   <!-- MAIN CONTENT CONTAINER -->
   <main class="max-w-md mx-auto px-4 pt-4 safe-pb">
 
     <!-- TAB 1: WEEK CALENDAR -->
     <section id="tab-week" class="space-y-4">
+      <!-- Guided next step -->
+      <div id="nextStepCard" class="glass rounded-3xl p-4 border border-emerald-500/40"></div>
+
       <div class="glass rounded-3xl p-4">
         <div class="flex items-center justify-between mb-2">
           <div>
@@ -147,6 +162,17 @@
         <div id="batchBlocksPreview" class="space-y-2"></div>
         <button onclick="switchTab('swipe')" class="mt-3 w-full py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs shadow-lg shadow-emerald-500/20 transition">
           Next: Swipe Meals for This Week →
+        </button>
+      </div>
+
+      <!-- Start New Week -->
+      <div class="glass rounded-3xl p-4 border border-slate-800">
+        <h3 class="text-sm font-bold text-white flex items-center gap-1.5"><span>🗓</span><span>New week?</span></h3>
+        <p class="text-xs text-slate-400 mt-1 mb-3">
+          Saves this week's savings to your history, then clears swipes, the plan approval and all shopping ticks. Your calendar and dislikes stay.
+        </p>
+        <button onclick="startNewWeek()" class="w-full py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-100 font-bold text-xs transition">
+          🔄 Start New Week
         </button>
       </div>
     </section>
@@ -193,6 +219,9 @@
       <!-- Approval / Ping-Pong Status Banner -->
       <div id="planStatusCard" class="glass rounded-3xl p-4 border"></div>
 
+      <!-- Money Saved Tracker -->
+      <div id="moneyCard" class="glass rounded-3xl p-4 border border-amber-500/30"></div>
+
       <!-- Side-by-Side Comparison when a Counter-Proposal exists -->
       <div id="comparisonContainer" class="hidden space-y-3"></div>
 
@@ -235,6 +264,9 @@
           </button>
         </div>
         <p id="shopModeDesc" class="text-[11px] text-slate-400 mt-2"></p>
+        <button onclick="copyChecklist('all')" class="mt-3 w-full py-2.5 rounded-2xl bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 font-bold text-xs">
+          📋 Copy unbought items (paste into Apple Reminders)
+        </button>
       </div>
 
       <div id="shoppingTripsContainer" class="space-y-4"></div>
@@ -242,6 +274,10 @@
 
     <!-- TAB 5: SETUP (DISLIKES, REMINDERS, IOS CALENDAR, SYNC) -->
     <section id="tab-setup" class="space-y-4 hidden">
+      <button onclick="openTour()" class="w-full py-3 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-bold text-xs">
+        ❓ How does this app work? (quick tour)
+      </button>
+
       <!-- Dislike Picker -->
       <div class="glass rounded-3xl p-4">
         <div class="flex items-center justify-between mb-2">
@@ -284,6 +320,33 @@
         </p>
       </div>
 
+      <!-- Money Settings -->
+      <div class="glass rounded-3xl p-4">
+        <h2 class="text-base font-bold text-white">Money Tracker</h2>
+        <p class="text-xs text-slate-400 mb-3">What would one portion cost if you ordered delivery instead? Used to calculate what you save by cooking.</p>
+        <div class="flex items-center gap-2">
+          <span class="text-sm text-slate-300">€</span>
+          <input id="deliveryPriceInput" type="number" inputmode="decimal" min="1" step="0.5" onchange="setDeliveryPrice(this.value)" class="w-24 px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white" />
+          <span class="text-xs text-slate-400">per delivered portion</span>
+        </div>
+      </div>
+
+      <!-- Custom meals manager -->
+      <div class="glass rounded-3xl p-4">
+        <div class="flex items-center justify-between mb-2">
+          <h2 class="text-base font-bold text-white">Our Custom Meals</h2>
+          <button onclick="openAddRecipeModal()" class="px-3 py-1.5 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-bold">+ Add</button>
+        </div>
+        <div id="customMealsList" class="space-y-2"></div>
+      </div>
+
+      <!-- Hidden meals -->
+      <div class="glass rounded-3xl p-4">
+        <h2 class="text-base font-bold text-white">Hidden Meals</h2>
+        <p class="text-xs text-slate-400 mb-2">Meals you tapped "Never show again" on.</p>
+        <div id="hiddenMealsList" class="space-y-2"></div>
+      </div>
+
       <!-- Cloud Sync & App Version Controls -->
       <div class="glass rounded-3xl p-4 space-y-3">
         <h2 class="text-base font-bold text-white">Cloud Sync & App Updates</h2>
@@ -315,38 +378,28 @@
   <div id="addRecipeModal" class="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4 hidden">
     <div class="w-full max-w-md glass rounded-3xl p-5 border border-slate-700 max-h-[90vh] overflow-y-auto">
       <div class="flex items-center justify-between mb-3">
-        <h3 class="text-base font-bold text-white">Add Our Own Meal</h3>
+        <h3 id="addRecipeTitle" class="text-base font-bold text-white">Add Our Own Meal</h3>
         <button onclick="closeAddRecipeModal()" class="text-slate-400 text-sm px-2 py-1">✕</button>
       </div>
-      <p class="text-xs text-slate-400 mb-3">
-        Just write the meal name and list a few key ingredients—the app automatically calculates grams, protein macros, supermarket aisles, and shelf-life!
-      </p>
+      <div id="addRecipeBody"></div>
+    </div>
+  </div>
 
-      <div class="space-y-3">
-        <div>
-          <label class="text-xs font-semibold text-slate-300">Meal Name</label>
-          <input id="newMealName" type="text" placeholder="e.g. Creamy Garlic Chicken Pasta" class="w-full mt-1 px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white" />
-        </div>
-        <div>
-          <label class="text-xs font-semibold text-slate-300">Equipment Used</label>
-          <select id="newMealEquip" class="w-full mt-1 px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white">
-            <option value="Airfryer + Rice Cooker">Airfryer + Rice Cooker</option>
-            <option value="Gas Stove + Pan">Gas Stove + Pan</option>
-            <option value="Oven + Pan">Oven + Pan</option>
-            <option value="Airfryer">Airfryer Only</option>
-            <option value="Rice Cooker + Pan">Rice Cooker + Pan</option>
-          </select>
-        </div>
-        <div>
-          <label class="text-xs font-semibold text-slate-300">Main Ingredients / Short Notes (comma separated)</label>
-          <textarea id="newMealNotes" rows="3" placeholder="e.g. chicken breast, penne pasta, cooking cream, cheese, garlic, spinach" class="w-full mt-1 px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white"></textarea>
-        </div>
-        <button onclick="saveCustomRecipe()" class="w-full py-3 rounded-2xl bg-emerald-500 text-slate-950 font-bold text-xs">
-          ✨ Auto-Build Macros & Save to Our Pool
-        </button>
+  <!-- WELCOME TOUR -->
+  <div id="tourModal" class="fixed inset-0 z-[55] bg-slate-950/95 backdrop-blur-xl flex items-center justify-center p-5 hidden">
+    <div class="w-full max-w-sm glass rounded-3xl p-6 border border-slate-700/60 text-center">
+      <div id="tourIcon" class="text-5xl mb-3"></div>
+      <h2 id="tourTitle" class="text-lg font-extrabold text-white mb-2"></h2>
+      <p id="tourText" class="text-sm text-slate-300 leading-relaxed min-h-[84px]"></p>
+      <div id="tourDots" class="flex justify-center gap-1.5 my-4"></div>
+      <div class="flex gap-2">
+        <button onclick="closeTour()" class="px-4 py-3 rounded-2xl bg-slate-800 border border-slate-700 text-slate-300 font-bold text-xs">Skip</button>
+        <button id="tourNext" onclick="tourNext()" class="flex-1 py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 font-extrabold text-sm">Next →</button>
       </div>
     </div>
   </div>
+
+  <div id="toast" class="toast px-4 py-2.5 rounded-2xl bg-slate-100 text-slate-900 text-xs font-bold shadow-xl"></div>
 
   <!-- BOTTOM NAVIGATION BAR -->
   <nav class="fixed bottom-0 inset-x-0 z-30 glass border-t border-slate-800/90 nav-pb pt-2 px-3">
@@ -1129,6 +1182,9 @@
         },
         customRecipes: [],
         recipeMultipliers: {},
+        hiddenRecipes: {},
+        settings: { deliveryPrice: 13 },
+        history: [],
         planNegotiation: {
           status: "draft",
           proposedBy: "laca",
@@ -1153,17 +1209,51 @@
       };
     }
 
-    let state = loadLocalState();
+    // Firebase drops empty arrays/objects and turns sparse arrays into objects,
+    // so every incoming state (local or remote) is rebuilt through this.
+    function toArr(v) {
+      if (Array.isArray(v)) return v;
+      return v && typeof v === "object" ? Object.values(v) : [];
+    }
+
+    function normalizeState(src) {
+      const d = createDefaultState();
+      const r = src && typeof src === "object" ? src : {};
+      const s = Object.assign({}, d, r);
+      s.calendar = Object.assign({}, d.calendar, r.calendar || {});
+      s.dislikes = { laca: toArr(r.dislikes && r.dislikes.laca), fruzsi: toArr(r.dislikes && r.dislikes.fruzsi) };
+      s.swipes = { laca: (r.swipes && r.swipes.laca) || {}, fruzsi: (r.swipes && r.swipes.fruzsi) || {} };
+      s.customRecipes = toArr(r.customRecipes).map(rec => Object.assign({}, rec, {
+        ingredients: toArr(rec.ingredients),
+        steps: toArr(rec.steps),
+        tags: toArr(rec.tags)
+      }));
+      s.recipeMultipliers = r.recipeMultipliers || {};
+      s.hiddenRecipes = r.hiddenRecipes || {};
+      s.settings = Object.assign({}, d.settings, r.settings || {});
+      s.history = toArr(r.history);
+      s.shopping = Object.assign({}, d.shopping, r.shopping || {});
+      s.shopping.atHome = s.shopping.atHome || {};
+      s.shopping.bought = s.shopping.bought || {};
+      s.reminders = Object.assign({}, d.reminders, r.reminders || {});
+      const pn = Object.assign({}, d.planNegotiation, r.planNegotiation || {});
+      pn.acceptedBy = Object.assign({ laca: false, fruzsi: false }, pn.acceptedBy || {});
+      pn.currentSlots = toArr(pn.currentSlots).map(sl => Object.assign({}, sl, { days: toArr(sl.days) }));
+      pn.previousSlots = pn.previousSlots ? toArr(pn.previousSlots).map(sl => Object.assign({}, sl, { days: toArr(sl.days) })) : null;
+      s.planNegotiation = pn;
+      return s;
+    }
+
+    let state = createDefaultState();
+    state = loadLocalState();
 
     function loadLocalState() {
       try {
         const raw = localStorage.getItem("lf_shared_state_v2");
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          return Object.assign(createDefaultState(), parsed);
-        }
+        if (raw) return normalizeState(JSON.parse(raw));
       } catch (e) {}
-      const initial = createDefaultState();
+      const initial = normalizeState(null);
+      state = initial;
       initial.planNegotiation.currentSlots = buildBatchSlotsFromCalendar(initial.calendar, initial);
       return initial;
     }
@@ -1241,6 +1331,7 @@
       document.getElementById("authModal").classList.add("hidden");
 
       startRealtimeListener();
+      maybeShowTour();
     }
 
     async function probeFirebaseUrls(pin) {
@@ -1293,27 +1384,10 @@
           updateSyncBadge("online", "Live Synced");
           if (remote && typeof remote === "object") {
             isApplyingRemoteUpdate = true;
-            state = Object.assign(createDefaultState(), remote);
-            state.dislikes = Object.assign({ laca: [], fruzsi: [] }, remote.dislikes || {});
-            state.dislikes.laca = state.dislikes.laca || [];
-            state.dislikes.fruzsi = state.dislikes.fruzsi || [];
-            state.swipes = Object.assign({ laca: {}, fruzsi: {} }, remote.swipes || {});
-            state.swipes.laca = state.swipes.laca || {};
-            state.swipes.fruzsi = state.swipes.fruzsi || {};
-            state.customRecipes = remote.customRecipes || [];
-            state.recipeMultipliers = remote.recipeMultipliers || {};
-            state.shopping = Object.assign({ mode: "fresh", atHome: {}, bought: {} }, remote.shopping || {});
-            state.shopping.atHome = state.shopping.atHome || {};
-            state.shopping.bought = state.shopping.bought || {};
-            state.planNegotiation = Object.assign({
-              status: "draft",
-              proposedBy: "laca",
-              acceptedBy: { laca: false, fruzsi: false },
-              previousSlots: null,
-              currentSlots: []
-            }, remote.planNegotiation || {});
-            state.planNegotiation.acceptedBy = Object.assign({ laca: false, fruzsi: false }, (remote.planNegotiation && remote.planNegotiation.acceptedBy) || {});
-            state.planNegotiation.currentSlots = (remote.planNegotiation && remote.planNegotiation.currentSlots) || buildBatchSlotsFromCalendar(state.calendar, state);
+            state = normalizeState(remote);
+            if (!state.planNegotiation.currentSlots.length) {
+              state.planNegotiation.currentSlots = buildBatchSlotsFromCalendar(state.calendar, state);
+            }
 
             localStorage.setItem("lf_shared_state_v2", JSON.stringify(state));
             renderAll();
@@ -1353,6 +1427,41 @@
 
     function getRecipeById(id) {
       return getAllRecipes().find(r => r.id === id) || DEFAULT_RECIPES[0];
+    }
+
+    // Recipes that are not hidden via "Never show again"
+    function getActiveRecipes() {
+      const hidden = state.hiddenRecipes || {};
+      const list = getAllRecipes().filter(r => !hidden[r.id]);
+      return list.length ? list : getAllRecipes();
+    }
+
+    function esc(v) {
+      return String(v == null ? "" : v)
+        .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+    }
+
+    let toastTimer = null;
+    function showToast(msg) {
+      const el = document.getElementById("toast");
+      el.textContent = msg;
+      el.classList.add("show");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => el.classList.remove("show"), 2200);
+    }
+
+    function todayIdx() { return (new Date().getDay() + 6) % 7; }
+
+    function getWeekMonday() {
+      const d = new Date();
+      d.setHours(0, 0, 0, 0);
+      d.setDate(d.getDate() - todayIdx());
+      return d;
+    }
+
+    function weekLabel() {
+      return "Week of " + getWeekMonday().toLocaleDateString("en-GB", { day: "numeric", month: "short" });
     }
 
     function recipeMatchesDislikes(recipe, whoMode) {
@@ -1450,8 +1559,9 @@
     }
 
     function pickBestRecipeForConstraint(whoConstraint, usedSet, currentState, fallbackIdx = 0) {
-      const all = getAllRecipes().filter(r => !recipeMatchesDislikes(r, whoConstraint));
-      const pool = all.length ? all : getAllRecipes();
+      const active = getActiveRecipes();
+      const all = active.filter(r => !recipeMatchesDislikes(r, whoConstraint));
+      const pool = all.length ? all : active;
 
       const lacaSwipes = currentState.swipes?.laca || {};
       const fruzsiSwipes = currentState.swipes?.fruzsi || {};
@@ -1605,6 +1715,66 @@
       saveStateAndSync(currentUser);
     }
 
+    function neverShowRecipe(recipeId) {
+      if (!confirm("Hide this meal for both of you? You can restore it later in Setup.")) return;
+      state.hiddenRecipes[recipeId] = true;
+      if (!state.swipes[currentUser]) state.swipes[currentUser] = {};
+      state.swipes[currentUser][recipeId] = "left";
+      const used = (state.planNegotiation.currentSlots || []).some(s => s.recipeId === recipeId);
+      if (used) {
+        recordCounterProposal((slots) => replaceRecipeInSlots(slots, recipeId));
+      } else {
+        saveStateAndSync(currentUser);
+      }
+      showToast("Hidden. Restore it in Setup → Hidden Meals");
+    }
+
+    function restoreRecipe(recipeId) {
+      delete state.hiddenRecipes[recipeId];
+      saveStateAndSync(currentUser);
+    }
+
+    // Swap a removed/hidden recipe out of every plan slot that uses it
+    function replaceRecipeInSlots(slots, recipeId) {
+      slots.forEach(s => {
+        if (s.recipeId !== recipeId) return;
+        const used = new Set(slots.map(x => x.recipeId));
+        const next = pickBestRecipeForConstraint(s.whoConstraint, used, state, 0);
+        s.recipeId = next.id;
+        s.multiplier = state.recipeMultipliers[next.id] || 1.0;
+      });
+    }
+
+    function startNewWeek() {
+      if (!confirm("Start a new week? Swipes, plan approval and shopping ticks will be cleared.")) return;
+      const neg = state.planNegotiation;
+      if (neg.status === "locked" && (neg.currentSlots || []).length) {
+        const m = computeMoney(neg.currentSlots);
+        state.history.push({
+          week: weekLabel(),
+          saved: Math.round(m.saved * 100) / 100,
+          cost: Math.round(m.cost * 100) / 100,
+          portions: m.portions,
+          ts: Date.now()
+        });
+        state.history = state.history.slice(-52);
+      }
+      state.swipes = { laca: {}, fruzsi: {} };
+      state.shopping.atHome = {};
+      state.shopping.bought = {};
+      state.planNegotiation = {
+        status: "draft",
+        proposedBy: currentUser,
+        acceptedBy: { laca: false, fruzsi: false },
+        previousSlots: null,
+        currentSlots: buildBatchSlotsFromCalendar(state.calendar, state)
+      };
+      localStorage.removeItem("lf_banner_snooze");
+      saveStateAndSync(currentUser);
+      switchTab("swipe");
+      showToast("Fresh week started! Swipe your meals 🎉");
+    }
+
     function renderSwipeTab() {
       const userLabel = currentUser === "laca" ? "Laca" : "Fruzsi";
       const mySwipes = state.swipes[currentUser] || {};
@@ -1630,7 +1800,7 @@
         </button>
       `).join("");
 
-      const available = getAllRecipes()
+      const available = getActiveRecipes()
         .filter(r => !recipeMatchesDislikes(r, currentUser))
         .filter(r => recipePassesSwipeFilter(r, activeSwipeFilter));
       const unswiped = available.filter(r => !mySwipes[r.id]);
@@ -1691,7 +1861,7 @@
                 </div>
               ` : ""}
 
-              <h3 class="text-lg font-extrabold text-white leading-snug">${top.name}</h3>
+              <h3 class="text-lg font-extrabold text-white leading-snug">${esc(top.name)}</h3>
 
               <!-- Macros Bar -->
               <div class="grid grid-cols-4 gap-2 my-3 p-2.5 rounded-2xl bg-slate-900/90 border border-slate-800 text-center">
@@ -1742,6 +1912,9 @@
                 <span>❤️</span><span>Want to Eat!</span>
               </button>
             </div>
+            <button onclick="neverShowRecipe('${top.id}')" class="w-full text-[11px] font-semibold text-slate-500 hover:text-rose-300 transition">
+              🚫 Never show this meal again
+            </button>
           </div>
         `;
       }
@@ -1751,7 +1924,7 @@
       const lacaR = state.swipes?.laca || {};
       const fruzsiR = state.swipes?.fruzsi || {};
 
-      const matches = getAllRecipes().filter(r => lacaR[r.id] === "right" || fruzsiR[r.id] === "right");
+      const matches = getActiveRecipes().filter(r => lacaR[r.id] === "right" || fruzsiR[r.id] === "right");
       if (!matches.length) {
         poolList.innerHTML = `<div class="text-xs text-slate-400 py-2 text-center">Swipe right on meals above to build your weekly pool!</div>`;
       } else {
@@ -1792,16 +1965,6 @@
     /********************************************************************
      * 9. ADD CUSTOM RECIPE ("Write name + a few notes")
      ********************************************************************/
-    function openAddRecipeModal() {
-      document.getElementById("newMealName").value = "";
-      document.getElementById("newMealNotes").value = "";
-      document.getElementById("addRecipeModal").classList.remove("hidden");
-    }
-
-    function closeAddRecipeModal() {
-      document.getElementById("addRecipeModal").classList.add("hidden");
-    }
-
     function inferIngredientDetails(rawToken) {
       const t = rawToken.toLowerCase().trim();
       if (t.includes("chicken") || t.includes("turkey") || t.includes("pork") || t.includes("beef") || t.includes("meat") || t.includes("sausage")) {
@@ -1828,66 +1991,291 @@
       return { name: rawToken.trim(), amountPerPortion: 90, unit: "g", aisle: "Veggies & Fruit", shelfLifeDays: 6, p: 2, c: 7, f: 0 };
     }
 
-    function saveCustomRecipe() {
+    /* ---- Draft flow: 1) type name + notes  2) preview & tweak  3) save ---- */
+    const EQUIP_OPTIONS = ["Airfryer + Rice Cooker", "Gas Stove + Pan", "Oven + Pan", "Airfryer", "Rice Cooker + Pan"];
+    const UNIT_OPTIONS = ["g", "ml", "pcs", "set"];
+    const AISLE_OPTIONS = ["Meat & Fish", "Dairy & Eggs", "Veggies & Fruit", "Dry Goods & Carbs", "Sauces & Spices"];
+    let draftRecipe = null;
+    let draftEditingId = null;
+
+    function estimateCost(ings) {
+      const perGram = { "Meat & Fish": 0.0075, "Dairy & Eggs": 0.0055, "Veggies & Fruit": 0.0025, "Dry Goods & Carbs": 0.0022, "Sauces & Spices": 0.004 };
+      let total = 0;
+      ings.forEach(i => {
+        if (i.unit === "pcs") total += i.amountPerPortion * 0.3;
+        else if (i.unit === "set") total += 0.15;
+        else total += i.amountPerPortion * (perGram[i.aisle] || 0.004);
+      });
+      return Math.max(1, Math.round(total * 20) / 20);
+    }
+
+    function openAddRecipeModal(editId) {
+      draftEditingId = editId || null;
+      draftRecipe = null;
+      if (editId) {
+        const found = (state.customRecipes || []).find(r => r.id === editId);
+        if (found) {
+          draftRecipe = JSON.parse(JSON.stringify(found));
+          draftRecipe.costNum = parseCost(found.costPerPortion);
+        }
+      }
+      document.getElementById("addRecipeModal").classList.remove("hidden");
+      renderAddRecipeModal();
+    }
+
+    function closeAddRecipeModal() {
+      document.getElementById("addRecipeModal").classList.add("hidden");
+      draftRecipe = null;
+      draftEditingId = null;
+    }
+
+    function buildDraftFromInputs() {
       const name = document.getElementById("newMealName").value.trim();
       const equip = document.getElementById("newMealEquip").value;
       const notes = document.getElementById("newMealNotes").value.trim();
-
-      if (!name) return;
+      if (!name) { showToast("Give the meal a name first"); return; }
 
       const tokens = notes
         ? notes.split(",").map(s => s.trim()).filter(Boolean)
         : ["Chicken breast", "Rice", "Broccoli"];
 
-      const parsedIngs = tokens.map(inferIngredientDetails);
+      const parsed = tokens.map(inferIngredientDetails);
       let totalP = 0, totalC = 0, totalF = 0;
-      parsedIngs.forEach(i => { totalP += i.p; totalC += i.c; totalF += i.f; });
+      parsed.forEach(i => { totalP += i.p; totalC += i.c; totalF += i.f; });
       if (totalP < 35) totalP = 48;
       if (totalC < 40) totalC = 72;
       if (totalF < 10) totalF = 18;
-      const kcal = Math.round(totalP * 4 + totalC * 4 + totalF * 9);
 
-      const newRec = {
+      const ingredients = parsed.map(i => ({
+        name: i.name.charAt(0).toUpperCase() + i.name.slice(1),
+        amountPerPortion: i.amountPerPortion,
+        unit: i.unit,
+        aisle: i.aisle,
+        shelfLifeDays: i.shelfLifeDays
+      }));
+
+      draftRecipe = {
         id: "custom-" + Date.now(),
         name,
         equipment: equip,
         prepMinutes: 18,
-        prepTime: "18 min",
-        calories: kcal,
-        protein: totalP,
-        carbs: totalC,
-        fat: totalF,
-        costPerPortion: "€1.95",
-        tags: tokens.map(t => t.toLowerCase()),
+        protein: Math.round(totalP),
+        carbs: Math.round(totalC),
+        fat: Math.round(totalF),
+        costNum: estimateCost(ingredients),
         steps: [
           `Prep ${tokens.slice(0, 2).join(" and ")} for ${equip}.`,
-          `Cook main protein and carbs until golden and tender.`,
+          "Cook main protein and carbs until golden and tender.",
           `Combine remaining ingredients (${tokens.slice(2).join(", ") || "seasonings"}) and portion into big bowls.`
         ],
-        ingredients: parsedIngs.map(i => ({
-          name: i.name.charAt(0).toUpperCase() + i.name.slice(1),
-          amountPerPortion: i.amountPerPortion,
-          unit: i.unit,
-          aisle: i.aisle,
-          shelfLifeDays: i.shelfLifeDays
-        }))
+        ingredients
       };
+      renderAddRecipeModal();
+    }
+
+    function draftSet(field, val) { if (draftRecipe) draftRecipe[field] = val; }
+
+    function draftSetNum(field, val) {
+      if (!draftRecipe) return;
+      draftRecipe[field] = Number(val) || 0;
+      const k = document.getElementById("draftKcal");
+      if (k) k.textContent = Math.round(draftRecipe.protein * 4 + draftRecipe.carbs * 4 + draftRecipe.fat * 9);
+    }
+
+    function draftSetSteps(val) {
+      if (draftRecipe) draftRecipe.steps = val.split("\n").map(s => s.trim()).filter(Boolean);
+    }
+
+    function draftIngSet(i, field, val) {
+      if (!draftRecipe || !draftRecipe.ingredients[i]) return;
+      draftRecipe.ingredients[i][field] = (field === "amountPerPortion" || field === "shelfLifeDays") ? (Number(val) || 0) : val;
+    }
+
+    function draftAddIng() {
+      draftRecipe.ingredients.push({ name: "", amountPerPortion: 100, unit: "g", aisle: "Veggies & Fruit", shelfLifeDays: 6 });
+      renderAddRecipeModal();
+    }
+
+    function draftRemoveIng(i) {
+      draftRecipe.ingredients.splice(i, 1);
+      renderAddRecipeModal();
+    }
+
+    function draftBack() {
+      draftRecipe = null;
+      renderAddRecipeModal();
+    }
+
+    function renderAddRecipeModal() {
+      const body = document.getElementById("addRecipeBody");
+      const title = document.getElementById("addRecipeTitle");
+      const inputCls = "w-full mt-1 px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white";
+      const smallCls = "w-full px-2 py-2 rounded-lg bg-slate-950 border border-slate-700 text-xs text-white";
+      const opts = (list, cur) => (list.includes(cur) ? list : [...list, cur])
+        .map(o => `<option value="${esc(o)}" ${o === cur ? "selected" : ""}>${esc(o)}</option>`).join("");
+
+      if (!draftRecipe) {
+        title.textContent = "Add Our Own Meal";
+        body.innerHTML = `
+          <p class="text-xs text-slate-400 mb-3">
+            Write the meal name and a few key ingredients. The app estimates grams, macros, aisles, shelf-life and cost, then lets you tweak everything before saving.
+          </p>
+          <div class="space-y-3">
+            <div>
+              <label class="text-xs font-semibold text-slate-300">Meal Name</label>
+              <input id="newMealName" type="text" placeholder="e.g. Creamy Garlic Chicken Pasta" class="${inputCls}" />
+            </div>
+            <div>
+              <label class="text-xs font-semibold text-slate-300">Equipment Used</label>
+              <select id="newMealEquip" class="${inputCls}">
+                ${EQUIP_OPTIONS.map(o => `<option value="${o}">${o}</option>`).join("")}
+              </select>
+            </div>
+            <div>
+              <label class="text-xs font-semibold text-slate-300">Main Ingredients (comma separated)</label>
+              <textarea id="newMealNotes" rows="3" placeholder="e.g. chicken breast, penne pasta, cooking cream, cheese, garlic, spinach" class="${inputCls}"></textarea>
+            </div>
+            <button onclick="buildDraftFromInputs()" class="w-full py-3 rounded-2xl bg-emerald-500 text-slate-950 font-bold text-xs">
+              ✨ Auto-Calculate & Preview →
+            </button>
+          </div>`;
+        return;
+      }
+
+      const d = draftRecipe;
+      title.textContent = draftEditingId ? "Edit Meal" : "Check & Tweak Your Meal";
+      const kcal = Math.round(d.protein * 4 + d.carbs * 4 + d.fat * 9);
+      body.innerHTML = `
+        <div class="space-y-3">
+          <div>
+            <label class="text-xs font-semibold text-slate-300">Meal Name</label>
+            <input type="text" value="${esc(d.name)}" oninput="draftSet('name', this.value)" class="${inputCls}" />
+          </div>
+          <div>
+            <label class="text-xs font-semibold text-slate-300">Equipment</label>
+            <select onchange="draftSet('equipment', this.value)" class="${inputCls}">${opts(EQUIP_OPTIONS, d.equipment)}</select>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="text-[11px] font-semibold text-slate-400">Cook time (min)</label>
+              <input type="number" inputmode="numeric" value="${d.prepMinutes}" oninput="draftSetNum('prepMinutes', this.value)" class="${smallCls} mt-1" />
+            </div>
+            <div>
+              <label class="text-[11px] font-semibold text-slate-400">Cost per portion (€)</label>
+              <input type="number" inputmode="decimal" step="0.05" value="${d.costNum}" oninput="draftSetNum('costNum', this.value)" class="${smallCls} mt-1" />
+            </div>
+          </div>
+          <div>
+            <div class="flex items-center justify-between">
+              <label class="text-[11px] font-semibold text-slate-400">Macros per portion</label>
+              <span class="text-[11px] text-slate-400"><strong id="draftKcal" class="text-white">${kcal}</strong> kcal</span>
+            </div>
+            <div class="grid grid-cols-3 gap-2 mt-1">
+              <div><span class="text-[10px] text-emerald-400">Protein g</span><input type="number" inputmode="numeric" value="${d.protein}" oninput="draftSetNum('protein', this.value)" class="${smallCls}" /></div>
+              <div><span class="text-[10px] text-slate-400">Carbs g</span><input type="number" inputmode="numeric" value="${d.carbs}" oninput="draftSetNum('carbs', this.value)" class="${smallCls}" /></div>
+              <div><span class="text-[10px] text-slate-400">Fat g</span><input type="number" inputmode="numeric" value="${d.fat}" oninput="draftSetNum('fat', this.value)" class="${smallCls}" /></div>
+            </div>
+          </div>
+
+          <div>
+            <label class="text-[11px] font-semibold text-slate-400">Ingredients (per 1 portion)</label>
+            <div class="space-y-2 mt-1">
+              ${d.ingredients.map((ing, i) => `
+                <div class="p-2.5 rounded-2xl bg-slate-900/70 border border-slate-800 space-y-1.5">
+                  <div class="flex gap-1.5">
+                    <input type="text" value="${esc(ing.name)}" placeholder="Ingredient" oninput="draftIngSet(${i}, 'name', this.value)" class="${smallCls} flex-1" />
+                    <button onclick="draftRemoveIng(${i})" class="px-2.5 rounded-lg bg-rose-500/15 text-rose-300 border border-rose-500/30 text-xs">✕</button>
+                  </div>
+                  <div class="grid grid-cols-3 gap-1.5">
+                    <input type="number" inputmode="decimal" step="any" value="${ing.amountPerPortion}" oninput="draftIngSet(${i}, 'amountPerPortion', this.value)" class="${smallCls}" />
+                    <select onchange="draftIngSet(${i}, 'unit', this.value)" class="${smallCls}">${opts(UNIT_OPTIONS, ing.unit)}</select>
+                    <div class="flex items-center gap-1">
+                      <input type="number" inputmode="numeric" value="${ing.shelfLifeDays}" oninput="draftIngSet(${i}, 'shelfLifeDays', this.value)" class="${smallCls}" />
+                      <span class="text-[10px] text-slate-500">days</span>
+                    </div>
+                  </div>
+                  <select onchange="draftIngSet(${i}, 'aisle', this.value)" class="${smallCls}">${opts(AISLE_OPTIONS, ing.aisle)}</select>
+                </div>
+              `).join("")}
+            </div>
+            <button onclick="draftAddIng()" class="mt-2 w-full py-2 rounded-xl bg-slate-800 border border-slate-700 text-slate-200 text-xs font-bold">+ Add ingredient</button>
+            <p class="text-[10px] text-slate-500 mt-1">"days" = how long it stays fresh. It decides which shopping trip it lands on.</p>
+          </div>
+
+          <div>
+            <label class="text-[11px] font-semibold text-slate-400">Cooking steps (one per line)</label>
+            <textarea rows="4" onchange="draftSetSteps(this.value)" class="${inputCls} text-xs">${esc(d.steps.join("\n"))}</textarea>
+          </div>
+
+          <div class="flex gap-2">
+            ${draftEditingId
+              ? `<button onclick="deleteCustomRecipe('${d.id}')" class="px-4 py-3 rounded-2xl bg-rose-500/15 border border-rose-500/40 text-rose-300 font-bold text-xs">🗑 Delete</button>`
+              : `<button onclick="draftBack()" class="px-4 py-3 rounded-2xl bg-slate-800 border border-slate-700 text-slate-300 font-bold text-xs">← Back</button>`}
+            <button onclick="saveDraftRecipe()" class="flex-1 py-3 rounded-2xl bg-emerald-500 text-slate-950 font-bold text-xs">
+              ${draftEditingId ? "💾 Save Changes" : "✅ Save to Our Pool"}
+            </button>
+          </div>
+        </div>`;
+    }
+
+    function saveDraftRecipe() {
+      const d = draftRecipe;
+      if (!d) return;
+      d.name = (d.name || "").trim();
+      d.ingredients = d.ingredients.filter(i => (i.name || "").trim()).map(i => Object.assign({}, i, { name: i.name.trim() }));
+      if (!d.name) { showToast("Give the meal a name first"); return; }
+      if (!d.ingredients.length) { showToast("Add at least one ingredient"); return; }
+
+      d.prepMinutes = Math.max(5, Math.round(d.prepMinutes || 18));
+      d.prepTime = d.prepMinutes + " min";
+      d.calories = Math.round(d.protein * 4 + d.carbs * 4 + d.fat * 9);
+      d.costPerPortion = "€" + (Number(d.costNum) || 0).toFixed(2);
+      d.tags = d.ingredients.map(i => i.name.toLowerCase());
+      if (!d.steps.length) d.steps = ["Cook everything together and portion into big bowls."];
+      delete d.costNum;
 
       if (!state.customRecipes) state.customRecipes = [];
-      state.customRecipes.unshift(newRec);
-      if (!state.swipes[currentUser]) state.swipes[currentUser] = {};
-      state.swipes[currentUser][newRec.id] = "right";
-
+      if (draftEditingId) {
+        const idx = state.customRecipes.findIndex(r => r.id === draftEditingId);
+        if (idx >= 0) state.customRecipes[idx] = d;
+      } else {
+        state.customRecipes.unshift(d);
+        if (!state.swipes[currentUser]) state.swipes[currentUser] = {};
+        state.swipes[currentUser][d.id] = "right";
+      }
       closeAddRecipeModal();
       saveStateAndSync(currentUser);
+      showToast("Meal saved ✅");
+    }
+
+    function deleteCustomRecipe(id) {
+      if (!confirm("Delete this custom meal for good?")) return;
+      const used = (state.planNegotiation.currentSlots || []).some(s => s.recipeId === id);
+      state.customRecipes = (state.customRecipes || []).filter(r => r.id !== id);
+      delete state.swipes.laca[id];
+      delete state.swipes.fruzsi[id];
+      delete state.recipeMultipliers[id];
+      delete state.hiddenRecipes[id];
+      closeAddRecipeModal();
+      if (used) {
+        recordCounterProposal((slots) => replaceRecipeInSlots(slots, id));
+      } else {
+        saveStateAndSync(currentUser);
+      }
+      showToast("Meal deleted");
     }
 
     /********************************************************************
      * 10. RENDER TAB 3: PING-PONG PLAN NEGOTIATION & PORTION MEMORY
      ********************************************************************/
     function recordCounterProposal(mutatorFn) {
-      const currentCopy = JSON.parse(JSON.stringify(state.planNegotiation.currentSlots || []));
-      state.planNegotiation.previousSlots = currentCopy;
+      const neg = state.planNegotiation;
+      // Several edits in a row by the same person stay ONE counter-offer:
+      // keep the plan the partner last saw as "Card 1".
+      const keepOriginal = neg.status === "proposed" && neg.proposedBy === currentUser && neg.previousSlots && neg.previousSlots.length;
+      if (!keepOriginal) {
+        neg.previousSlots = JSON.parse(JSON.stringify(neg.currentSlots || []));
+      }
       mutatorFn(state.planNegotiation.currentSlots);
       state.planNegotiation.status = "proposed";
       state.planNegotiation.proposedBy = currentUser;
@@ -1901,6 +2289,7 @@
     function changeSlotRecipe(slotIdx, newRecipeId) {
       recordCounterProposal((slots) => {
         slots[slotIdx].recipeId = newRecipeId;
+        slots[slotIdx].multiplier = state.recipeMultipliers[newRecipeId] || 1.0;
       });
     }
 
@@ -1984,6 +2373,160 @@
       saveStateAndSync(currentUser);
     }
 
+    /* ---- Money tracker ---- */
+    function parseCost(str) {
+      const n = parseFloat(String(str == null ? "" : str).replace(/[^0-9.,]/g, "").replace(",", "."));
+      return isNaN(n) ? 2 : n;
+    }
+
+    function fmtEur(n) { return "€" + (Math.round(n * 100) / 100).toFixed(2); }
+
+    // Cost uses scaled portions (bigger appetite = more food bought);
+    // delivery comparison counts people-meals (base portions) only.
+    function computeMoney(slots) {
+      let portions = 0, cost = 0;
+      (slots || []).forEach(s => {
+        const mult = s.multiplier || 1;
+        portions += s.basePortions;
+        cost += s.basePortions * mult * parseCost(getRecipeById(s.recipeId).costPerPortion);
+      });
+      const price = Number(state.settings && state.settings.deliveryPrice) || 13;
+      const delivery = portions * price;
+      return { portions, cost, delivery, saved: delivery - cost, price };
+    }
+
+    function setDeliveryPrice(val) {
+      const n = Number(val);
+      if (!n || n < 1) return;
+      state.settings.deliveryPrice = n;
+      saveStateAndSync(currentUser);
+    }
+
+    function renderMoneyCard() {
+      const slots = state.planNegotiation.currentSlots || [];
+      const locked = state.planNegotiation.status === "locked";
+      const m = computeMoney(slots);
+      const past = (state.history || []).reduce((sum, h) => sum + (Number(h.saved) || 0), 0);
+      const total = past + (locked ? m.saved : 0);
+      document.getElementById("moneyCard").innerHTML = `
+        <div class="flex items-center justify-between mb-1">
+          <span class="text-xs font-extrabold uppercase tracking-wider text-amber-300">💰 Money Saved This Week</span>
+          <span class="text-[10px] font-bold px-2 py-0.5 rounded-lg ${locked ? "bg-emerald-500/20 text-emerald-300" : "bg-slate-800 text-slate-400"}">${locked ? "Plan locked" : "Estimate"}</span>
+        </div>
+        <div class="text-3xl font-extrabold text-white">${fmtEur(Math.max(0, m.saved))}</div>
+        <div class="grid grid-cols-3 gap-2 mt-3 text-center">
+          <div class="p-2 rounded-xl bg-slate-900/80 border border-slate-800">
+            <div class="text-[10px] text-slate-400">Cooking at home</div>
+            <div class="text-sm font-bold text-emerald-300">${fmtEur(m.cost)}</div>
+          </div>
+          <div class="p-2 rounded-xl bg-slate-900/80 border border-slate-800">
+            <div class="text-[10px] text-slate-400">Delivery @ €${m.price}</div>
+            <div class="text-sm font-bold text-rose-300">${fmtEur(m.delivery)}</div>
+          </div>
+          <div class="p-2 rounded-xl bg-slate-900/80 border border-slate-800">
+            <div class="text-[10px] text-slate-400">Portions</div>
+            <div class="text-sm font-bold text-white">${m.portions}</div>
+          </div>
+        </div>
+        <div class="text-[11px] text-slate-400 mt-2.5">
+          🏆 All-time saved: <strong class="text-amber-300">${fmtEur(total)}</strong>${state.history.length ? ` over ${state.history.length} finished week${state.history.length > 1 ? "s" : ""}` : ""}
+        </div>`;
+    }
+
+    /* ---- Ping-pong diff: which slots did the partner change? ---- */
+    function diffPlans(prev, cur) {
+      const map = {};
+      if (!prev || !prev.length) return map;
+      const nm = (id) => getRecipeById(id).name;
+      const byId = {};
+      prev.forEach(s => { byId[s.id] = s; });
+      (cur || []).forEach(s => {
+        const p = byId[s.id];
+        const notes = [];
+        if (!p) {
+          notes.push(s.days.length === 2 ? "🔗 Merged into a 2-day batch" : "✂️ Split into a 1-day meal");
+          const pp = prev.find(x => x.days.includes(s.days[0]));
+          if (pp && pp.recipeId !== s.recipeId) notes.push(`🍽 ${nm(pp.recipeId)} → ${nm(s.recipeId)}`);
+        } else {
+          if (p.recipeId !== s.recipeId) notes.push(`🍽 ${nm(p.recipeId)} → ${nm(s.recipeId)}`);
+          if ((p.multiplier || 1) !== (s.multiplier || 1)) notes.push(`⚖️ Portion ${p.multiplier || 1}x → ${s.multiplier || 1}x`);
+        }
+        if (notes.length) map[s.id] = notes;
+      });
+      return map;
+    }
+
+    /* ---- Tap-to-cook drawer ---- */
+    const openCook = new Set();
+    function toggleCook(slotId) {
+      if (openCook.has(slotId)) openCook.delete(slotId); else openCook.add(slotId);
+      renderPlanTab();
+    }
+
+    function renderCookDrawer(slot, rec, mult) {
+      const total = slot.basePortions * mult;
+      const r1 = (n) => Math.round(n * 10) / 10;
+      return `
+        <div class="p-3 rounded-2xl bg-slate-950/70 border border-emerald-500/20 space-y-2.5">
+          <div class="flex items-center justify-between text-[11px] text-slate-400">
+            <span>Eating on: <strong class="text-slate-200">${slot.days.map(d => DAY_SHORT[d]).join(" + ")}</strong></span>
+            <span>Cooking for <strong class="text-emerald-300">${r1(total)}</strong> portions</span>
+          </div>
+          <div class="grid grid-cols-4 gap-1.5 text-center">
+            <div class="p-1.5 rounded-lg bg-slate-900"><div class="text-[10px] text-slate-400">Protein</div><div class="text-xs font-extrabold text-emerald-400">${Math.round(rec.protein * mult)}g</div></div>
+            <div class="p-1.5 rounded-lg bg-slate-900"><div class="text-[10px] text-slate-400">kcal</div><div class="text-xs font-bold text-white">${Math.round(rec.calories * mult)}</div></div>
+            <div class="p-1.5 rounded-lg bg-slate-900"><div class="text-[10px] text-slate-400">Carbs</div><div class="text-xs font-bold text-slate-200">${Math.round(rec.carbs * mult)}g</div></div>
+            <div class="p-1.5 rounded-lg bg-slate-900"><div class="text-[10px] text-slate-400">Fat</div><div class="text-xs font-bold text-slate-200">${Math.round(rec.fat * mult)}g</div></div>
+          </div>
+          <div>
+            <div class="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Ingredients for the whole pot</div>
+            <div class="space-y-0.5">
+              ${(rec.ingredients || []).map(i => `
+                <div class="flex justify-between text-xs text-slate-200 border-b border-slate-800/70 py-1">
+                  <span>${esc(i.name)}</span><strong class="text-emerald-300">${r1(i.amountPerPortion * total)} ${esc(i.unit)}</strong>
+                </div>`).join("")}
+            </div>
+          </div>
+          <div>
+            <div class="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Steps · ${esc(rec.prepTime)} · ${esc(rec.equipment)}</div>
+            <ol class="space-y-1.5 text-xs text-slate-200">
+              ${(rec.steps || []).map((st, n) => `<li class="flex gap-2"><strong class="text-emerald-400 shrink-0">${n + 1}.</strong><span>${esc(st)}</span></li>`).join("")}
+            </ol>
+          </div>
+        </div>`;
+    }
+
+    /* ---- Smart grouped meal dropdown ---- */
+    function renderRecipeOptions(slot) {
+      const who = slot.whoConstraint;
+      const L = state.swipes.laca || {};
+      const F = state.swipes.fruzsi || {};
+      const groups = { both: [], liked: [], other: [] };
+      let hiddenByDislike = 0;
+
+      getActiveRecipes().forEach(r => {
+        if (r.id === slot.recipeId) return;
+        if (recipeMatchesDislikes(r, who)) { hiddenByDislike++; return; }
+        const l = L[r.id] === "right", f = F[r.id] === "right";
+        if (who === "both") {
+          if (l && f) groups.both.push(r); else if (l || f) groups.liked.push(r); else groups.other.push(r);
+        } else {
+          const mine = who === "laca" ? l : f;
+          if (mine) groups.liked.push(r); else groups.other.push(r);
+        }
+      });
+
+      const cur = getRecipeById(slot.recipeId);
+      const opt = (r) => `<option value="${esc(r.id)}">${esc(r.name)} (${esc(r.prepTime)} • ${esc(r.equipment)})</option>`;
+      const group = (label, list) => list.length ? `<optgroup label="${label}">${list.map(opt).join("")}</optgroup>` : "";
+      const html = `
+        <optgroup label="✅ Current pick"><option value="${esc(cur.id)}" selected>${esc(cur.name)} (${esc(cur.prepTime)} • ${esc(cur.equipment)})</option></optgroup>
+        ${group("💘 Both matched", groups.both)}
+        ${group(who === "both" ? "👍 Liked by one of you" : "👍 You liked these", groups.liked)}
+        ${group("🍽 Other safe meals", groups.other)}`;
+      return { html, hiddenByDislike };
+    }
+
     function renderPlanTab() {
       if (!state.planNegotiation.currentSlots || !state.planNegotiation.currentSlots.length) {
         state.planNegotiation.currentSlots = buildBatchSlotsFromCalendar(state.calendar, state);
@@ -1999,6 +2542,8 @@
 
       const badge = document.getElementById("planActionBadge");
       badge.classList.toggle("hidden", bothLocked || myAccepted);
+
+      renderMoneyCard();
 
       const statusCard = document.getElementById("planStatusCard");
       if (bothLocked) {
@@ -2016,6 +2561,7 @@
         `;
       } else {
         statusCard.className = "glass rounded-3xl p-4 border border-amber-500/40";
+        const proposer = neg.proposedBy === "laca" ? "Laca" : "Fruzsi";
         statusCard.innerHTML = `
           <div class="flex items-center justify-between mb-2">
             <span class="text-xs font-extrabold uppercase tracking-wider text-amber-300">🤝 Ping-Pong Plan Approval</span>
@@ -2030,8 +2576,10 @@
           </div>
           <p class="text-xs text-slate-300 mb-3">
             ${myAccepted
-              ? `You (${userLabel}) accepted this version. Waiting for ${otherLabel} to accept or counter-propose on her phone.`
-              : `${otherLabel} proposed a plan update! Review below and either accept it or swap a meal to send a counter-offer.`}
+              ? `You (${userLabel}) accepted this version. Waiting for ${otherLabel} to accept or counter-propose on their phone.`
+              : (neg.proposedBy === currentUser
+                  ? `Review the plan below, tap Accept, or change a meal to send ${otherLabel} a counter-offer.`
+                  : `${proposer} proposed a plan! Review below and either accept it or swap a meal to send a counter-offer.`)}
           </p>
           <div class="flex gap-2">
             ${!myAccepted ? `
@@ -2047,18 +2595,21 @@
         `;
       }
 
+      const diff = bothLocked ? {} : diffPlans(neg.previousSlots, neg.currentSlots);
+
       const compBox = document.getElementById("comparisonContainer");
       if (neg.previousSlots && neg.previousSlots.length && !bothLocked) {
         compBox.classList.remove("hidden");
         const proposerName = neg.proposedBy === "laca" ? "Laca" : "Fruzsi";
+        const changedCount = Object.keys(diff).length;
         compBox.innerHTML = `
           <div class="glass rounded-3xl p-4 border border-cyan-500/40 space-y-3">
-            <div class="text-xs font-bold text-cyan-300">⚡ Counter-Proposal Comparison (${proposerName} changed the plan)</div>
+            <div class="text-xs font-bold text-cyan-300">⚡ Counter-Proposal (${proposerName} changed ${changedCount} thing${changedCount === 1 ? "" : "s"})</div>
             <div class="grid grid-cols-2 gap-2.5">
               <div class="p-3 rounded-2xl bg-slate-900/90 border border-slate-800">
                 <div class="text-[11px] font-bold text-slate-400 mb-1.5">Card 1: Previous Plan</div>
                 <div class="space-y-1 text-[11px] text-slate-300">
-                  ${neg.previousSlots.map(s => `<div>• <strong>${s.days.map(d => DAY_SHORT[d]).join("+")}:</strong> ${getRecipeById(s.recipeId).name}</div>`).join("")}
+                  ${neg.previousSlots.map(s => `<div>• <strong>${s.days.map(d => DAY_SHORT[d]).join("+")}:</strong> ${esc(getRecipeById(s.recipeId).name)}${(s.multiplier || 1) !== 1 ? ` <span class="text-slate-500">(${s.multiplier}x)</span>` : ""}</div>`).join("")}
                 </div>
                 <button onclick="revertToPreviousPlan()" class="mt-2.5 w-full py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-[11px] border border-slate-700">
                   Accept Original
@@ -2066,8 +2617,15 @@
               </div>
               <div class="p-3 rounded-2xl bg-emerald-950/30 border border-emerald-500/40">
                 <div class="text-[11px] font-bold text-emerald-300 mb-1.5">Card 2: ${proposerName}'s New Plan</div>
-                <div class="space-y-1 text-[11px] text-white">
-                  ${neg.currentSlots.map(s => `<div>• <strong>${s.days.map(d => DAY_SHORT[d]).join("+")}:</strong> ${getRecipeById(s.recipeId).name}</div>`).join("")}
+                <div class="space-y-1.5 text-[11px] text-white">
+                  ${neg.currentSlots.map(s => {
+                    const notes = diff[s.id];
+                    return `<div class="${notes ? "p-1.5 -mx-1 rounded-lg bg-amber-500/10 border border-amber-500/40" : ""}">
+                      • <strong>${s.days.map(d => DAY_SHORT[d]).join("+")}:</strong> ${esc(getRecipeById(s.recipeId).name)}${(s.multiplier || 1) !== 1 ? ` <span class="text-slate-400">(${s.multiplier}x)</span>` : ""}
+                      ${notes ? `<span class="ml-1 text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-amber-400 text-slate-950 align-middle">CHANGED</span>
+                        <div class="text-[10px] text-amber-200 mt-0.5">${notes.map(esc).join("<br>")}</div>` : ""}
+                    </div>`;
+                  }).join("")}
                 </div>
                 <button onclick="acceptCurrentPlan()" class="mt-2.5 w-full py-2 rounded-xl bg-emerald-500 text-slate-950 font-extrabold text-[11px]">
                   Accept New Proposal
@@ -2081,7 +2639,6 @@
       }
 
       const slotsList = document.getElementById("planSlotsList");
-      const allRecipes = getAllRecipes();
 
       slotsList.innerHTML = (neg.currentSlots || []).map((slot, idx) => {
         const rec = getRecipeById(slot.recipeId);
@@ -2089,35 +2646,34 @@
         const effectivePortions = Math.round(slot.basePortions * mult * 10) / 10;
         const dayTitle = slot.days.map(d => DAY_LABELS[d]).join(" + ");
         const canSplitOrMerge = slot.days.length === 2 || (idx + 1 < neg.currentSlots.length && neg.currentSlots[idx + 1].days.length === 1);
+        const changed = !!diff[slot.id];
+        const cookOpen = openCook.has(slot.id);
+        const options = renderRecipeOptions(slot);
 
         return `
-          <div class="p-3.5 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-2.5">
+          <div class="p-3.5 rounded-2xl bg-slate-900/80 border ${changed ? "border-amber-500/50" : "border-slate-800"} space-y-2.5">
             <div class="flex items-center justify-between gap-2">
               <div>
                 <span class="text-xs font-extrabold uppercase tracking-wider text-emerald-400">
-                  🍳 Cook on ${DAY_LABELS[slot.days[0]]} (${rec.prepTime})
+                  🍳 Cook on ${DAY_LABELS[slot.days[0]]} (${esc(rec.prepTime)})
                 </span>
+                ${changed ? `<span class="ml-1 text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-amber-400 text-slate-950 align-middle">CHANGED</span>` : ""}
                 <div class="text-xs text-slate-400">Covers: ${dayTitle} (${slot.basePortions} base portions)</div>
               </div>
               ${canSplitOrMerge ? `
-                <button onclick="toggleSlotBatchSplit(${idx})" class="text-[11px] font-semibold px-2.5 py-1 rounded-xl bg-slate-800 text-slate-300 border border-slate-700">
+                <button onclick="toggleSlotBatchSplit(${idx})" class="shrink-0 text-[11px] font-semibold px-2.5 py-1 rounded-xl bg-slate-800 text-slate-300 border border-slate-700">
                   ${slot.days.length === 2 ? "✂️ Split 1-Day" : "🔗 Merge 2-Day"}
                 </button>
               ` : ""}
             </div>
 
-            <!-- Meal Selector Dropdown -->
             <div>
               <select onchange="changeSlotRecipe(${idx}, this.value)" class="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-xs font-bold text-white">
-                ${allRecipes.map(r => `
-                  <option value="${r.id}" ${r.id === rec.id ? "selected" : ""}>
-                    ${r.name} (${r.prepTime} • ${r.equipment})
-                  </option>
-                `).join("")}
+                ${options.html}
               </select>
+              ${options.hiddenByDislike ? `<div class="text-[10px] text-slate-500 mt-1">${options.hiddenByDislike} meal${options.hiddenByDislike === 1 ? "" : "s"} hidden because of dislikes</div>` : ""}
             </div>
 
-            <!-- Portion Multiplier & Appetite Memory -->
             <div class="flex items-center justify-between gap-2 pt-1">
               <div class="flex items-center gap-1">
                 ${[1.0, 1.25, 1.5].map(m => `
@@ -2127,10 +2683,15 @@
                 `).join("")}
               </div>
 
-              <button onclick="bumpRecipePermanentPortion('${rec.id}')" class="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
+              <button onclick="bumpRecipePermanentPortion('${esc(rec.id)}')" class="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
                 📈 Next time +20% (${effectivePortions}p)
               </button>
             </div>
+
+            <button onclick="toggleCook('${esc(slot.id)}')" class="w-full py-2 rounded-xl text-xs font-bold border transition ${cookOpen ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40" : "bg-slate-800 text-slate-200 border-slate-700"}">
+              👩‍🍳 ${cookOpen ? "Hide recipe" : "Tap to cook: ingredients & steps"}
+            </button>
+            ${cookOpen ? renderCookDrawer(slot, rec, mult) : ""}
           </div>
         `;
       }).join("");
@@ -2156,57 +2717,152 @@
       saveStateAndSync(currentUser);
     }
 
+    // Firebase keys may not contain . $ # [ ] / so keys are reduced to a-z0-9-
+    function safeKey(s) {
+      return String(s).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+    }
+
+    /*
+     * Shelf-life trip planner.
+     * Every ingredient is needed on the day its meal is cooked and can be bought
+     * at the earliest (cookDay - (shelfLife - 1)). The fewest trips that still
+     * keep everything fresh are found by greedy interval stabbing; each
+     * ingredient is then put on the EARLIEST trip inside its freshness window,
+     * so long-life items ride along with the first big haul.
+     * Freezer mode = one trip on the first cooking day; items that would not
+     * last until their cook day get a "freeze" tag.
+     */
     function buildShoppingTrips() {
       const slots = state.planNegotiation.currentSlots || [];
       const mode = state.shopping.mode || "fresh";
-
-      const mondayMap = {};
-      const thursdayMap = {};
+      const needs = [];
 
       slots.forEach(slot => {
         const rec = getRecipeById(slot.recipeId);
-        const mult = slot.multiplier || 1.0;
-        const totalPortions = slot.basePortions * mult;
-        const firstDayIdx = DAY_KEYS.indexOf(slot.days[0]);
-        const isLateWeek = firstDayIdx >= 3;
-
+        const total = slot.basePortions * (slot.multiplier || 1.0);
+        const cookIdx = DAY_KEYS.indexOf(slot.days[0]);
         (rec.ingredients || []).forEach(ing => {
-          const amount = Math.round(ing.amountPerPortion * totalPortions * 10) / 10;
-          const isPerishableMeat = ing.shelfLifeDays <= 3;
-
-          const targetTrip = (mode === "fresh" && isLateWeek && isPerishableMeat) ? thursdayMap : mondayMap;
-          const freezeTag = (mode === "freezer" && isLateWeek && isPerishableMeat);
-
-          const mapKey = `${ing.name.toLowerCase()}__${ing.unit}`;
-          if (!targetTrip[mapKey]) {
-            targetTrip[mapKey] = {
-              key: mapKey + (targetTrip === thursdayMap ? "__thu" : "__mon"),
-              name: ing.name,
-              amount: 0,
-              unit: ing.unit,
-              aisle: ing.aisle || "Other",
-              usedFor: new Set(),
-              freezeOnMonday: false
-            };
-          }
-          targetTrip[mapKey].amount = Math.round((targetTrip[mapKey].amount + amount) * 10) / 10;
-          targetTrip[mapKey].usedFor.add(DAY_SHORT[slot.days[0]]);
-          if (freezeTag) targetTrip[mapKey].freezeOnMonday = true;
+          needs.push({ ing, amount: ing.amountPerPortion * total, cookIdx, cookDay: slot.days[0] });
         });
       });
+      if (!needs.length) return [];
 
-      return {
-        mondayItems: Object.values(mondayMap),
-        thursdayItems: Object.values(thursdayMap)
-      };
+      const firstCook = Math.min(...needs.map(n => n.cookIdx));
+      needs.forEach(n => {
+        n.shelf = Math.max(1, Number(n.ing.shelfLifeDays) || 3);
+        n.winEnd = n.cookIdx;
+        n.winStart = Math.max(firstCook, n.cookIdx - (n.shelf - 1));
+      });
+
+      let tripDays = [];
+      if (mode === "freezer") {
+        tripDays = [firstCook];
+      } else {
+        [...needs].sort((a, b) => a.winEnd - b.winEnd).forEach(n => {
+          if (!tripDays.some(t => t >= n.winStart && t <= n.winEnd)) tripDays.push(n.winEnd);
+        });
+        tripDays.sort((a, b) => a - b);
+      }
+
+      const trips = tripDays.map(d => ({ dayIdx: d, dayKey: DAY_KEYS[d], map: {} }));
+      needs.forEach(n => {
+        const trip = mode === "freezer"
+          ? trips[0]
+          : trips.find(t => t.dayIdx >= n.winStart && t.dayIdx <= n.winEnd);
+        const key = `${safeKey(n.ing.name)}__${safeKey(n.ing.unit)}__${trip.dayKey}`;
+        if (!trip.map[key]) {
+          trip.map[key] = {
+            key,
+            name: n.ing.name,
+            amount: 0,
+            unit: n.ing.unit,
+            aisle: n.ing.aisle || "Other",
+            usedFor: new Set(),
+            freezeFor: new Set()
+          };
+        }
+        const item = trip.map[key];
+        item.amount = Math.round((item.amount + n.amount) * 10) / 10;
+        item.usedFor.add(DAY_SHORT[n.cookDay]);
+        if (n.cookIdx - trip.dayIdx >= n.shelf) item.freezeFor.add(DAY_SHORT[n.cookDay]);
+      });
+
+      return trips.map(t => ({ dayIdx: t.dayIdx, dayKey: t.dayKey, items: Object.values(t.map) }));
     }
 
-    function renderShoppingTripCard(title, subtitle, badgeText, items) {
-      if (!items.length) return "";
+    function isItemDone(item) {
+      return !!(state.shopping.atHome?.[item.key] || state.shopping.bought?.[item.key]);
+    }
+
+    function tripPending(trip) {
+      return trip.items.filter(i => !isItemDone(i));
+    }
+
+    // Plain lines: Apple Reminders turns each pasted line into its own reminder
+    function checklistLines(which) {
+      const trips = buildShoppingTrips();
+      const idx = todayIdx();
+      let chosen = trips;
+      if (which === "due") chosen = trips.filter(t => t.dayIdx <= idx);
+      else if (typeof which === "number") chosen = trips[which] ? [trips[which]] : [];
+      const lines = [];
+      chosen.forEach(t => tripPending(t).forEach(i => lines.push(`${i.name} ${i.amount} ${i.unit}`)));
+      return lines;
+    }
+
+    function copyChecklist(which) {
+      const lines = checklistLines(which);
+      if (!lines.length) { showToast("Nothing left to buy 🎉"); return; }
+      const text = lines.join("\n");
+      const done = () => showToast(`Copied ${lines.length} items. Paste into Reminders`);
+      const fallback = () => {
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        ta.style.position = "fixed";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        try { document.execCommand("copy"); done(); } catch (e) { showToast("Copy failed"); }
+        document.body.removeChild(ta);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done, fallback);
+      } else {
+        fallback();
+      }
+    }
+
+    function describeTrip(trip, i) {
+      const today = todayIdx();
+      const pending = tripPending(trip).length;
+      const day = DAY_LABELS[trip.dayKey];
+      let when;
+      if (trip.dayIdx === today) when = `Buy TODAY (${DAY_SHORT[trip.dayKey]})`;
+      else if (trip.dayIdx > today) when = `Buy on ${day}`;
+      else when = `${day} trip`;
+
+      let badge, badgeCls;
+      if (!pending) { badge = "✓ All done"; badgeCls = "bg-emerald-500/15 text-emerald-300 border-emerald-500/30"; }
+      else if (trip.dayIdx < today) { badge = `⚠ ${pending} overdue`; badgeCls = "bg-rose-500/20 text-rose-300 border-rose-500/40"; }
+      else if (trip.dayIdx === today) { badge = `${pending} to buy today`; badgeCls = "bg-amber-500/20 text-amber-300 border-amber-500/40"; }
+      else { badge = `${pending} to buy`; badgeCls = "bg-slate-800 text-slate-300 border-slate-700"; }
+
+      const cooks = [...new Set(trip.items.flatMap(it => [...it.usedFor]))];
+      const mode = state.shopping.mode || "fresh";
+      const subtitle = mode === "freezer"
+        ? "Everything for the week in one go. Late-week meat gets a freeze tag."
+        : `For cooks on: ${cooks.join(", ")}${i === 0 ? " + all long-life items" : ""}`;
+      return { title: `${i === 0 ? "🛒 Main Haul" : "🥩 Fresh Top-Up"} · ${when}`, subtitle, badge, badgeCls };
+    }
+
+    function renderShoppingTripCard(trip, i) {
+      if (!trip.items.length) return "";
+      const info = describeTrip(trip, i);
 
       const aislesOrder = ["Meat & Fish", "Dairy & Eggs", "Veggies & Fruit", "Dry Goods & Carbs", "Sauces & Spices"];
       const grouped = {};
-      items.forEach(item => {
+      trip.items.forEach(item => {
         const a = item.aisle || "Other";
         if (!grouped[a]) grouped[a] = [];
         grouped[a].push(item);
@@ -2225,7 +2881,7 @@
         .map(aisle => `
           <div class="space-y-1.5">
             <div class="text-xs font-extrabold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5 pt-2">
-              <span>${aisleIcons[aisle] || "🛍"}</span><span>${aisle}</span>
+              <span>${aisleIcons[aisle] || "🛍"}</span><span>${esc(aisle)}</span>
             </div>
             ${grouped[aisle].map(item => {
               const isHome = !!state.shopping.atHome?.[item.key];
@@ -2235,9 +2891,9 @@
                 <div class="p-2.5 rounded-2xl border transition flex items-center justify-between gap-2 ${done ? "bg-slate-900/30 border-slate-800/60 opacity-55" : "bg-slate-900/90 border-slate-800"}">
                   <div class="min-w-0 flex-1">
                     <div class="text-xs font-bold ${done ? "line-through text-slate-400" : "text-white"} flex items-center gap-1.5 flex-wrap">
-                      <span>${item.name}</span>
-                      <span class="text-emerald-300 font-extrabold">${item.amount} ${item.unit}</span>
-                      ${item.freezeOnMonday ? `<span class="text-[10px] px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">❄️ Freeze Mon</span>` : ""}
+                      <span>${esc(item.name)}</span>
+                      <span class="text-emerald-300 font-extrabold">${item.amount} ${esc(item.unit)}</span>
+                      ${item.freezeFor.size ? `<span class="text-[10px] px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">❄️ Freeze, thaw for ${[...item.freezeFor].join(", ")}</span>` : ""}
                     </div>
                     <div class="text-[10px] text-slate-400">For ${[...item.usedFor].join(", ")} cook</div>
                   </div>
@@ -2256,17 +2912,18 @@
         `).join("");
 
       return `
-        <div class="glass rounded-3xl p-4 space-y-2 border border-slate-800">
-          <div class="flex items-center justify-between">
-            <div>
-              <h3 class="text-sm font-extrabold text-white">${title}</h3>
-              <p class="text-[11px] text-slate-400">${subtitle}</p>
+        <div class="glass rounded-3xl p-4 space-y-2 border ${trip.dayIdx === todayIdx() && tripPending(trip).length ? "border-amber-500/50" : "border-slate-800"}">
+          <div class="flex items-start justify-between gap-2">
+            <div class="min-w-0">
+              <h3 class="text-sm font-extrabold text-white">${esc(info.title)}</h3>
+              <p class="text-[11px] text-slate-400">${esc(info.subtitle)}</p>
             </div>
-            <span class="text-[11px] font-bold px-2.5 py-1 rounded-xl bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
-              ${badgeText}
-            </span>
+            <span class="shrink-0 text-[11px] font-bold px-2.5 py-1 rounded-xl border ${info.badgeCls}">${info.badge}</span>
           </div>
           ${sectionsHtml}
+          <button onclick="copyChecklist(${i})" class="mt-2 w-full py-2 rounded-xl bg-slate-800 border border-slate-700 text-slate-200 text-[11px] font-bold">
+            📋 Copy this trip's checklist
+          </button>
         </div>
       `;
     }
@@ -2280,33 +2937,24 @@
       if (mode === "fresh") {
         btnFresh.className = "py-2 px-2.5 rounded-xl text-xs font-bold bg-emerald-500 text-slate-950 shadow transition text-center";
         btnFreezer.className = "py-2 px-2.5 rounded-xl text-xs font-bold text-slate-400 transition text-center";
-        desc.textContent = "All long-life items for Thursday–Sunday are pulled into Monday's trip so you only grab fresh meat on Wednesday/Thursday.";
+        desc.textContent = "The fewest trips that keep everything fresh. Long-life items ride along on the first haul; meat is bought as late as its shelf life allows.";
       } else {
         btnFreezer.className = "py-2 px-2.5 rounded-xl text-xs font-bold bg-emerald-500 text-slate-950 shadow transition text-center";
         btnFresh.className = "py-2 px-2.5 rounded-xl text-xs font-bold text-slate-400 transition text-center";
-        desc.textContent = "1-Trip Mode: Buy 100% of the week's groceries on Monday and put Thursday–Sunday meats into the freezer.";
+        desc.textContent = "1-Trip Mode: buy 100% of the week's groceries on your first cooking day and freeze whatever won't last.";
       }
 
-      const { mondayItems, thursdayItems } = buildShoppingTrips();
+      const trips = buildShoppingTrips();
       const container = document.getElementById("shoppingTripsContainer");
+      const locked = state.planNegotiation.status === "locked";
 
-      let html = renderShoppingTripCard(
-        "🛒 Buy on Monday (Main Weekly Haul)",
-        "Covers Mon–Wed meals + all non-perishable items for the whole week",
-        `${mondayItems.length} items`,
-        mondayItems
-      );
+      let html = locked || !trips.length ? "" : `
+        <div class="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-[11px] text-amber-200">
+          The plan isn't locked yet, so this list can still change. Accept the plan on the Plan tab first.
+        </div>`;
+      html += trips.map((t, i) => renderShoppingTripCard(t, i)).join("");
 
-      if (thursdayItems.length) {
-        html += renderShoppingTripCard(
-          "🥩 Buy on Wednesday / Thursday (Quick Fresh Run)",
-          "Fresh meat & short-life items needed for Thursday–Sunday meals",
-          `${thursdayItems.length} items`,
-          thursdayItems
-        );
-      }
-
-      container.innerHTML = html || `<div class="glass rounded-3xl p-5 text-center text-xs text-slate-400">No ingredients needed yet—build your weekly plan first!</div>`;
+      container.innerHTML = html || `<div class="glass rounded-3xl p-5 text-center text-xs text-slate-400">No ingredients needed yet. Build your weekly plan first!</div>`;
     }
 
     /********************************************************************
@@ -2353,24 +3001,22 @@
       });
     }
 
+    function icsEscape(t) {
+      return String(t).replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\r?\n/g, "\\n");
+    }
+
+    function icsLocal(d) {
+      const p = (n) => String(n).padStart(2, "0");
+      return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}T${p(d.getHours())}${p(d.getMinutes())}00`;
+    }
+
     function exportToAppleCalendar() {
-      const { mondayItems, thursdayItems } = buildShoppingTrips();
-      const monSummary = mondayItems
-        .filter(i => !state.shopping.atHome?.[i.key] && !state.shopping.bought?.[i.key])
-        .map(i => `${i.name} (${i.amount}${i.unit})`)
-        .join(", ") || "Check app for weekly list";
+      const trips = buildShoppingTrips();
+      const slots = state.planNegotiation.currentSlots || [];
+      const monday = getWeekMonday();
+      const stamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d+/, "");
 
-      const thuSummary = thursdayItems
-        .filter(i => !state.shopping.atHome?.[i.key] && !state.shopping.bought?.[i.key])
-        .map(i => `${i.name} (${i.amount}${i.unit})`)
-        .join(", ") || "Fresh meat top-up";
-
-      const now = new Date();
-      const dayOfWeek = (now.getDay() + 6) % 7;
-      const mondayDate = new Date(now);
-      mondayDate.setDate(now.getDate() - dayOfWeek);
-
-      let icsLines = [
+      const icsLines = [
         "BEGIN:VCALENDAR",
         "VERSION:2.0",
         "PRODID:-//LacaFruzsi//MealPlanner//EN",
@@ -2378,29 +3024,34 @@
       ];
 
       DAY_KEYS.forEach((dayKey, dIdx) => {
+        if ((state.calendar[dayKey] || "away") === "away") return;
         const times = state.reminders?.[dayKey] || ["13:00", "17:30"];
-        const eventDate = new Date(mondayDate);
-        eventDate.setDate(mondayDate.getDate() + dIdx);
+        const trip = trips.find(t => t.dayIdx >= dIdx && tripPending(t).length);
+        const cook = slots.find(s => s.days[0] === dayKey);
 
-        const y = eventDate.getFullYear();
-        const m = String(eventDate.getMonth() + 1).padStart(2, "0");
-        const d = String(eventDate.getDate()).padStart(2, "0");
+        const parts = ["Don't order food!"];
+        if (trip) {
+          parts.push(`Buy (${DAY_LABELS[trip.dayKey]} trip): ` + tripPending(trip).map(i => `${i.name} ${i.amount}${i.unit}`).join(", "));
+        }
+        if (cook) parts.push(`Cook: ${getRecipeById(cook.recipeId).name}`);
+        const description = parts.join("\n");
 
         times.forEach((tStr, tIdx) => {
           if (!tStr) return;
-          const [hh, mm] = tStr.split(":");
-          const dtStart = `${y}${m}${d}T${hh}${mm}00`;
-          const dtEnd = `${y}${m}${d}T${hh}${String(Math.min(59, Number(mm) + 15)).padStart(2, "0")}00`;
-          const listNote = dIdx >= 2 && thursdayItems.length ? thuSummary : monSummary;
+          const [hh, mm] = tStr.split(":").map(Number);
+          const start = new Date(monday);
+          start.setDate(monday.getDate() + dIdx);
+          start.setHours(hh, mm, 0, 0);
+          const end = new Date(start.getTime() + 15 * 60000);
 
           icsLines.push(
             "BEGIN:VEVENT",
-            `UID:lf-${dayKey}-${tIdx}-${Date.now()}@lacafruzsi.app`,
-            `DTSTAMP:${y}${m}${d}T080000Z`,
-            `DTSTART:${dtStart}`,
-            `DTEND:${dtEnd}`,
-            `SUMMARY:🛒 Laca & Fruzsi Meal & Grocery Check`,
-            `DESCRIPTION:Don't order food! Items to grab: ${listNote}`,
+            `UID:lf-${icsLocal(start).slice(0, 8)}-${tIdx}@lacafruzsi.app`,
+            `DTSTAMP:${stamp}`,
+            `DTSTART:${icsLocal(start)}`,
+            `DTEND:${icsLocal(end)}`,
+            `SUMMARY:${icsEscape(tIdx === 0 ? "🛒 Grocery & meal check" : "🍳 Time to cook")}`,
+            `DESCRIPTION:${icsEscape(description)}`,
             "BEGIN:VALARM",
             "TRIGGER:-PT0M",
             "ACTION:DISPLAY",
@@ -2420,6 +3071,90 @@
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+    }
+
+    /* ---- In-app reminder banner (+ notification while the app is open) ---- */
+    function reminderMinutes(dayKey) {
+      return (state.reminders?.[dayKey] || [])
+        .filter(Boolean)
+        .map(t => { const [h, m] = t.split(":").map(Number); return h * 60 + m; })
+        .sort((a, b) => a - b);
+    }
+
+    function snoozeBanner() {
+      const now = new Date();
+      const mins = now.getHours() * 60 + now.getMinutes();
+      const next = reminderMinutes(DAY_KEYS[todayIdx()]).find(t => t > mins);
+      const until = next != null
+        ? new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, next).getTime()
+        : Date.now() + 60 * 60000;
+      try { localStorage.setItem("lf_banner_snooze", String(until)); } catch (e) {}
+      renderReminderBanner();
+    }
+
+    function renderReminderBanner() {
+      const el = document.getElementById("reminderBanner");
+      const hide = () => { el.classList.add("hidden"); el.innerHTML = ""; };
+
+      const now = new Date();
+      const idx = todayIdx();
+      const dayKey = DAY_KEYS[idx];
+      const mins = now.getHours() * 60 + now.getMinutes();
+      const times = reminderMinutes(dayKey);
+      if (!times.length || mins < times[0]) return hide();
+      if ((state.calendar[dayKey] || "away") === "away") return hide();
+
+      let snooze = 0;
+      try { snooze = Number(localStorage.getItem("lf_banner_snooze")) || 0; } catch (e) {}
+      if (Date.now() < snooze) return hide();
+
+      const trips = buildShoppingTrips();
+      const slots = state.planNegotiation.currentSlots || [];
+      const due = trips.filter(t => t.dayIdx <= idx);
+      const pendingItems = due.flatMap(t => tripPending(t));
+      const cook = slots.find(s => s.days[0] === dayKey);
+
+      const lines = [];
+      if (pendingItems.length) {
+        const names = pendingItems.slice(0, 3).map(i => i.name.split("/")[0].trim()).join(", ");
+        lines.push(`🛒 <strong>${pendingItems.length} item${pendingItems.length === 1 ? "" : "s"} still to buy</strong>: ${esc(names)}${pendingItems.length > 3 ? "…" : ""}`);
+      }
+      if (cook && mins >= (times[1] != null ? times[1] : times[0])) {
+        lines.push(`🍳 Cook now: <strong>${esc(getRecipeById(cook.recipeId).name)}</strong> (${esc(getRecipeById(cook.recipeId).prepTime)})`);
+      }
+      if (!lines.length) return hide();
+
+      el.classList.remove("hidden");
+      el.innerHTML = `
+        <div class="rounded-3xl p-3.5 border border-amber-500/50 bg-amber-500/10 space-y-2.5">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-extrabold uppercase tracking-wider text-amber-300">🔔 Don't order delivery!</span>
+            <button onclick="snoozeBanner()" class="text-[11px] text-slate-400 px-1">Snooze</button>
+          </div>
+          <div class="text-xs text-slate-100 space-y-1">${lines.map(l => `<div>${l}</div>`).join("")}</div>
+          <div class="flex gap-2">
+            ${pendingItems.length ? `<button onclick="switchTab('shop')" class="flex-1 py-2 rounded-xl bg-amber-400 text-slate-950 font-extrabold text-xs">Open list</button>
+            <button onclick="copyChecklist('due')" class="flex-1 py-2 rounded-xl bg-slate-800 border border-slate-700 text-slate-100 font-bold text-xs">📋 Copy checklist</button>` : `<button onclick="switchTab('plan')" class="flex-1 py-2 rounded-xl bg-amber-400 text-slate-950 font-extrabold text-xs">Open recipe</button>`}
+          </div>
+        </div>`;
+    }
+
+    function maybeFireNotification() {
+      if (!("Notification" in window) || Notification.permission !== "granted") return;
+      const now = new Date();
+      const hhmm = String(now.getHours()).padStart(2, "0") + ":" + String(now.getMinutes()).padStart(2, "0");
+      const dayKey = DAY_KEYS[todayIdx()];
+      if (!(state.reminders?.[dayKey] || []).includes(hhmm)) return;
+      const stamp = `${now.toDateString()}-${hhmm}`;
+      try {
+        if (localStorage.getItem("lf_last_notif") === stamp) return;
+        localStorage.setItem("lf_last_notif", stamp);
+        const pending = checklistLines("due");
+        new Notification("🛒 Laca & Fruzsi: don't order delivery!", {
+          body: pending.length ? `${pending.length} items left to buy: ${pending.slice(0, 3).join(", ")}` : "Time to cook tonight's meal."
+        });
+      } catch (e) {}
     }
 
     function forceAppUpdate() {
@@ -2460,26 +3195,136 @@
           </div>
         `;
       }).join("");
+
+      const priceEl = document.getElementById("deliveryPriceInput");
+      if (priceEl && document.activeElement !== priceEl) priceEl.value = state.settings.deliveryPrice;
+
+      const customs = state.customRecipes || [];
+      document.getElementById("customMealsList").innerHTML = customs.length ? customs.map(r => `
+        <div class="p-2.5 rounded-2xl bg-slate-900/80 border border-slate-800 flex items-center justify-between gap-2">
+          <div class="min-w-0">
+            <div class="text-xs font-bold text-white truncate">${esc(r.name)}</div>
+            <div class="text-[11px] text-slate-400">${esc(r.prepTime)} • ${r.protein}g P • ${esc(r.costPerPortion)}</div>
+          </div>
+          <button onclick="openAddRecipeModal('${esc(r.id)}')" class="shrink-0 px-3 py-1.5 rounded-xl bg-slate-800 border border-slate-700 text-slate-200 text-[11px] font-bold">✏️ Edit</button>
+        </div>`).join("")
+        : `<div class="text-xs text-slate-400">No custom meals yet. Add your own with the + button.</div>`;
+
+      const hiddenIds = Object.keys(state.hiddenRecipes || {}).filter(id => state.hiddenRecipes[id]);
+      document.getElementById("hiddenMealsList").innerHTML = hiddenIds.length ? hiddenIds.map(id => `
+        <div class="p-2.5 rounded-2xl bg-slate-900/80 border border-slate-800 flex items-center justify-between gap-2">
+          <div class="text-xs font-bold text-slate-300 truncate">${esc(getRecipeById(id).name)}</div>
+          <button onclick="restoreRecipe('${esc(id)}')" class="shrink-0 px-3 py-1.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[11px] font-bold">Restore</button>
+        </div>`).join("")
+        : `<div class="text-xs text-slate-400">Nothing hidden.</div>`;
     }
 
     /********************************************************************
      * 13. MASTER RENDER & INIT
      ********************************************************************/
+    /* ---- First-time tour ---- */
+    const TOUR_STEPS = [
+      { icon: "🍲", title: "Cook at home, save money", text: "This app plans your week's meals, builds one shopping list and reminds you to cook, so you stop ordering expensive delivery. Both phones stay in sync live." },
+      { icon: "📅", title: "1. Set your week", text: "On the Week tab, tap who is home each day: both of you, only one, or away. The app groups days into big batches so you cook as rarely as possible." },
+      { icon: "🔥", title: "2. Swipe meals", text: "On the Swipe tab, tap ❤️ for meals you'd eat and ✕ to skip. Each of you swipes on your own phone. Tell the app what you hate in Setup and those meals vanish." },
+      { icon: "🤝", title: "3. Agree on the plan", text: "On the Plan tab, the app proposes a week. Either of you can swap a meal or change portions, and the other sees what changed. When you both tap Accept, it's locked in." },
+      { icon: "🛒", title: "4. Shop once, cook easy", text: "The Shop tab groups everything by aisle and trip day. Tap 🛒 Buy or 🏠 Home as you go and it updates on both phones. On cook day, tap a meal on the Plan tab for the recipe." },
+      { icon: "🔔", title: "You're ready!", text: "Turn on reminders in Setup so you never forget. The green card at the top of the Week tab always tells you what to do next." }
+    ];
+    let tourIdx = 0;
+
+    function openTour() {
+      tourIdx = 0;
+      document.getElementById("tourModal").classList.remove("hidden");
+      renderTour();
+    }
+
+    function closeTour() {
+      document.getElementById("tourModal").classList.add("hidden");
+      try { localStorage.setItem("lf_tour_done", "1"); } catch (e) {}
+    }
+
+    function tourNext() {
+      if (tourIdx >= TOUR_STEPS.length - 1) return closeTour();
+      tourIdx++;
+      renderTour();
+    }
+
+    function renderTour() {
+      const s = TOUR_STEPS[tourIdx];
+      document.getElementById("tourIcon").textContent = s.icon;
+      document.getElementById("tourTitle").textContent = s.title;
+      document.getElementById("tourText").textContent = s.text;
+      document.getElementById("tourNext").textContent = tourIdx === TOUR_STEPS.length - 1 ? "Let's go! 🎉" : "Next →";
+      document.getElementById("tourDots").innerHTML = TOUR_STEPS.map((_, i) =>
+        `<span class="w-2 h-2 rounded-full ${i === tourIdx ? "bg-emerald-400" : "bg-slate-700"}"></span>`).join("");
+    }
+
+    function maybeShowTour() {
+      let done = false;
+      try { done = !!localStorage.getItem("lf_tour_done"); } catch (e) {}
+      if (!done && document.getElementById("authModal").classList.contains("hidden")) openTour();
+    }
+
+    /* ---- "Your next step" card ---- */
+    function renderNextStep() {
+      const me = state.swipes[currentUser] || {};
+      const myLikes = Object.values(me).filter(v => v === "right").length;
+      const neg = state.planNegotiation;
+      const locked = neg.status === "locked";
+      const trips = buildShoppingTrips();
+      const pending = trips.reduce((n, t) => n + tripPending(t).length, 0);
+
+      const steps = [
+        { label: "Week", done: true },
+        { label: "Swipe", done: myLikes >= 3 },
+        { label: "Plan", done: locked },
+        { label: "Shop", done: locked && trips.length > 0 && pending === 0 }
+      ];
+
+      let title, text, btn, tab;
+      if (myLikes < 3) {
+        title = "Next: swipe a few meals"; text = `Like at least 3 meals (you have ${myLikes}). Your week above looks right? Then go swipe.`; btn = "Start swiping →"; tab = "swipe";
+      } else if (!locked) {
+        const mineOk = neg.acceptedBy && neg.acceptedBy[currentUser];
+        title = mineOk ? "Waiting for your partner" : "Next: review & accept the plan";
+        text = mineOk ? "You accepted. The plan locks as soon as they accept too." : "Check the proposed meals, change anything you don't like, then tap Accept.";
+        btn = "Open the plan →"; tab = "plan";
+      } else if (pending > 0) {
+        title = "Next: go shopping"; text = `${pending} item${pending === 1 ? "" : "s"} left on your list. Tap Buy or Home as you shop.`; btn = "Open shopping list →"; tab = "shop";
+      } else {
+        title = "All set! 🎉 Time to cook"; text = "Everything is bought. Open the Plan tab and tap a meal for the recipe. When the week ends, start a new one below."; btn = "See what to cook →"; tab = "plan";
+      }
+
+      document.getElementById("nextStepCard").innerHTML = `
+        <div class="flex items-center gap-1.5 mb-2">
+          ${steps.map(s => `<span class="flex-1 text-center text-[10px] font-bold py-1 rounded-lg ${s.done ? "bg-emerald-500/25 text-emerald-300" : "bg-slate-800 text-slate-500"}">${s.done ? "✓ " : ""}${s.label}</span>`).join("")}
+        </div>
+        <div class="text-sm font-extrabold text-white">${title}</div>
+        <p class="text-xs text-slate-300 mt-0.5 mb-3">${text}</p>
+        <button onclick="switchTab('${tab}')" class="w-full py-2.5 rounded-xl bg-emerald-500 text-slate-950 font-extrabold text-xs">${btn}</button>`;
+    }
+
     function renderAll() {
+      renderNextStep();
       renderTopUserToggle();
       renderWeekTab();
       renderSwipeTab();
       renderPlanTab();
       renderShopTab();
       renderSetupTab();
+      renderReminderBanner();
+      document.getElementById("headerSub").textContent = `${getActiveRecipes().length} Fast, Cheap, High-Protein Meals`;
     }
 
     window.addEventListener("DOMContentLoaded", () => {
       renderAll();
+      setInterval(() => { renderReminderBanner(); maybeFireNotification(); }, 30000);
       if (!secretPin) {
         openPinSettings();
       } else {
         startRealtimeListener();
+        maybeShowTour();
       }
     });
   </script>
