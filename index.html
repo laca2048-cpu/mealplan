@@ -243,6 +243,10 @@
             <input id="spendNote" type="text" placeholder="Store (optional)" class="flex-1 min-w-0 px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white" />
             <button onclick="addSpend()" class="px-3.5 py-2 rounded-xl bg-emerald-500 text-slate-950 font-bold text-xs">Add</button>
           </div>
+          <div class="flex gap-2 mt-2">
+            <input id="spendExtras" type="number" inputmode="decimal" step="0.01" min="0" placeholder="€ extras" class="w-24 px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white" />
+            <input id="spendExtrasNote" type="text" placeholder="Extras not on our list (optional)" class="flex-1 min-w-0 px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white" />
+          </div>
         </div>
         <div id="spendList" class="space-y-1.5"></div>
         <details>
@@ -2312,6 +2316,7 @@
           cost: Math.round(m.cost * 100) / 100,
           est: Math.round(m.estimate * 100) / 100,
           real: m.real,
+          extras: Math.round(m.extras * 100) / 100,
           portions: m.portions,
           ts: Date.now()
         });
@@ -3412,12 +3417,35 @@
       return isNaN(n) ? 2 : n;
     }
 
-    function weekSpent() {
+    function weekEntries() {
       const wk = planMondayISO();
       const legacyStart = getWeekMonday().getTime();
-      return (state.spending || [])
-        .filter(e => e.week ? e.week === wk : e.ts >= legacyStart)
-        .reduce((n, e) => n + (Number(e.amount) || 0), 0);
+      return (state.spending || []).filter(e => e.week ? e.week === wk : e.ts >= legacyStart);
+    }
+
+    // money spent on the shopping list (receipt total minus extras)
+    function weekSpent() {
+      return weekEntries().reduce((n, e) => n + Math.max(0, (Number(e.amount) || 0) - (Number(e.extras) || 0)), 0);
+    }
+
+    // extras that were not on the list (snacks, treats, impulse buys)
+    function weekExtras() {
+      return weekEntries().reduce((n, e) => n + (Number(e.extras) || 0), 0);
+    }
+
+    function addSpend() {
+      const amt = Number(document.getElementById("spendAmount").value);
+      if (!amt || amt <= 0) { showToast("Type the receipt total first"); return; }
+      const note = document.getElementById("spendNote").value.trim();
+      const extras = Math.min(amt, Math.max(0, Number(document.getElementById("spendExtras").value) || 0));
+      const extrasNote = document.getElementById("spendExtrasNote").value.trim();
+      const entry = { id: "sp" + Date.now(), ts: Date.now(), week: planMondayISO(), amount: Math.round(amt * 100) / 100, note, by: currentUser };
+      if (extras > 0) { entry.extras = Math.round(extras * 100) / 100; if (extrasNote) entry.extrasNote = extrasNote; }
+      state.spending.push(entry);
+      state.spending = state.spending.slice(-200);
+      ["spendAmount", "spendNote", "spendExtras", "spendExtrasNote"].forEach(id => { document.getElementById(id).value = ""; });
+      saveStateAndSync(currentUser);
+      showToast("Saved " + fmtEur(amt));
     }
 
     function computeMoney(slots) {
@@ -3430,19 +3458,7 @@
       const allBought = trips.length > 0 && trips.every(t => tripPending(t).length === 0);
       const real = spent > 0 && (allBought || spent >= estimate);
       const cost = real ? spent : Math.max(estimate, spent);
-      return { portions, price, delivery, estimate, spent, real, cost, saved: delivery - cost };
-    }
-
-    function addSpend() {
-      const amt = Number(document.getElementById("spendAmount").value);
-      if (!amt || amt <= 0) { showToast("Type the receipt total first"); return; }
-      const note = document.getElementById("spendNote").value.trim();
-      state.spending.push({ id: "sp" + Date.now(), ts: Date.now(), week: planMondayISO(), amount: Math.round(amt * 100) / 100, note, by: currentUser });
-      state.spending = state.spending.slice(-200);
-      document.getElementById("spendAmount").value = "";
-      document.getElementById("spendNote").value = "";
-      saveStateAndSync(currentUser);
-      showToast("Saved " + fmtEur(amt));
+      return { portions, price, delivery, estimate, spent, extras: weekExtras(), real, cost, saved: delivery - cost };
     }
 
     /* ---- "Not at the store?" swaps: same dish, still tasty, healthy and cheap ----
@@ -3716,12 +3732,13 @@
       document.getElementById("budgetSummary").innerHTML = `
         <div class="grid grid-cols-2 gap-2">
           ${box("Planned (estimate)", fmtEur(m.estimate), "for this shopping list", "text-white")}
-          ${box("Spent so far", fmtEur(m.spent), "from your receipts", m.spent > m.estimate && m.estimate > 0 ? "text-rose-300" : "text-emerald-300")}
+          ${box("Spent on the list", fmtEur(m.spent), "receipts minus extras", m.spent > m.estimate && m.estimate > 0 ? "text-rose-300" : "text-emerald-300")}
         </div>
         <div class="mt-2.5">
           <div class="h-2 rounded-full bg-slate-800 overflow-hidden"><div class="h-full rounded-full ${over > 0 ? "bg-rose-400" : "bg-emerald-400"}" style="width:${pct}%"></div></div>
           <div class="text-[11px] mt-1.5 ${over > 0 ? "text-rose-300" : "text-slate-400"}">${m.spent > 0 ? (over > 0 ? `${fmtEur(over)} over the estimate` : `${fmtEur(-over)} left of the estimate`) : "Add your receipts below to compare."}</div>
         </div>
+        ${m.extras > 0 ? `<div class="mt-2.5 p-2.5 rounded-2xl bg-pink-500/10 border border-pink-500/30 text-xs text-pink-200">➕ Extras not on the list: <strong>${fmtEur(m.extras)}</strong>${m.spent + m.extras > 0 ? ` (${Math.round(m.extras / (m.spent + m.extras) * 100)}% of what you spent)` : ""}</div>` : ""}
         <div class="mt-3 p-3 rounded-2xl bg-slate-900/80 border border-slate-800 text-xs space-y-1">
           <div class="flex justify-between text-slate-300"><span>Delivery instead (${m.portions} meals × €${m.price})</span><strong class="text-rose-300">${fmtEur(m.delivery)}</strong></div>
           <div class="flex justify-between text-slate-300"><span>${m.real ? "Cooking at home (real)" : "Cooking at home (estimate)"}</span><strong class="text-white">${fmtEur(m.cost)}</strong></div>
@@ -3733,7 +3750,7 @@
       const mine = (state.spending || []).filter(e => e.week ? e.week === wk : e.ts >= getWeekMonday().getTime()).sort((a, b) => b.ts - a.ts);
       document.getElementById("spendList").innerHTML = mine.map(e => `
         <div class="flex items-center justify-between p-2 rounded-xl bg-slate-900/70 border border-slate-800 text-xs">
-          <span class="text-slate-300">${new Date(e.ts).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}${e.note ? " · " + esc(e.note) : ""} <span class="text-slate-500">${e.by === "fruzsi" ? "👩" : "👦"}</span></span>
+          <span class="text-slate-300">${new Date(e.ts).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}${e.note ? " · " + esc(e.note) : ""} <span class="text-slate-500">${e.by === "fruzsi" ? "👩" : "👦"}</span>${e.extras ? `<span class="block text-[10px] text-pink-300">incl. ${fmtEur(e.extras)} extras${e.extrasNote ? ": " + esc(e.extrasNote) : ""}</span>` : ""}</span>
           <span class="flex items-center gap-2"><strong class="text-white">${fmtEur(e.amount)}</strong><button onclick="deleteSpend('${esc(e.id)}')" class="text-slate-500 px-1">✕</button></span>
         </div>`).join("");
 
