@@ -104,27 +104,24 @@
   </div>
 
   <!-- TOP HEADER -->
-  <header class="sticky top-0 z-30 glass safe-pt pb-3 px-4 border-b border-slate-800/80">
-    <div class="max-w-md mx-auto flex items-center justify-between gap-2">
-      <div>
-        <div class="flex items-center gap-2">
-          <span class="font-extrabold text-base tracking-tight bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">Laca & Fruzsi</span>
-          <span id="syncBadge" onclick="openPinSettings()" class="cursor-pointer text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700 flex items-center gap-1">
-            <span id="syncDot" class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
-            <span id="syncText">Connecting</span>
-          </span>
+  <header class="sticky top-0 z-30 glass safe-pt pb-2.5 px-4 border-b border-slate-800/60">
+    <div class="max-w-md mx-auto flex items-center justify-between gap-3">
+      <div class="min-w-0 flex items-center gap-2.5">
+        <div class="w-9 h-9 shrink-0 rounded-xl bg-gradient-to-br from-emerald-400 to-teal-600 flex items-center justify-center text-lg shadow-lg shadow-emerald-500/20">🍲</div>
+        <div class="min-w-0">
+          <h1 id="headerTitle" class="text-[17px] font-extrabold tracking-tight text-white leading-none">Calendar</h1>
+          <p id="headerSub" class="text-[11px] text-slate-400 mt-1 leading-none truncate">&nbsp;</p>
         </div>
-        <p id="headerSub" class="text-[11px] text-slate-400">Fast, Cheap, Healthy Meals</p>
       </div>
-
-      <!-- User Switcher -->
-      <div class="flex bg-slate-900/90 p-1 rounded-2xl border border-slate-800">
-        <button onclick="switchUser('laca')" id="topBtnLaca" class="px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1">
-          <span>👦</span><span>Laca</span>
-        </button>
-        <button onclick="switchUser('fruzsi')" id="topBtnFruzsi" class="px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1">
-          <span>👩</span><span>Fruzsi</span>
-        </button>
+      <div class="flex items-center gap-2.5 shrink-0">
+        <span id="syncBadge" onclick="openPinSettings()" class="cursor-pointer flex items-center">
+          <span id="syncDot" class="w-2 h-2 rounded-full bg-amber-400"></span>
+          <span id="syncText" class="hidden text-[10px] ml-1 text-slate-400"></span>
+        </span>
+        <div class="flex bg-slate-900/90 p-0.5 rounded-full border border-slate-800">
+          <button onclick="switchUser('laca')" id="topBtnLaca" aria-label="Laca" class="w-9 h-8 rounded-full text-base transition">👦</button>
+          <button onclick="switchUser('fruzsi')" id="topBtnFruzsi" aria-label="Fruzsi" class="w-9 h-8 rounded-full text-base transition">👩</button>
+        </div>
       </div>
     </div>
   </header>
@@ -136,36 +133,17 @@
   <main class="max-w-md mx-auto px-4 pt-4 safe-pb">
 
     <!-- TAB 1: WEEK CALENDAR -->
-    <section id="tab-week" class="space-y-4">
+    <section id="tab-week" class="space-y-3">
       <div id="nextStepCard" class="glass rounded-3xl p-4 border border-emerald-500/40"></div>
-
-      <div class="glass rounded-3xl p-4">
-        <h2 class="text-base font-bold text-white">When are <span id="weekWho" class="text-emerald-300">you</span> home?</h2>
-        <p class="text-xs text-slate-400">Tap a day to switch between Home and Away. Only you can change your own days.</p>
-        <div id="calendarDaysList" class="space-y-1.5 mt-3"></div>
-
-        <button id="sendWeekBtn" onclick="sendMyWeek()" class="mt-3 w-full py-3 rounded-2xl font-extrabold text-sm transition"></button>
-
-        <div id="partnerStatus" class="mt-3 p-3 rounded-2xl bg-slate-900/70 border border-slate-800 text-xs"></div>
-
-        <details class="mt-3">
-          <summary class="text-xs font-semibold text-emerald-300">Together this week · <span id="weekSummaryBadge">…</span> <span class="chev">▾</span></summary>
-          <div id="batchBlocksPreview" class="space-y-2 mt-2"></div>
-          <p class="text-[11px] text-slate-500 mt-2">Days next to each other share one big cook, so you cook less often.</p>
-        </details>
-
-        <button onclick="switchTab('swipe')" class="mt-4 w-full py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-sm shadow-lg shadow-emerald-500/20 transition">
-          Next: choose meals →
-        </button>
-      </div>
+      <div id="calendarCard" class="glass rounded-3xl p-4"></div>
 
       <details class="glass rounded-3xl border border-slate-800">
         <summary class="p-4 flex items-center justify-between text-sm font-bold text-white">
           <span>🗓 Week finished? Start a new one</span><span class="chev text-slate-400">▾</span>
         </summary>
         <div class="px-4 pb-4">
-          <p class="text-xs text-slate-400 mb-3">Saves this week's savings, then clears swipes, the plan and shopping ticks. Your days and dislikes stay.</p>
-          <button onclick="startNewWeek()" class="w-full py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-100 font-bold text-xs transition">🔄 Start New Week</button>
+          <p class="text-xs text-slate-400 mb-3">Saves this week's budget, then clears meal picks, the plan and shopping ticks. Your calendar days stay.</p>
+          <button onclick="startNewWeek()" class="w-full py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-100 font-bold text-xs transition">🔄 Start new week</button>
         </div>
       </details>
     </section>
@@ -173,104 +151,59 @@
     <!-- TAB 2: TINDER SWIPE -->
     <section id="tab-swipe" class="space-y-3 hidden">
       <div class="flex items-center justify-between gap-2">
-        <div class="min-w-0">
-          <h2 class="text-base font-bold text-white">Pick meals</h2>
-          <p id="swipeStatusSub" class="text-xs text-slate-400"></p>
-        </div>
-        <div class="flex gap-1.5 shrink-0">
-          <button id="filterToggleBtn" onclick="toggleFilters()" class="px-3 py-1.5 rounded-xl bg-slate-800 border border-slate-700 text-slate-200 text-xs font-bold">⚙️ Filter</button>
-          <button onclick="openAddRecipeModal()" class="px-3 py-1.5 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-bold">+ Add</button>
-        </div>
+        <button id="filterToggleBtn" onclick="toggleFilters()" class="px-3.5 py-2 rounded-xl bg-slate-800 border border-slate-700 text-slate-200 text-xs font-bold">⚙️ Filters</button>
+        <button onclick="openAddRecipeModal()" class="px-3.5 py-2 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-bold">+ Add meal</button>
       </div>
 
-      <div id="swipeFilterPanel" class="hidden glass rounded-2xl p-3 space-y-2">
-        <div id="swipeFilterBar" class="flex flex-wrap gap-1.5"></div>
-        <button onclick="resetWeeklySwipes()" class="text-[11px] text-slate-400 underline">Start all swipes over</button>
-      </div>
+      <div id="swipeFilterPanel" class="hidden glass rounded-2xl p-3.5 space-y-3"></div>
 
       <div id="swipeArea" class="relative"></div>
 
       <button onclick="generateInitialPlanFromSwipes()" class="w-full py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 font-extrabold text-sm shadow-lg shadow-emerald-500/20">
         Done picking → build our week
       </button>
-
-      <div class="glass rounded-3xl p-4">
-        <h3 class="text-sm font-bold text-white mb-2">Picks so far</h3>
-        <div id="matchedPoolList" class="space-y-2"></div>
-      </div>
     </section>
 
     <!-- TAB 3: PING-PONG PLAN NEGOTIATION -->
-    <section id="tab-plan" class="space-y-4 hidden">
-      <!-- Approval / Ping-Pong Status Banner -->
-      <div id="planStatusCard" class="glass rounded-3xl p-4 border"></div>
+    <section id="tab-plan" class="space-y-3 hidden">
+      <div id="planStatusCard" class="glass rounded-3xl p-4"></div>
+      <div id="comparisonContainer" class="hidden"></div>
+      <div id="planSlotsList" class="space-y-3"></div>
 
-      <!-- Week at a glance -->
-      <div id="weekStrip" class="glass rounded-3xl p-4"></div>
-
-      <!-- Money Saved Tracker -->
-      <div id="moneyCard" class="glass rounded-3xl p-4 border border-amber-500/30"></div>
-      <div id="historyCard" class="glass rounded-3xl p-4 border border-slate-800"></div>
-
-      <!-- Side-by-Side Comparison when a Counter-Proposal exists -->
-      <div id="comparisonContainer" class="hidden space-y-3"></div>
-
-      <!-- Active Weekly Meal Plan Editor -->
-      <div class="glass rounded-3xl p-4">
-        <div class="flex items-center justify-between mb-3">
+      <details class="glass rounded-3xl border border-slate-800">
+        <summary class="p-4 flex items-center justify-between text-sm font-bold text-white">
+          <span>More options</span><span class="chev text-slate-400">▾</span>
+        </summary>
+        <div class="px-4 pb-4 space-y-3">
           <div>
-            <h2 class="text-base font-bold text-white">Weekly Meal Plan</h2>
-            <p class="text-xs text-slate-400">Tap ⚙️ Change on any meal to swap it or change portions.</p>
+            <div class="text-xs font-bold text-slate-300 mb-1.5">Ate faster than planned?</div>
+            <div class="grid grid-cols-2 gap-2">
+              <button onclick="addExtraMeals(1)" class="py-2.5 rounded-xl bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 font-bold text-xs">+1 cook<br><span class="font-normal text-[10px]">about 2 days of food</span></button>
+              <button onclick="addExtraMeals(2)" class="py-2.5 rounded-xl bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 font-bold text-xs">+2 cooks<br><span class="font-normal text-[10px]">about 4 days of food</span></button>
+            </div>
           </div>
-          <button onclick="generateInitialPlanFromSwipes()" class="text-xs font-semibold px-2.5 py-1.5 rounded-xl bg-slate-800 border border-slate-700 text-slate-300">
-            🔄 New suggestions
-          </button>
+          <button onclick="generateInitialPlanFromSwipes()" class="w-full py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-slate-200 font-semibold text-xs">🔄 New suggestions from our picks</button>
         </div>
-
-        <div id="planSlotsList" class="space-y-3"></div>
-      </div>
-
-      <div class="glass rounded-3xl p-4 border border-cyan-500/30">
-        <h3 class="text-sm font-extrabold text-white">🍽 Ran out of meals?</h3>
-        <p class="text-xs text-slate-400 mt-1 mb-3">Ate faster than planned? We'll pick new meals and add them to your shopping list.</p>
-        <div class="grid grid-cols-2 gap-2">
-          <button onclick="addExtraMeals(1)" class="py-2.5 rounded-xl bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 font-bold text-xs">+1 cook<br><span class="font-normal text-[10px]">about 2 days of food</span></button>
-          <button onclick="addExtraMeals(2)" class="py-2.5 rounded-xl bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 font-bold text-xs">+2 cooks<br><span class="font-normal text-[10px]">about 4 days of food</span></button>
-        </div>
-      </div>
+      </details>
     </section>
 
     <!-- TAB 4: SMART SHOPPING LIST -->
-    <section id="tab-shop" class="space-y-4 hidden">
-      <div class="glass rounded-3xl p-4">
-        <div class="flex items-center justify-between mb-2">
-          <div>
-            <h2 class="text-base font-bold text-white">Smart Shopping List</h2>
-            <p class="text-xs text-slate-400">Synced live while you walk through the store.</p>
-          </div>
-          <button onclick="clearShoppingChecks()" class="text-[11px] font-semibold px-2.5 py-1 rounded-xl bg-slate-800 text-slate-400 border border-slate-700">
-            Clear Ticks
-          </button>
-        </div>
-
-        <!-- Fresh vs Freezer Mode Toggle -->
-        <div class="grid grid-cols-2 gap-2 mt-3 bg-slate-900/90 p-1.5 rounded-2xl border border-slate-800">
-          <button onclick="setShoppingMode('fresh')" id="shopModeFresh" class="py-2 px-2.5 rounded-xl text-xs font-bold transition text-center">
-            🥩 2 Trips (Fresh Meat)
-          </button>
-          <button onclick="setShoppingMode('freezer')" id="shopModeFreezer" class="py-2 px-2.5 rounded-xl text-xs font-bold transition text-center">
-            ❄️ 1 Trip (Use Freezer)
-          </button>
+    <section id="tab-shop" class="space-y-3 hidden">
+      <div class="glass rounded-3xl p-3.5">
+        <div class="grid grid-cols-2 gap-1.5 bg-slate-900/90 p-1 rounded-2xl border border-slate-800">
+          <button onclick="setShoppingMode('fresh')" id="shopModeFresh" class="py-2 px-2 rounded-xl text-xs font-bold transition text-center">🥩 Fresh · 2 trips</button>
+          <button onclick="setShoppingMode('freezer')" id="shopModeFreezer" class="py-2 px-2 rounded-xl text-xs font-bold transition text-center">❄️ Freezer · 1 trip</button>
         </div>
         <p id="shopModeDesc" class="text-[11px] text-slate-400 mt-2"></p>
-        <button onclick="copyChecklist('all')" class="mt-3 w-full py-2.5 rounded-2xl bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 font-bold text-xs">
-          📋 Copy unbought items (paste into Apple Reminders)
-        </button>
+        <div class="flex gap-2 mt-2.5">
+          <button onclick="copyChecklist('all')" class="flex-1 py-2 rounded-xl bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 font-bold text-xs">📋 Copy list for Reminders</button>
+          <button onclick="clearShoppingChecks()" class="px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-slate-400 font-semibold text-xs">Clear ticks</button>
+        </div>
+        <p class="text-[10px] text-slate-500 mt-2">Tap an item to tick it · 🏠 we have it · ⇄ not in the store? get a swap</p>
       </div>
 
-      <div id="shoppingTripsContainer" class="space-y-4"></div>
+      <div id="shoppingTripsContainer" class="space-y-3"></div>
 
-      <!-- At home: live stock, barcode scan -->
       <details class="glass rounded-3xl border border-cyan-500/30">
         <summary class="p-4 flex items-center justify-between">
           <div>
@@ -289,7 +222,7 @@
             </div>
           </div>
           <div id="pantryList" class="space-y-2 mt-3"></div>
-          <p class="text-[11px] text-slate-400 mt-3">Type what you have, like "chicken 1000 g". Stock drops by itself when you tap ✓ Cooked on the Plan tab, and the app plans meals with it and takes it off your shopping list.</p>
+          <p class="text-[11px] text-slate-400 mt-3">Type what you have, like "chicken 1000 g". Stock drops by itself when you tap ✓ Cooked, and the app plans meals with it and takes it off your list.</p>
           <div class="flex items-center justify-between mt-2 text-xs text-slate-300">
             <span>Max meals per week with the same item</span>
             <select id="pantryMaxSelect" onchange="setPantryMax(this.value)" class="px-2 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-xs text-white"><option value="1">1</option><option value="2">2</option><option value="3">3</option></select>
@@ -297,17 +230,25 @@
         </div>
       </details>
 
-      <!-- Grocery Spending (type in what the receipt said) -->
-      <div class="glass rounded-3xl p-4 border border-amber-500/30">
-        <h3 class="text-sm font-extrabold text-white">🧾 What did you actually spend?</h3>
-        <p class="text-[11px] text-slate-400 mb-3">After each shop, type the total from the receipt. The app then compares real spending to delivery.</p>
-        <div class="flex gap-2">
-          <input id="spendAmount" type="number" inputmode="decimal" step="0.01" min="0" placeholder="€ total" class="w-24 px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white" />
-          <input id="spendNote" type="text" placeholder="Store (optional)" class="flex-1 min-w-0 px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white" />
-          <button onclick="addSpend()" class="px-3.5 py-2 rounded-xl bg-emerald-500 text-slate-950 font-bold text-xs">Add</button>
+      <div class="glass rounded-3xl p-4 border border-amber-500/30 space-y-3">
+        <div class="flex items-center justify-between">
+          <h3 class="text-sm font-extrabold text-white">💰 Budget</h3>
+          <span id="budgetWeek" class="text-[11px] text-slate-400"></span>
         </div>
-        <div id="spendSummary" class="mt-3 text-xs text-slate-300"></div>
-        <div id="spendList" class="space-y-1.5 mt-2"></div>
+        <div id="budgetSummary"></div>
+        <div>
+          <div class="text-[11px] font-bold text-slate-400 mb-1.5">Add a receipt</div>
+          <div class="flex gap-2">
+            <input id="spendAmount" type="number" inputmode="decimal" step="0.01" min="0" placeholder="€ total" class="w-24 px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white" />
+            <input id="spendNote" type="text" placeholder="Store (optional)" class="flex-1 min-w-0 px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white" />
+            <button onclick="addSpend()" class="px-3.5 py-2 rounded-xl bg-emerald-500 text-slate-950 font-bold text-xs">Add</button>
+          </div>
+        </div>
+        <div id="spendList" class="space-y-1.5"></div>
+        <details>
+          <summary class="text-xs font-semibold text-slate-300">📊 Week by week <span class="chev">▾</span></summary>
+          <div id="historyCard" class="mt-2"></div>
+        </details>
       </div>
     </section>
 
@@ -447,7 +388,7 @@
     <div class="max-w-md mx-auto grid grid-cols-5 gap-1">
       <button onclick="switchTab('week')" id="nav-week" class="flex flex-col items-center py-1 rounded-xl text-emerald-400">
         <span class="text-lg">📅</span>
-        <span class="text-[10px] font-bold mt-0.5">Week</span>
+        <span class="text-[10px] font-bold mt-0.5">Calendar</span>
       </button>
       <button onclick="switchTab('swipe')" id="nav-swipe" class="flex flex-col items-center py-1 rounded-xl text-slate-400">
         <span class="text-lg">🔥</span>
@@ -1537,19 +1478,45 @@
     /********************************************************************
      * 3. SHARED APPLICATION STATE
      ********************************************************************/
+    /* ---- dates & the plan week ---- */
+    function pad2(n) { return String(n).padStart(2, "0"); }
+    function isoDate(dt) { return `${dt.getFullYear()}-${pad2(dt.getMonth() + 1)}-${pad2(dt.getDate())}`; }
+    function parseISO(str) { const [y, m, dd] = str.split("-").map(Number); return new Date(y, m - 1, dd); }
+    function addDaysISO(str, n) { const dt = parseISO(str); dt.setDate(dt.getDate() + n); return isoDate(dt); }
+    function mondayOf(dt) { const x = new Date(dt); x.setHours(0, 0, 0, 0); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return x; }
+    function todayISO() { return isoDate(new Date()); }
+    function planMondayISO() { return (state && state.planWeekStart) || isoDate(mondayOf(new Date())); }
+    function getWeekMonday() { return parseISO(planMondayISO()); }
+    function planDateOf(dk) { return addDaysISO(planMondayISO(), DAY_KEYS.indexOf(dk)); }
+    function todayInPlanWeek() { const t = todayISO(), m = planMondayISO(); return t >= m && t <= addDaysISO(m, 6); }
+    function weekLabel() { return "Week of " + getWeekMonday().toLocaleDateString("en-GB", { day: "numeric", month: "short" }); }
+    // Saturday/Sunday: the next plan week starts on the coming Monday
+    function nextPlanMondayISO() {
+      const now = new Date();
+      const mon = mondayOf(now);
+      if ((now.getDay() + 6) % 7 >= 5) mon.setDate(mon.getDate() + 7);
+      return isoDate(mon);
+    }
+
+    // the shared weekday calendar is derived from both people's per-date days
+    function refreshCalendar(s) {
+      const cal = {}, det = {};
+      DAY_KEYS.forEach((dk, i) => {
+        const iso = addDaysISO(s.planWeekStart, i);
+        const l = s.avail.laca[iso], f = s.avail.fruzsi[iso];
+        const lh = l === "home" || l === "half", fh = f === "home" || f === "half";
+        cal[dk] = lh && fh ? "both" : lh ? "laca" : fh ? "fruzsi" : "away";
+        det[dk] = { laca: l || "unset", fruzsi: f || "unset" };
+      });
+      s.calendar = cal;
+      s.calendarDetail = det;
+    }
+
     function createDefaultState() {
       return {
         updatedAt: Date.now(),
         updatedBy: "laca",
-        calendar: {
-          mon: "both",
-          tue: "both",
-          wed: "laca",
-          thu: "both",
-          fri: "both",
-          sat: "away",
-          sun: "away"
-        },
+        calendar: { mon: "away", tue: "away", wed: "away", thu: "away", fri: "away", sat: "away", sun: "away" },
         dislikes: {
           laca: [],
           fruzsi: []
@@ -1565,8 +1532,10 @@
         history: [],
         spending: [],
         pantry: [],
-        availability: null,
-        availabilitySent: { laca: true, fruzsi: true },
+        planWeekStart: null,
+        avail: { laca: {}, fruzsi: {} },
+        calendarDetail: {},
+        subs: {},
         planNegotiation: {
           status: "draft",
           proposedBy: "laca",
@@ -1616,15 +1585,25 @@
       s.history = toArr(r.history);
       s.spending = toArr(r.spending);
       s.pantry = toArr(r.pantry);
-      // per-person availability; older saves are converted from the shared calendar
-      s.availability = { laca: {}, fruzsi: {} };
-      DAY_KEYS.forEach(dk => {
-        const c = s.calendar[dk];
-        const ra = r.availability || {};
-        s.availability.laca[dk] = ra.laca && ra.laca[dk] != null ? !!ra.laca[dk] : (c === "both" || c === "laca");
-        s.availability.fruzsi[dk] = ra.fruzsi && ra.fruzsi[dk] != null ? !!ra.fruzsi[dk] : (c === "both" || c === "fruzsi");
-      });
-      s.availabilitySent = Object.assign({ laca: true, fruzsi: true }, r.availabilitySent || {});
+      s.subs = r.subs || {};
+      s.planWeekStart = r.planWeekStart || isoDate(mondayOf(new Date()));
+      // per-date availability: { laca: { "2026-10-27": "home" | "half" | "away" } }
+      s.avail = { laca: Object.assign({}, r.avail && r.avail.laca), fruzsi: Object.assign({}, r.avail && r.avail.fruzsi) };
+      if (!r.avail && (r.calendar || r.availability)) {
+        // older saves (weekday-based) become dates for the plan week
+        ["laca", "fruzsi"].forEach(u => {
+          if (r.availabilitySent && r.availabilitySent[u] === false) return;
+          DAY_KEYS.forEach((dk, i) => {
+            const c = r.calendar && r.calendar[dk];
+            const old = r.availability && r.availability[u] && r.availability[u][dk];
+            const home = old != null ? !!old : (c === "both" || c === u);
+            s.avail[u][addDaysISO(s.planWeekStart, i)] = home ? "home" : "away";
+          });
+        });
+      }
+      delete s.availability;
+      delete s.availabilitySent;
+      refreshCalendar(s);
       s.shopping = Object.assign({}, d.shopping, r.shopping || {});
       s.shopping.atHome = s.shopping.atHome || {};
       s.shopping.bought = s.shopping.bought || {};
@@ -1798,19 +1777,6 @@
       }
     }
 
-    function updateSyncBadge(status, label) {
-      const dot = document.getElementById("syncDot");
-      const txt = document.getElementById("syncText");
-      txt.textContent = label;
-      if (status === "online") {
-        dot.className = "w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399]";
-      } else if (status === "connecting") {
-        dot.className = "w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse";
-      } else {
-        dot.className = "w-1.5 h-1.5 rounded-full bg-rose-500";
-      }
-    }
-
     /********************************************************************
      * 5. HELPER FUNCTIONS: RECIPES, DISLIKES & BATCH BLOCKS
      ********************************************************************/
@@ -1846,17 +1812,6 @@
 
     function todayIdx() { return (new Date().getDay() + 6) % 7; }
 
-    function getWeekMonday() {
-      const d = new Date();
-      d.setHours(0, 0, 0, 0);
-      d.setDate(d.getDate() - todayIdx());
-      return d;
-    }
-
-    function weekLabel() {
-      return "Week of " + getWeekMonday().toLocaleDateString("en-GB", { day: "numeric", month: "short" });
-    }
-
     function recipeMatchesDislikes(recipe, whoMode) {
       const lacaDis = (state.dislikes?.laca || []).map(x => x.toLowerCase());
       const fruzsiDis = (state.dislikes?.fruzsi || []).map(x => x.toLowerCase());
@@ -1875,70 +1830,53 @@
       return activeDislikes.some(dis => searchable.includes(dis));
     }
 
-    function recipePassesSwipeFilter(recipe, filterKey) {
-      if (filterKey === "all") return true;
-      const eq = (recipe.equipment || "").toLowerCase();
-      const mins = recipe.prepMinutes || 20;
-      if (filterKey === "fast") return mins <= 18;
-      if (filterKey === "airfryer") return eq.includes("airfryer");
-      if (filterKey === "ricecooker") return eq.includes("rice cooker");
-      if (filterKey === "stove") return eq.includes("stove") || eq.includes("pan");
-      if (filterKey === "oven") return eq.includes("oven");
-      if (filterKey === "nomeat") return !(recipe.ingredients || []).some(i => i.aisle === "Meat & Fish");
-      if (filterKey === "sandwich") return /sandwich|toast|wrap|burger|quesadilla|pizza|burrito/i.test(recipe.name);
-      return true;
-    }
-
     function getPersonCountForDay(dayState) {
       if (dayState === "both") return 2;
       if (dayState === "laca" || dayState === "fruzsi") return 1;
       return 0;
     }
 
+    // Portions per cook. A half-day person eats one meal at home in the afternoon and takes a
+    // lunch box to work, cooked the day before, so that cook gets one extra portion.
+    function applyPortions(slots, st = state) {
+      const cal = st.calendar, det = st.calendarDetail || {};
+      const norm = slots.filter(s => !s.extra);
+      norm.forEach(s => {
+        s.basePortions = s.days.reduce((n, dk) => n + getPersonCountForDay(cal[dk] || "away"), 0);
+        s.lunchBoxes = 0;
+        s.lunchDays = [];
+      });
+      DAY_KEYS.forEach((dk, i) => {
+        const dd = det[dk];
+        if (!dd) return;
+        const n = (dd.laca === "half" ? 1 : 0) + (dd.fruzsi === "half" ? 1 : 0);
+        if (!n) return;
+        const prev = i > 0 ? DAY_KEYS[i - 1] : null;
+        const target = (prev && norm.find(s => s.days.includes(prev))) || norm.find(s => s.days.includes(dk));
+        if (target) { target.basePortions += n; target.lunchBoxes += n; target.lunchDays.push(dk); }
+      });
+      return slots;
+    }
+
     function buildBatchSlotsFromCalendar(calendarObj, currentState = state) {
       const blocks = [];
       let i = 0;
-
       while (i < DAY_KEYS.length) {
         const d1 = DAY_KEYS[i];
         const s1 = calendarObj[d1] || "away";
-
-        if (s1 === "away") {
-          i++;
-          continue;
-        }
-
+        if (s1 === "away") { i++; continue; }
         const d2 = i + 1 < DAY_KEYS.length ? DAY_KEYS[i + 1] : null;
         const s2 = d2 ? (calendarObj[d2] || "away") : "away";
-
-        const canPair = d2 && s2 !== "away" && !(
-          (s1 === "laca" && s2 === "fruzsi") ||
-          (s1 === "fruzsi" && s2 === "laca")
-        );
-
+        const canPair = d2 && s2 !== "away" && !((s1 === "laca" && s2 === "fruzsi") || (s1 === "fruzsi" && s2 === "laca"));
         if (canPair) {
-          const basePortions = getPersonCountForDay(s1) + getPersonCountForDay(s2);
-          const whoConstraint = (s1 === "both" || s2 === "both") ? "both" : s1;
-          blocks.push({
-            id: `slot-${d1}-${d2}`,
-            days: [d1, d2],
-            whoConstraint,
-            basePortions,
-            isBatch: true
-          });
+          blocks.push({ id: `slot-${d1}-${d2}`, days: [d1, d2], whoConstraint: (s1 === "both" || s2 === "both") ? "both" : s1, basePortions: 0, isBatch: true });
           i += 2;
         } else {
-          const basePortions = getPersonCountForDay(s1);
-          blocks.push({
-            id: `slot-${d1}`,
-            days: [d1],
-            whoConstraint: s1,
-            basePortions,
-            isBatch: false
-          });
+          blocks.push({ id: `slot-${d1}`, days: [d1], whoConstraint: s1, basePortions: 0, isBatch: false });
           i += 1;
         }
       }
+      applyPortions(blocks, Object.assign({}, currentState, { calendar: calendarObj }));
 
       const usedRecipes = new Set();
       const ctx = newPantryCtx(currentState);
@@ -1947,11 +1885,7 @@
         usedRecipes.add(chosen.id);
         const savedMult = (currentState.recipeMultipliers && currentState.recipeMultipliers[chosen.id]) || 1.0;
         consumePantryCtx(chosen, b.basePortions * savedMult, ctx);
-        return {
-          ...b,
-          recipeId: chosen.id,
-          multiplier: savedMult
-        };
+        return { ...b, recipeId: chosen.id, multiplier: savedMult };
       });
     }
 
@@ -1998,35 +1932,56 @@
     /********************************************************************
      * 6. UI NAVIGATION & TOP USER TOGGLE
      ********************************************************************/
-    function switchUser(user) {
-      currentUser = user;
-      localStorage.setItem("lf_current_user", user);
-      renderAll();
-    }
-
-    function renderTopUserToggle() {
-      const btnLaca = document.getElementById("topBtnLaca");
-      const btnFruzsi = document.getElementById("topBtnFruzsi");
-      if (currentUser === "laca") {
-        btnLaca.className = "px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-500 text-slate-950 shadow transition flex items-center gap-1";
-        btnFruzsi.className = "px-3 py-1.5 rounded-xl text-xs font-bold text-slate-400 hover:text-white transition flex items-center gap-1";
-      } else {
-        btnFruzsi.className = "px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-500 text-slate-950 shadow transition flex items-center gap-1";
-        btnLaca.className = "px-3 py-1.5 rounded-xl text-xs font-bold text-slate-400 hover:text-white transition flex items-center gap-1";
-      }
-    }
+    const TAB_TITLES = { week: "Calendar", swipe: "Meals", plan: "Plan", shop: "Shop", setup: "Setup" };
 
     function switchTab(tab) {
       currentTab = tab;
       ["week", "swipe", "plan", "shop", "setup"].forEach(t => {
         document.getElementById(`tab-${t}`).classList.toggle("hidden", t !== tab);
         const navBtn = document.getElementById(`nav-${t}`);
-        if (t === tab) {
-          navBtn.className = "relative flex flex-col items-center py-1 rounded-xl text-emerald-400 scale-105 transition";
-        } else {
-          navBtn.className = "relative flex flex-col items-center py-1 rounded-xl text-slate-400 hover:text-slate-200 transition";
-        }
+        navBtn.className = t === tab
+          ? "relative flex flex-col items-center py-1 rounded-xl text-emerald-400 scale-105 transition"
+          : "relative flex flex-col items-center py-1 rounded-xl text-slate-400 hover:text-slate-200 transition";
       });
+      window.scrollTo(0, 0);
+      renderAll();
+    }
+
+    function renderTopUserToggle() {
+      const on = "w-9 h-8 rounded-full text-base transition bg-emerald-500 shadow";
+      const off = "w-9 h-8 rounded-full text-base transition opacity-45";
+      document.getElementById("topBtnLaca").className = currentUser === "laca" ? on : off;
+      document.getElementById("topBtnFruzsi").className = currentUser === "fruzsi" ? on : off;
+    }
+
+    function updateSyncBadge(status, label) {
+      const dot = document.getElementById("syncDot");
+      const txt = document.getElementById("syncText");
+      txt.textContent = label;
+      txt.classList.toggle("hidden", status === "online");
+      dot.className = status === "online" ? "w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399]"
+        : status === "connecting" ? "w-2 h-2 rounded-full bg-amber-400 animate-pulse" : "w-2 h-2 rounded-full bg-rose-500";
+    }
+
+    function renderHeader() {
+      document.getElementById("headerTitle").textContent = TAB_TITLES[currentTab] || "";
+      let sub = "";
+      if (currentTab === "plan") sub = weekLabel();
+      else if (currentTab === "swipe") {
+        const likes = Object.values(state.swipes[currentUser] || {}).filter(v => v === "right").length;
+        sub = likes ? `❤️ ${likes} picked` : "Swipe right on meals you like";
+      } else if (currentTab === "shop") {
+        const left = buildShoppingTrips().reduce((n, t) => n + tripPending(t).length, 0);
+        sub = left ? `${left} item${left === 1 ? "" : "s"} left to buy` : "Nothing left to buy";
+      } else if (currentTab === "week") {
+        sub = typeof calMonthTitle === "function" ? calMonthTitle() : "";
+      }
+      document.getElementById("headerSub").innerHTML = sub ? esc(sub) : "&nbsp;";
+    }
+
+    function switchUser(user) {
+      currentUser = user;
+      localStorage.setItem("lf_current_user", user);
       renderAll();
     }
 
@@ -2035,100 +1990,237 @@
      ********************************************************************/
 
     // Each person only edits their own days; the shared calendar is derived from both
-    function deriveCalendar(av) {
-      const cal = {};
-      DAY_KEYS.forEach(d => {
-        const l = !!(av.laca && av.laca[d]), f = !!(av.fruzsi && av.fruzsi[d]);
-        cal[d] = l && f ? "both" : l ? "laca" : f ? "fruzsi" : "away";
-      });
-      return cal;
+    /* ---- Month calendar: everyone sets their own days ---- */
+    const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    const CAL_CYCLE = ["", "home", "half", "away"];
+    let calMonth = null, calEditing = false, calDraft = {}, calSelectMode = false;
+    const calSelected = new Set();
+
+    function calView() {
+      if (!calMonth) { const n = new Date(); calMonth = { y: n.getFullYear(), m: n.getMonth() }; }
+      return calMonth;
+    }
+    function calMonthTitle() { const v = calView(); return `${MONTHS[v.m]} ${v.y}`; }
+    function calMonthKey(v) { return `${v.y}-${pad2(v.m + 1)}-`; }
+    function calNext() { const n = new Date(); return new Date(n.getFullYear(), n.getMonth() + 1, 1); }
+
+    // next month appears in the last 10 days of the month (or once it has days)
+    function calNextMonthVisible() {
+      const now = new Date();
+      const dim = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+      const nm = calNext();
+      const key = calMonthKey({ y: nm.getFullYear(), m: nm.getMonth() });
+      const has = [...Object.keys(state.avail.laca), ...Object.keys(state.avail.fruzsi)].some(k => k.startsWith(key));
+      return now.getDate() >= dim - 9 || has;
     }
 
-    function toggleMyDay(dayKey) {
-      state.availability[currentUser][dayKey] = !state.availability[currentUser][dayKey];
-      state.availabilitySent[currentUser] = false;
-      saveStateAndSync(currentUser);
+    function calGo(off) {
+      const n = new Date();
+      const t = off ? calNext() : new Date(n.getFullYear(), n.getMonth(), 1);
+      calMonth = { y: t.getFullYear(), m: t.getMonth() };
+      calEditing = false; calDraft = {}; calSelectMode = false; calSelected.clear();
+      renderWeekTab(); renderHeader();
     }
 
-    function sendMyWeek() {
-      state.availabilitySent[currentUser] = true;
-      state.calendar = deriveCalendar(state.availability);
-      state.planNegotiation.currentSlots = buildBatchSlotsFromCalendar(state.calendar, state);
-      state.planNegotiation.status = "draft";
-      state.planNegotiation.acceptedBy = { laca: false, fruzsi: false };
-      state.planNegotiation.previousSlots = null;
+    function calValue(user, iso) {
+      if (calEditing && user === currentUser && Object.prototype.hasOwnProperty.call(calDraft, iso)) return calDraft[iso];
+      return (state.avail[user] || {})[iso] || "";
+    }
+
+    function calSetDraft(iso, val) {
+      const saved = (state.avail[currentUser] || {})[iso] || "";
+      if (saved === val) delete calDraft[iso]; else calDraft[iso] = val;
+    }
+
+    function calTap(iso) {
+      if (iso < todayISO() || !calEditing) return;
+      if (calSelectMode) {
+        if (calSelected.has(iso)) calSelected.delete(iso); else calSelected.add(iso);
+      } else {
+        const cur = calValue(currentUser, iso);
+        calSetDraft(iso, CAL_CYCLE[(CAL_CYCLE.indexOf(cur) + 1) % CAL_CYCLE.length]);
+      }
+      renderWeekTab();
+    }
+
+    function calStartEdit() { calEditing = true; calDraft = {}; renderWeekTab(); }
+    function calCancel() { calEditing = false; calDraft = {}; calSelectMode = false; calSelected.clear(); renderWeekTab(); }
+    function calToggleSelect() { calSelectMode = !calSelectMode; calSelected.clear(); renderWeekTab(); }
+
+    function calQuick(kind) {
+      const v = calView();
+      const dim = new Date(v.y, v.m + 1, 0).getDate();
+      calSelected.clear();
+      for (let day = 1; day <= dim; day++) {
+        const iso = `${calMonthKey(v)}${pad2(day)}`;
+        if (iso < todayISO()) continue;
+        const dow = (new Date(v.y, v.m, day).getDay() + 6) % 7;
+        if (kind === "all" || (kind === "weekdays" && dow < 5) || (kind === "weekend" && dow >= 5)) calSelected.add(iso);
+      }
+      calSelectMode = true;
+      renderWeekTab();
+    }
+
+    function calApply(val) {
+      calSelected.forEach(iso => calSetDraft(iso, val));
+      calSelected.clear();
+      renderWeekTab();
+    }
+
+    function calConfirm() {
+      const before = JSON.stringify([state.calendar, state.calendarDetail]);
+      const mine = state.avail[currentUser];
+      Object.keys(calDraft).forEach(iso => { if (calDraft[iso]) mine[iso] = calDraft[iso]; else delete mine[iso]; });
+      const changes = Object.keys(calDraft).length;
+      calEditing = false; calDraft = {}; calSelectMode = false; calSelected.clear();
+      refreshCalendar(state);
+      const planChanged = before !== JSON.stringify([state.calendar, state.calendarDetail]);
+      if (planChanged) {
+        state.planNegotiation.currentSlots = buildBatchSlotsFromCalendar(state.calendar, state);
+        state.planNegotiation.status = "draft";
+        state.planNegotiation.acceptedBy = { laca: false, fruzsi: false };
+        state.planNegotiation.previousSlots = null;
+      }
       saveStateAndSync(currentUser);
-      const other = currentUser === "laca" ? "Fruzsi" : "Laca";
-      showToast(state.availabilitySent[currentUser === "laca" ? "fruzsi" : "laca"] ? "Week sent. Plan updated ✅" : `Sent! Waiting for ${other}'s days`);
+      showToast(changes ? (planChanged ? "Days confirmed. Plan updated ✅" : "Days confirmed ✅") : "Nothing changed");
     }
 
     function renderWeekTab() {
-      const list = document.getElementById("calendarDaysList");
-      const me = currentUser, other = me === "laca" ? "fruzsi" : "laca";
+      const el = document.getElementById("calendarCard");
+      const v = calView();
+      const now = new Date();
+      const curMonth = { y: now.getFullYear(), m: now.getMonth() };
+      const nxt = calNext();
+      const nextVisible = calNextMonthVisible();
+      if (v.y === nxt.getFullYear() && v.m === nxt.getMonth() && !nextVisible) calMonth = Object.assign({}, curMonth);
+      const view = calView();
+      const key = calMonthKey(view);
+      const isNextTab = view.y === nxt.getFullYear() && view.m === nxt.getMonth();
+      const other = currentUser === "laca" ? "fruzsi" : "laca";
       const nm = (u) => u === "laca" ? "Laca" : "Fruzsi";
       const em = (u) => u === "laca" ? "👦" : "👩";
-      const mine = state.availability[me], theirs = state.availability[other];
-      const sent = state.availabilitySent[me];
-      document.getElementById("weekWho").textContent = `${em(me)} ${nm(me)}`;
+      const mine = state.avail[currentUser] || {};
+      const confirmedInMonth = Object.keys(mine).filter(k => k.startsWith(key));
+      const monthIsPast = new Date(view.y, view.m + 1, 0) < new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      if (!calEditing && !confirmedInMonth.length && !monthIsPast) calEditing = true;
 
-      list.innerHTML = DAY_KEYS.map(dayKey => {
-        const home = !!mine[dayKey];
-        const isToday = DAY_KEYS.indexOf(dayKey) === todayIdx();
-        return `
-          <button onclick="toggleMyDay('${dayKey}')" class="w-full flex items-center justify-between px-4 py-3 rounded-2xl border transition ${home ? "bg-emerald-500/15 border-emerald-500/50" : "bg-slate-900/70 border-slate-800"}">
-            <span class="text-sm font-bold ${isToday ? "text-emerald-300" : "text-white"}">${DAY_LABELS[dayKey]}${isToday ? ' <span class="text-[10px] font-semibold text-emerald-400">today</span>' : ""}</span>
-            <span class="text-sm font-bold ${home ? "text-emerald-300" : "text-slate-500"}">${home ? "🏠 Home" : "✈️ Away"}</span>
-          </button>`;
-      }).join("");
+      const first = new Date(view.y, view.m, 1);
+      const dim = new Date(view.y, view.m + 1, 0).getDate();
+      const lead = (first.getDay() + 6) % 7;
+      const today = todayISO();
+      const ICON = { home: "🏠", half: "🌓", away: "✈️", "": "" };
+      const BG = { home: "bg-emerald-500/25 border-emerald-500/60", half: "bg-amber-500/25 border-amber-500/60", away: "bg-slate-800 border-slate-700", "": "bg-slate-900/50 border-slate-800" };
+      const DOT = { home: "bg-emerald-400", half: "bg-amber-400", away: "bg-slate-500", "": "bg-transparent" };
 
-      const btn = document.getElementById("sendWeekBtn");
-      btn.textContent = sent ? "✓ Sent. Tap a day to change it" : "📤 Send my week";
-      btn.className = "mt-3 w-full py-3 rounded-2xl font-extrabold text-sm transition " +
-        (sent ? "bg-slate-800 border border-slate-700 text-emerald-300" : "bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/25");
-      btn.onclick = sent ? null : sendMyWeek;
-
-      const otherSent = state.availabilitySent[other];
-      document.getElementById("partnerStatus").innerHTML = `
-        <div class="flex items-center justify-between mb-2">
-          <span class="font-bold text-white">${em(other)} ${nm(other)}</span>
-          <span class="${otherSent ? "text-emerald-300" : "text-amber-300"} font-semibold">${otherSent ? "✅ sent their week" : "⏳ hasn't sent yet"}</span>
-        </div>
-        <div class="grid grid-cols-7 gap-1 text-center">
-          ${DAY_KEYS.map(d => `<div><div class="text-[10px] text-slate-500">${DAY_SHORT[d]}</div><div class="text-sm">${theirs[d] ? "🏠" : "✈️"}</div></div>`).join("")}
-        </div>`;
-
-      const activeDaysCount = DAY_KEYS.filter(d => state.calendar[d] && state.calendar[d] !== "away").length;
-      const previewSlots = buildBatchSlotsFromCalendar(state.calendar, state);
-      document.getElementById("weekSummaryBadge").textContent = previewSlots.length
-        ? `You cook ${previewSlots.length}×` : "No cooking";
-
-      const previewContainer = document.getElementById("batchBlocksPreview");
-      if (!previewSlots.length) {
-        previewContainer.innerHTML = `<div class="p-3 rounded-2xl bg-slate-900/60 text-xs text-slate-400 text-center">All days are Away. No cooking needed!</div>`;
-      } else {
-        previewContainer.innerHTML = previewSlots.map((slot, idx) => {
-          const dayNames = slot.days.map(d => DAY_SHORT[d]).join(" + ");
-          const whoText = slot.whoConstraint === "both" ? "Laca & Fruzsi" : (slot.whoConstraint === "laca" ? "Only Laca" : "Only Fruzsi");
-          return `
-            <div class="p-2.5 rounded-2xl bg-slate-900/80 border border-slate-800 flex items-center justify-between">
-              <div>
-                <div class="text-xs font-bold text-white">Cook on ${DAY_SHORT[slot.days[0]]} for ${dayNames}</div>
-                <div class="text-[11px] text-slate-400">${whoText}</div>
-              </div>
-              <span class="text-xs font-bold px-2.5 py-1 rounded-xl bg-slate-800 text-emerald-300 border border-slate-700">${slot.basePortions} portions</span>
-            </div>`;
-        }).join("");
+      let cells = "";
+      for (let i = 0; i < lead; i++) cells += `<div></div>`;
+      for (let day = 1; day <= dim; day++) {
+        const iso = `${key}${pad2(day)}`;
+        const val = calValue(currentUser, iso);
+        const pv = (state.avail[other] || {})[iso] || "";
+        const past = iso < today, sel = calSelected.has(iso), isToday = iso === today;
+        cells += `<button onclick="calTap('${iso}')" class="relative h-12 rounded-xl border ${BG[val]} ${sel ? "ring-2 ring-cyan-400" : isToday ? "ring-1 ring-emerald-400/70" : ""} ${past ? "opacity-35" : ""} ${calEditing && !past ? "active:scale-95" : ""} transition">
+          <span class="absolute top-1 left-1.5 text-[10px] font-bold ${isToday ? "text-emerald-300" : "text-slate-400"}">${day}</span>
+          <span class="text-lg leading-none">${ICON[val]}</span>
+          <span class="absolute bottom-1 right-1.5 w-1.5 h-1.5 rounded-full ${DOT[pv]}"></span>
+        </button>`;
       }
+
+      const counts = { home: 0, half: 0, away: 0 };
+      confirmedInMonth.forEach(k => { if (counts[mine[k]] != null) counts[mine[k]]++; });
+      const otherCount = Object.keys(state.avail[other] || {}).filter(k => k.startsWith(key)).length;
+      const draftN = Object.keys(calDraft).length;
+      const tabBtn = (label, on, off, dot) => `<button onclick="calGo(${off})" class="px-3.5 py-1.5 rounded-xl text-xs font-bold border transition ${on ? "bg-emerald-500 text-slate-950 border-emerald-400" : "bg-slate-900 text-slate-300 border-slate-700"}">${label}${dot && !on ? ' <span class="inline-block w-1.5 h-1.5 rounded-full bg-amber-400 align-middle"></span>' : ""}</button>`;
+
+      el.innerHTML = `
+        <div class="flex items-center gap-2 mb-3">
+          ${tabBtn(MONTHS[curMonth.m], !isNextTab, 0, false)}
+          ${nextVisible ? tabBtn(MONTHS[nxt.getMonth()], isNextTab, 1, true) : ""}
+          <span class="ml-auto text-[11px] text-slate-400">${em(currentUser)} ${nm(currentUser)}'s days</span>
+        </div>
+
+        <div class="grid grid-cols-7 gap-1.5 text-center text-[10px] font-bold text-slate-500 mb-1.5">
+          ${["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map(x => `<div>${x}</div>`).join("")}
+        </div>
+        <div class="grid grid-cols-7 gap-1.5">${cells}</div>
+
+        ${calEditing ? `
+          <div class="mt-3 p-3 rounded-2xl bg-slate-900/70 border border-slate-800 space-y-2.5">
+            <div class="text-[11px] text-slate-300 leading-relaxed">Tap a day: <strong>1×</strong> 🏠 home · <strong>2×</strong> 🌓 half day · <strong>3×</strong> ✈️ away · <strong>4×</strong> clear</div>
+            <div class="text-[10px] text-slate-500">🌓 Half day: you're at work and eat at home only in the afternoon. We cook extra the day before so you can take a lunch box.</div>
+            <button onclick="calToggleSelect()" class="w-full py-2 rounded-xl text-xs font-bold border ${calSelectMode ? "bg-cyan-500/20 border-cyan-500/50 text-cyan-300" : "bg-slate-800 border-slate-700 text-slate-200"}">${calSelectMode ? "✓ Selecting several days" : "☑ Select several days"}</button>
+            ${calSelectMode ? `
+              <div class="flex flex-wrap gap-1.5">
+                <button onclick="calQuick('weekdays')" class="px-2.5 py-1.5 rounded-lg text-[11px] font-semibold bg-slate-800 border border-slate-700 text-slate-200">Mon–Fri</button>
+                <button onclick="calQuick('weekend')" class="px-2.5 py-1.5 rounded-lg text-[11px] font-semibold bg-slate-800 border border-slate-700 text-slate-200">Sat–Sun</button>
+                <button onclick="calQuick('all')" class="px-2.5 py-1.5 rounded-lg text-[11px] font-semibold bg-slate-800 border border-slate-700 text-slate-200">Rest of month</button>
+              </div>
+              <div class="text-[11px] text-slate-400">${calSelected.size} selected. Tap days to add or remove, then set them:</div>
+              <div class="grid grid-cols-4 gap-1.5">
+                <button onclick="calApply('home')" class="py-2 rounded-xl text-xs font-bold bg-emerald-500/20 border border-emerald-500/50 text-emerald-300">🏠 Home</button>
+                <button onclick="calApply('half')" class="py-2 rounded-xl text-xs font-bold bg-amber-500/20 border border-amber-500/50 text-amber-300">🌓 Half</button>
+                <button onclick="calApply('away')" class="py-2 rounded-xl text-xs font-bold bg-slate-800 border border-slate-600 text-slate-200">✈️ Away</button>
+                <button onclick="calApply('')" class="py-2 rounded-xl text-xs font-bold bg-slate-900 border border-slate-700 text-slate-400">Clear</button>
+              </div>` : ""}
+          </div>
+          <div class="flex gap-2 mt-3">
+            ${confirmedInMonth.length ? `<button onclick="calCancel()" class="px-4 py-3 rounded-2xl bg-slate-800 border border-slate-700 text-slate-300 font-bold text-xs">Cancel</button>` : ""}
+            <button onclick="calConfirm()" ${draftN ? "" : "disabled"} class="flex-1 py-3 rounded-2xl font-extrabold text-sm transition ${draftN ? "bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/25" : "bg-slate-800 text-slate-500"}">${draftN ? `✓ Confirm ${draftN} day${draftN === 1 ? "" : "s"}` : "Tap your days first"}</button>
+          </div>` : `
+          <div class="mt-3 flex items-center justify-between text-[11px] text-slate-400">
+            <span>🏠 ${counts.home} · 🌓 ${counts.half} · ✈️ ${counts.away}</span>
+            <span>${em(other)} ${nm(other)}: ${otherCount ? otherCount + " days set" : "not set yet"}</span>
+          </div>
+          ${monthIsPast ? "" : `<button onclick="calStartEdit()" class="mt-3 w-full py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-100 font-bold text-sm">✏️ Edit my days</button>`}`}
+        <div class="flex items-center gap-3 mt-3 text-[10px] text-slate-500">
+          <span>Small dot = ${nm(other)}:</span>
+          <span><span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400"></span> home</span>
+          <span><span class="inline-block w-1.5 h-1.5 rounded-full bg-amber-400"></span> half</span>
+          <span><span class="inline-block w-1.5 h-1.5 rounded-full bg-slate-500"></span> away</span>
+        </div>`;
+    }
+
+    function renderNextStep() {
+      const me = state.swipes[currentUser] || {};
+      const myLikes = Object.values(me).filter(v => v === "right").length;
+      const neg = state.planNegotiation;
+      const locked = neg.status === "locked";
+      const slots = neg.currentSlots || [];
+      const daysSet = Object.keys(state.avail[currentUser] || {}).some(k => k >= todayISO());
+      const trips = buildShoppingTrips();
+      const pending = trips.reduce((n, t) => n + tripPending(t).length, 0);
+
+      const steps = [
+        { label: "Days", done: daysSet },
+        { label: "Meals", done: myLikes >= 3 },
+        { label: "Plan", done: locked },
+        { label: "Shop", done: locked && trips.length > 0 && pending === 0 }
+      ];
+
+      let title, btn, tab;
+      if (!daysSet) { title = "Tell us when you're home"; btn = "Set my days"; tab = "week"; }
+      else if (myLikes < 3) { title = `Pick a few meals (${myLikes}/3)`; btn = "Start picking"; tab = "swipe"; }
+      else if (!locked) {
+        const mineOk = neg.acceptedBy && neg.acceptedBy[currentUser];
+        title = mineOk ? "Waiting for your partner" : "Review and accept the plan";
+        btn = "Open the plan"; tab = "plan";
+      } else if (slots.length && slots.every(s => s.cooked)) { title = "All planned meals eaten 🍽"; btn = "Add more meals"; tab = "plan"; }
+      else if (pending > 0) { title = `${pending} item${pending === 1 ? "" : "s"} left to buy`; btn = "Open shopping list"; tab = "shop"; }
+      else { title = "All set. Time to cook 🍳"; btn = "See what to cook"; tab = "plan"; }
+
+      document.getElementById("nextStepCard").innerHTML = `
+        <div class="flex items-center gap-1.5 mb-2.5">
+          ${steps.map(s => `<span class="flex-1 text-center text-[10px] font-bold py-1 rounded-lg ${s.done ? "bg-emerald-500/25 text-emerald-300" : "bg-slate-800 text-slate-500"}">${s.done ? "✓ " : ""}${s.label}</span>`).join("")}
+        </div>
+        <div class="flex items-center justify-between gap-3">
+          <div class="text-sm font-extrabold text-white">${title}</div>
+          <button onclick="switchTab('${tab}')" class="shrink-0 px-3.5 py-2 rounded-xl bg-emerald-500 text-slate-950 font-extrabold text-xs">${btn} →</button>
+        </div>`;
     }
 
     /********************************************************************
      * 8. RENDER TAB 2: TINDER SWIPE, QUICK FILTERS & MATCH POOL
      ********************************************************************/
-    function setSwipeFilter(filterKey) {
-      activeSwipeFilter = filterKey;
-      renderSwipeTab();
-    }
-
     function handleSwipe(recipeId, direction) {
       const card = document.getElementById("activeSwipeCard");
       if (card) {
@@ -2208,7 +2300,9 @@
     }
 
     function startNewWeek() {
-      if (!confirm("Start a new week? Swipes, plan approval and shopping ticks will be cleared.")) return;
+      const nextMon = nextPlanMondayISO();
+      const nextLabel = parseISO(nextMon).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+      if (!confirm(`Start the week of ${nextLabel}? Meal picks, the plan and shopping ticks will be cleared. Your calendar days stay.`)) return;
       const neg = state.planNegotiation;
       if (neg.status === "locked" && (neg.currentSlots || []).length) {
         const m = computeMoney(neg.currentSlots);
@@ -2216,11 +2310,16 @@
           week: weekLabel(),
           saved: Math.round(m.saved * 100) / 100,
           cost: Math.round(m.cost * 100) / 100,
+          est: Math.round(m.estimate * 100) / 100,
+          real: m.real,
           portions: m.portions,
           ts: Date.now()
         });
         state.history = state.history.slice(-52);
       }
+      state.planWeekStart = nextMon;
+      refreshCalendar(state);
+      state.subs = {};
       state.swipes = { laca: {}, fruzsi: {} };
       state.shopping.atHome = {};
       state.shopping.bought = {};
@@ -2243,62 +2342,101 @@
     function toggleFilters() { showFilters = !showFilters; renderSwipeTab(); }
     function toggleSwipeDetails() { swipeDetailsOpen = !swipeDetailsOpen; renderSwipeTab(); }
 
-    function meToo(recipeId) {
-      if (!state.swipes[currentUser]) state.swipes[currentUser] = {};
-      state.swipes[currentUser][recipeId] = "right";
-      saveStateAndSync(currentUser);
-    }
+    /* ---- Filters: grouped so new categories are easy to add ---- */
+    const noMeat = (r) => !(r.ingredients || []).some(i => i.aisle === "Meat & Fish");
+    const hasIng = (r, re, minAmt) => (r.ingredients || []).some(i => re.test(i.name.toLowerCase()) && i.amountPerPortion >= (minAmt || 0));
+    const FILTER_GROUPS = [
+      { key: "protein", label: "What's in it", options: [
+        { key: "chicken", label: "🍗 Chicken", test: r => mainProtein(r) === "chicken" },
+        { key: "pork", label: "🥓 Pork & sausage", test: r => mainProtein(r) === "pork" },
+        { key: "beef", label: "🥩 Beef & turkey", test: r => ["beef", "turkey"].includes(mainProtein(r)) },
+        { key: "fish", label: "🐟 Fish", test: r => mainProtein(r) === "fish" },
+        { key: "egg", label: "🍳 Eggs", test: r => mainProtein(r) === "egg" },
+        { key: "nomeat", label: "🥦 No meat or fish", test: noMeat }
+      ] },
+      { key: "style", label: "Style of meal", options: [
+        { key: "sandwich", label: "🥪 Sandwiches & wraps", test: r => /sandwich|toast|wrap|burger|quesadilla|pizza|burrito|falafel/i.test(r.name) },
+        { key: "bowl", label: "🍚 Rice & bowls", test: r => /bowl|rice|pilaf|congee|mujaddara|koshari|oyakodon|lecs/i.test(r.name) },
+        { key: "pasta", label: "🍝 Pasta & noodles", test: r => /pasta|spaghetti|penne|noodle|gnocchi|macaroni|mac &|csusza|bolognese|cabbage pasta/i.test(r.name) },
+        { key: "soup", label: "🥣 Soups & stews", test: r => /soup|stew|gulyás|gulyas|minestrone|casserole|congee/i.test(r.name) },
+        { key: "salad", label: "🥗 Salads & light", test: r => /salad|light/i.test(r.name) || /no cooking/i.test(r.equipment) },
+        { key: "potato", label: "🥔 Potato dishes", test: r => hasIng(r, /^potatoes|potato/, 200) && !/sweet/.test(r.name.toLowerCase()) },
+        { key: "bake", label: "🔥 Oven bakes", test: r => /oven/i.test(r.equipment) }
+      ] },
+      { key: "time", label: "Time", options: [
+        { key: "t15", label: "⚡ Under 15 min", test: r => (r.prepMinutes || 20) <= 15 },
+        { key: "t25", label: "Under 25 min", test: r => (r.prepMinutes || 20) <= 25 }
+      ] },
+      { key: "gear", label: "Equipment", options: [
+        { key: "air", label: "🍟 Airfryer", test: r => /airfryer/i.test(r.equipment) },
+        { key: "rice", label: "🍚 Rice cooker", test: r => /rice cooker/i.test(r.equipment) },
+        { key: "pan", label: "🍳 Pan / stove", test: r => /stove|pan/i.test(r.equipment) },
+        { key: "oven", label: "🔥 Oven", test: r => /oven/i.test(r.equipment) },
+        { key: "none", label: "❄️ No cooking", test: r => /no cooking/i.test(r.equipment) }
+      ] },
+      { key: "extra", label: "Also", options: [
+        { key: "cheap", label: "💰 Under €1.50", test: r => parseCost(r.costPerPortion) < 1.5 },
+        { key: "hiprot", label: "💪 40 g+ protein", test: r => r.protein >= 40 },
+        { key: "stock", label: "🧊 Uses our stock", test: r => recipeUsesPantry(r) }
+      ] }
+    ];
+    let activeFilters = {};
 
-    function unpick(recipeId) {
-      delete state.swipes[currentUser][recipeId];
-      saveStateAndSync(currentUser);
+    function filterCount() { return Object.values(activeFilters).reduce((n, a) => n + a.length, 0); }
+    function toggleFilterOpt(g, k) {
+      const a = activeFilters[g] || [];
+      const i = a.indexOf(k);
+      if (i >= 0) a.splice(i, 1); else a.push(k);
+      activeFilters[g] = a;
+      renderSwipeTab();
+    }
+    function clearFilters() { activeFilters = {}; renderSwipeTab(); }
+    function recipePassesFilters(r) {
+      return FILTER_GROUPS.every(g => {
+        const sel = activeFilters[g.key] || [];
+        return !sel.length || g.options.some(o => sel.includes(o.key) && o.test(r));
+      });
     }
 
     function renderSwipeTab() {
-      const userLabel = currentUser === "laca" ? "Laca" : "Fruzsi";
       const mySwipes = state.swipes[currentUser] || {};
       const otherUser = currentUser === "laca" ? "fruzsi" : "laca";
-      const otherLabel = otherUser === "laca" ? "Laca" : "Fruzsi";
       const otherSwipes = state.swipes[otherUser] || {};
-
-      const filters = [
-        { key: "all", label: "All meals" },
-        { key: "fast", label: "⚡ Under 18 min" },
-        { key: "nomeat", label: "🥦 No meat" },
-        { key: "sandwich", label: "🥪 Sandwiches & wraps" },
-        { key: "airfryer", label: "🍟 Airfryer" },
-        { key: "ricecooker", label: "🍚 Rice Cooker" },
-        { key: "stove", label: "🍳 Pan / Stove" },
-        { key: "oven", label: "🔥 Oven" }
-      ];
-      document.getElementById("swipeFilterBar").innerHTML = filters.map(f => `
-        <button onclick="setSwipeFilter('${f.key}')" class="px-3 py-1.5 rounded-xl text-xs font-bold border transition ${
-          activeSwipeFilter === f.key
-            ? "bg-emerald-500 text-slate-950 border-emerald-400"
-            : "bg-slate-900/90 text-slate-400 border-slate-800"
-        }">${f.label}</button>`).join("");
-      document.getElementById("swipeFilterPanel").classList.toggle("hidden", !showFilters);
-      document.getElementById("filterToggleBtn").textContent = "⚙️ Filter" + (activeSwipeFilter !== "all" ? " •" : "");
 
       const available = getActiveRecipes()
         .filter(r => !recipeMatchesDislikes(r, currentUser))
-        .filter(r => recipePassesSwipeFilter(r, activeSwipeFilter));
-      // Meals your partner already picked are not shown again: they're in the pool below
-      const partnerPicked = available.filter(r => !mySwipes[r.id] && otherSwipes[r.id] === "right").length;
+        .filter(recipePassesFilters);
+      // meals your partner already picked are not shown again
       const unswiped = available.filter(r => !mySwipes[r.id] && otherSwipes[r.id] !== "right");
 
-      document.getElementById("swipeStatusSub").textContent =
-        `${userLabel}: ${unswiped.length} meals to look at` + (partnerPicked ? ` · ${partnerPicked} already picked by ${otherLabel}` : "");
+      const n = filterCount();
+      document.getElementById("filterToggleBtn").textContent = "⚙️ Filters" + (n ? ` · ${n}` : "");
+      const panel = document.getElementById("swipeFilterPanel");
+      panel.classList.toggle("hidden", !showFilters);
+      if (showFilters) {
+        panel.innerHTML = `
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-white">${available.length} meals match</span>
+            ${n ? `<button onclick="clearFilters()" class="text-[11px] text-slate-400 underline">Clear all</button>` : ""}
+          </div>
+          ${FILTER_GROUPS.map(g => `
+            <div>
+              <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">${g.label}</div>
+              <div class="flex flex-wrap gap-1.5">
+                ${g.options.map(o => `<button onclick="toggleFilterOpt('${g.key}','${o.key}')" class="px-2.5 py-1.5 rounded-xl text-xs font-semibold border transition ${(activeFilters[g.key] || []).includes(o.key) ? "bg-emerald-500 text-slate-950 border-emerald-400" : "bg-slate-900/90 text-slate-300 border-slate-700"}">${o.label}</button>`).join("")}
+              </div>
+            </div>`).join("")}
+          <button onclick="resetWeeklySwipes()" class="text-[11px] text-slate-500 underline">Start all swipes over</button>`;
+      }
 
       const area = document.getElementById("swipeArea");
-
       if (!unswiped.length) {
         area.innerHTML = `
           <div class="glass rounded-3xl p-6 text-center space-y-3 border border-emerald-500/30">
             <div class="text-4xl">🎉</div>
-            <h3 class="text-base font-bold text-white">You've seen every meal here!</h3>
-            <p class="text-xs text-slate-400">Build your week below, or change the filter to look at other meals.</p>
-            ${activeSwipeFilter !== "all" ? `<button onclick="setSwipeFilter('all')" class="px-4 py-2.5 rounded-2xl bg-slate-800 text-white font-bold text-xs border border-slate-700">Show all meals</button>` : ""}
+            <h3 class="text-base font-bold text-white">That's every meal here!</h3>
+            <p class="text-xs text-slate-400">Build your week below${n ? ", or clear the filters to see more" : ""}.</p>
+            ${n ? `<button onclick="clearFilters()" class="px-4 py-2.5 rounded-2xl bg-slate-800 text-white font-bold text-xs border border-slate-700">Clear filters</button>` : ""}
           </div>`;
       } else {
         const top = unswiped[0];
@@ -2320,50 +2458,19 @@
                 <div class="flex flex-wrap gap-1.5">
                   ${top.ingredients.map(ing => `<span class="text-xs px-2.5 py-1 rounded-xl bg-slate-800/90 text-slate-200">${esc(ing.name)}: <strong>${Math.round(ing.amountPerPortion * mult * 10) / 10}${esc(ing.unit)}</strong></span>`).join("")}
                 </div>
-                <div class="text-[11px] text-slate-500">Amounts are for 1 portion. ${Math.round(top.calories * mult)} kcal · ${Math.round(top.carbs * mult)}g carbs · ${Math.round(top.fat * mult)}g fat</div>
+                <div class="text-[11px] text-slate-500">Per portion · ${Math.round(top.calories * mult)} kcal · ${Math.round(top.carbs * mult)}g carbs · ${Math.round(top.fat * mult)}g fat</div>
                 <ol class="space-y-1 text-xs text-slate-300">
                   ${top.steps.map((st, idx) => `<li><strong class="text-emerald-400">${idx + 1}.</strong> ${esc(st)}</li>`).join("")}
                 </ol>
               </div>` : ""}
             <div class="grid grid-cols-2 gap-3 pt-1">
-              <button onclick="handleSwipe('${top.id}', 'left')" class="py-3.5 rounded-2xl bg-slate-800 border border-slate-700 text-rose-300 font-bold text-sm flex items-center justify-center gap-2 transition active:scale-95">
-                <span>✕</span><span>Skip</span>
-              </button>
-              <button onclick="handleSwipe('${top.id}', 'right')" class="py-3.5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 font-extrabold text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/25 transition active:scale-95">
-                <span>❤️</span><span>Want it</span>
-              </button>
+              <button onclick="handleSwipe('${top.id}', 'left')" class="py-3.5 rounded-2xl bg-slate-800 border border-slate-700 text-rose-300 font-bold text-sm flex items-center justify-center gap-2 transition active:scale-95"><span>✕</span><span>Skip</span></button>
+              <button onclick="handleSwipe('${top.id}', 'right')" class="py-3.5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 font-extrabold text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/25 transition active:scale-95"><span>❤️</span><span>Want it</span></button>
             </div>
-            <p class="text-center text-[11px] text-slate-500">Drag the card or tap a button</p>
             <button onclick="neverShowRecipe('${top.id}')" class="w-full text-[11px] font-semibold text-slate-500 hover:text-rose-300 transition">🚫 Never show this meal again</button>
           </div>`;
       }
-
       attachSwipeDrag();
-
-      const poolList = document.getElementById("matchedPoolList");
-      const lacaR = state.swipes?.laca || {};
-      const fruzsiR = state.swipes?.fruzsi || {};
-      const matches = getActiveRecipes().filter(r => lacaR[r.id] === "right" || fruzsiR[r.id] === "right");
-      if (!matches.length) {
-        poolList.innerHTML = `<div class="text-xs text-slate-400 py-2 text-center">Tap ❤️ on meals you'd like to eat. They show up here.</div>`;
-      } else {
-        poolList.innerHTML = matches.map(r => {
-          const lacaYes = lacaR[r.id] === "right", fruzsiYes = fruzsiR[r.id] === "right";
-          const mine = currentUser === "laca" ? lacaYes : fruzsiYes;
-          const both = lacaYes && fruzsiYes;
-          const who = both ? "💘 Both" : (lacaYes ? "👦 Laca" : "👩 Fruzsi");
-          return `
-            <div class="p-2.5 rounded-2xl bg-slate-900/80 border ${both ? "border-emerald-500/40" : "border-slate-800"} flex items-center justify-between gap-2">
-              <div class="min-w-0">
-                <div class="text-xs font-bold text-white truncate">${esc(r.name)}</div>
-                <div class="text-[11px] text-slate-400">${esc(r.prepTime)} · ${who}</div>
-              </div>
-              ${mine
-                ? `<button onclick="unpick('${r.id}')" class="shrink-0 text-[11px] text-slate-500 px-2 py-1">✕ Remove</button>`
-                : `<button onclick="meToo('${r.id}')" class="shrink-0 text-[11px] font-bold px-2.5 py-1.5 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300">👍 Me too</button>`}
-            </div>`;
-        }).join("");
-      }
     }
 
     function generateInitialPlanFromSwipes() {
@@ -2734,44 +2841,21 @@
     function toggleSlotBatchSplit(slotIdx) {
       recordCounterProposal((slots) => {
         const slot = slots[slotIdx];
+        const next = slots[slotIdx + 1];
         if (slot.days.length === 2) {
           const [d1, d2] = slot.days;
           const s1 = state.calendar[d1] || "both";
           const s2 = state.calendar[d2] || "both";
           const secondRecipe = pickBestRecipeForConstraint(s2, new Set([slot.recipeId]), state, slotIdx + 1);
-          const firstHalf = {
-            id: `slot-${d1}`,
-            days: [d1],
-            whoConstraint: s1,
-            basePortions: getPersonCountForDay(s1),
-            isBatch: false,
-            recipeId: slot.recipeId,
-            multiplier: slot.multiplier || 1.0
-          };
-          const secondHalf = {
-            id: `slot-${d2}`,
-            days: [d2],
-            whoConstraint: s2,
-            basePortions: getPersonCountForDay(s2),
-            isBatch: false,
-            recipeId: secondRecipe.id,
-            multiplier: state.recipeMultipliers[secondRecipe.id] || 1.0
-          };
-          slots.splice(slotIdx, 1, firstHalf, secondHalf);
-        } else if (slotIdx + 1 < slots.length && slots[slotIdx + 1].days.length === 1) {
-          const nextSlot = slots[slotIdx + 1];
-          const d1 = slot.days[0];
-          const d2 = nextSlot.days[0];
-          slots.splice(slotIdx, 2, {
-            id: `slot-${d1}-${d2}`,
-            days: [d1, d2],
-            whoConstraint: "both",
-            basePortions: slot.basePortions + nextSlot.basePortions,
-            isBatch: true,
-            recipeId: slot.recipeId,
-            multiplier: slot.multiplier || 1.0
-          });
+          slots.splice(slotIdx, 1,
+            { id: `slot-${d1}`, days: [d1], whoConstraint: s1, basePortions: 0, isBatch: false, recipeId: slot.recipeId, multiplier: slot.multiplier || 1.0 },
+            { id: `slot-${d2}`, days: [d2], whoConstraint: s2, basePortions: 0, isBatch: false, recipeId: secondRecipe.id, multiplier: state.recipeMultipliers[secondRecipe.id] || 1.0 });
+        } else if (next && next.days.length === 1 && !next.extra && !slot.extra) {
+          const d1 = slot.days[0], d2 = next.days[0];
+          const s1 = state.calendar[d1] || "both", s2 = state.calendar[d2] || "both";
+          slots.splice(slotIdx, 2, { id: `slot-${d1}-${d2}`, days: [d1, d2], whoConstraint: (s1 === "both" || s2 === "both") ? "both" : s1, basePortions: 0, isBatch: true, recipeId: slot.recipeId, multiplier: slot.multiplier || 1.0 });
         }
+        applyPortions(slots);
       });
     }
 
@@ -2794,65 +2878,14 @@
     }
 
     /* ---- Money tracker ---- */
-    function parseCost(str) {
-      const n = parseFloat(String(str == null ? "" : str).replace(/[^0-9.,]/g, "").replace(",", "."));
-      return isNaN(n) ? 2 : n;
-    }
-
     function fmtEur(n) { return "€" + (Math.round(n * 100) / 100).toFixed(2); }
 
     // Cost uses scaled portions (bigger appetite = more food bought);
     // delivery comparison counts people-meals (base portions) only.
-    function computeMoney(slots) {
-      let portions = 0, cost = 0;
-      (slots || []).forEach(s => {
-        const mult = s.multiplier || 1;
-        portions += s.basePortions;
-        cost += s.basePortions * mult * parseCost(getRecipeById(s.recipeId).costPerPortion);
-      });
-      const price = Number(state.settings && state.settings.deliveryPrice) || 13;
-      const delivery = portions * price;
-      const actual = weekSpent();
-      if (actual > 0) cost = actual; // real receipts beat the estimate
-      return { portions, cost, delivery, saved: delivery - cost, price, actual: actual > 0 };
-    }
-
     /* ---- Receipts: just the amount, synced in the shared state ---- */
-    function weekSpent() {
-      const start = getWeekMonday().getTime();
-      return (state.spending || []).filter(e => e.ts >= start).reduce((n, e) => n + (Number(e.amount) || 0), 0);
-    }
-
-    function addSpend() {
-      const amt = Number(document.getElementById("spendAmount").value);
-      if (!amt || amt <= 0) { showToast("Type the receipt total first"); return; }
-      const note = document.getElementById("spendNote").value.trim();
-      state.spending.push({ id: "sp" + Date.now(), ts: Date.now(), amount: Math.round(amt * 100) / 100, note, by: currentUser });
-      state.spending = state.spending.slice(-200);
-      document.getElementById("spendAmount").value = "";
-      document.getElementById("spendNote").value = "";
-      saveStateAndSync(currentUser);
-      showToast("Saved " + fmtEur(amt));
-    }
-
     function deleteSpend(id) {
       state.spending = state.spending.filter(e => e.id !== id);
       saveStateAndSync(currentUser);
-    }
-
-    function renderSpendCard() {
-      const start = getWeekMonday().getTime();
-      const mine = state.spending.filter(e => e.ts >= start).sort((a, b) => b.ts - a.ts);
-      const m = computeMoney(state.planNegotiation.currentSlots || []);
-      const total = weekSpent();
-      document.getElementById("spendSummary").innerHTML = total > 0
-        ? `This week: <strong class="text-white">${fmtEur(total)}</strong> spent vs <strong class="text-rose-300">${fmtEur(m.delivery)}</strong> if you'd ordered delivery. You saved <strong class="text-emerald-300">${fmtEur(Math.max(0, m.delivery - total))}</strong>.`
-        : "Nothing entered this week yet.";
-      document.getElementById("spendList").innerHTML = mine.map(e => `
-        <div class="flex items-center justify-between p-2 rounded-xl bg-slate-900/70 border border-slate-800 text-xs">
-          <span class="text-slate-300">${new Date(e.ts).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}${e.note ? " · " + esc(e.note) : ""} <span class="text-slate-500">${e.by === "fruzsi" ? "👩" : "👦"}</span></span>
-          <span class="flex items-center gap-2"><strong class="text-white">${fmtEur(e.amount)}</strong><button onclick="deleteSpend('${esc(e.id)}')" class="text-slate-500 px-1">✕</button></span>
-        </div>`).join("");
     }
 
     /* ---- Pantry / freezer ---- */
@@ -2977,27 +3010,6 @@
     }
 
     /* ---- Weekly history chart ---- */
-    function renderHistoryCard() {
-      const rows = (state.history || []).slice(-7).map(h => ({ label: String(h.week || "").replace("Week of ", ""), spent: Number(h.cost) || 0, delivery: (Number(h.cost) || 0) + (Number(h.saved) || 0) }));
-      const m = computeMoney(state.planNegotiation.currentSlots || []);
-      rows.push({ label: "now", spent: m.cost, delivery: m.delivery, now: true });
-      const max = Math.max(...rows.map(r => Math.max(r.spent, r.delivery)), 1);
-      document.getElementById("historyCard").innerHTML = `
-        <div class="text-xs font-extrabold uppercase tracking-wider text-slate-300 mb-2">📊 Spent vs delivery, week by week</div>
-        <div class="space-y-1.5">
-          ${rows.map(r => `
-            <div class="flex items-center gap-2">
-              <span class="w-12 text-[10px] ${r.now ? "text-amber-300 font-bold" : "text-slate-400"} shrink-0">${esc(r.label)}</span>
-              <div class="flex-1 space-y-0.5">
-                <div class="h-2 rounded bg-rose-400/70" style="width:${Math.max(2, r.delivery / max * 100)}%"></div>
-                <div class="h-2 rounded bg-emerald-400" style="width:${Math.max(2, r.spent / max * 100)}%"></div>
-              </div>
-              <span class="w-14 text-right text-[10px] text-emerald-300 font-bold shrink-0">+${fmtEur(Math.max(0, r.delivery - r.spent)).replace(".00", "")}</span>
-            </div>`).join("")}
-        </div>
-        <div class="flex gap-3 mt-2 text-[10px] text-slate-400"><span><span class="inline-block w-2 h-2 rounded bg-rose-400/70"></span> delivery</span><span><span class="inline-block w-2 h-2 rounded bg-emerald-400"></span> what you spent</span></div>`;
-    }
-
     /* ---- Stock at home: merge, live deduction ---- */
     function addStock(it) {
       const key = it.name.toLowerCase().trim();
@@ -3013,7 +3025,7 @@
     function slotPantryTake(slot) {
       const take = {};
       const total = slot.basePortions * (slot.multiplier || 1);
-      (getRecipeById(slot.recipeId).ingredients || []).forEach(ing => {
+      effectiveIngredients(getRecipeById(slot.recipeId)).forEach(ing => {
         let need = ing.amountPerPortion * total;
         pantryItemsFor(ing).forEach(pt => {
           if (need <= 0) return;
@@ -3077,51 +3089,6 @@
     }
 
     /* ---- Week at a glance ---- */
-    function focusSlot(slotId) {
-      openCook.add(slotId);
-      renderPlanTab();
-      const el = document.getElementById("slot-" + slotId);
-      if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
-    }
-
-    function renderWeekStrip() {
-      const slots = state.planNegotiation.currentSlots || [];
-      const today = todayIdx();
-      const who = (w) => w === "both" ? "👫" : w === "laca" ? "👦" : w === "fruzsi" ? "👩" : "";
-      const dayCell = (dk, i) => `<div class="w-10 shrink-0 text-center pt-2.5"><div class="text-[11px] font-extrabold ${i === today ? "text-emerald-300" : "text-slate-300"}">${DAY_SHORT[dk]}</div>${i === today ? '<div class="text-[8px] font-bold text-emerald-400">TODAY</div>' : ""}</div>`;
-      const cookCard = (slot, label) => {
-        const rec = getRecipeById(slot.recipeId), st = foodStyle(rec);
-        return `<button onclick="focusSlot('${esc(slot.id)}')" class="flex-1 min-w-0 flex items-center gap-3 p-2.5 rounded-2xl text-left border border-white/10 ${slot.cooked ? "opacity-50" : ""}" style="background:linear-gradient(135deg,${st.a},${st.b})">
-          <span class="w-12 h-12 shrink-0 rounded-xl bg-black/25 flex items-center justify-center text-3xl">${st.emoji}</span>
-          <span class="min-w-0 flex-1">
-            <span class="block text-xs font-bold text-white leading-tight ${slot.cooked ? "line-through" : ""}" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esc(rec.name)}</span>
-            <span class="block text-[10px] text-white/70 mt-1">${label} · ${who(slot.whoConstraint)} ${slot.basePortions}p · ⏱ ${esc(rec.prepTime)}</span>
-          </span>
-          ${slot.cooked ? '<span class="text-lg">✅</span>' : ""}
-        </button>`;
-      };
-      const rows = DAY_KEYS.map((dk, i) => {
-        const cook = slots.find(x => !x.extra && x.days[0] === dk);
-        const carry = slots.find(x => !x.extra && x.days[1] === dk);
-        let body;
-        if (cook) body = cookCard(cook, "🍳 Cook");
-        else if (carry) {
-          const rec = getRecipeById(carry.recipeId), st = foodStyle(rec);
-          body = `<div class="flex-1 min-w-0 flex items-center gap-3 p-2.5 rounded-2xl border border-white/5 bg-slate-900/60 ${carry.cooked ? "opacity-50" : ""}">
-            <span class="w-12 h-12 shrink-0 rounded-xl bg-slate-800 flex items-center justify-center text-2xl opacity-80">${st.emoji}</span>
-            <span class="min-w-0"><span class="block text-xs font-semibold text-slate-300 truncate">↳ Leftovers: ${esc(rec.name)}</span><span class="block text-[10px] text-slate-500 mt-0.5">${who(state.calendar[dk])} no cooking today</span></span></div>`;
-        } else {
-          body = `<div class="flex-1 flex items-center gap-3 p-2.5 rounded-2xl border border-slate-800 bg-slate-900/40 opacity-60"><span class="w-12 h-12 shrink-0 rounded-xl bg-slate-800 flex items-center justify-center text-2xl">✈️</span><span class="text-xs text-slate-500">Away. Nothing to cook</span></div>`;
-        }
-        return `<div class="flex gap-2">${dayCell(dk, i)}${body}</div>`;
-      }).join("");
-      const extras = slots.filter(x => x.extra).map(x => `<div class="flex gap-2"><div class="w-10 shrink-0 text-center pt-3 text-[11px] font-extrabold text-cyan-300">➕</div>${cookCard(x, "Extra cook")}</div>`).join("");
-      document.getElementById("weekStrip").innerHTML = `
-        <div class="text-sm font-extrabold text-white mb-3">🗓 Your week at a glance</div>
-        <div class="space-y-1.5">${rows}${extras}</div>
-        <p class="text-[10px] text-slate-500 mt-2">Tap a meal to see its recipe.</p>`;
-    }
-
     function setDeliveryPrice(val) {
       const n = Number(val);
       if (!n || n < 1) return;
@@ -3130,53 +3097,55 @@
     }
 
     let moneyOpen = false;
-    function toggleMoney() { moneyOpen = !moneyOpen; renderPlanTab(); }
-
-    function renderMoneyCard() {
-      const slots = state.planNegotiation.currentSlots || [];
-      const locked = state.planNegotiation.status === "locked";
-      const m = computeMoney(slots);
-      const past = (state.history || []).reduce((sum, h) => sum + (Number(h.saved) || 0), 0);
-      const total = past + (locked ? m.saved : 0);
-      document.getElementById("historyCard").classList.toggle("hidden", !moneyOpen);
-      if (!moneyOpen) {
-        document.getElementById("moneyCard").innerHTML = `
-          <div class="flex items-center justify-between">
-            <div>
-              <div class="text-[11px] font-bold text-amber-300">💰 Saved vs delivery this week</div>
-              <div class="text-2xl font-extrabold text-white">${fmtEur(Math.max(0, m.saved))}</div>
-            </div>
-            <button onclick="toggleMoney()" class="text-xs font-semibold text-slate-300 px-3 py-1.5 rounded-xl bg-slate-800 border border-slate-700">Details ▾</button>
-          </div>`;
-        return;
-      }
-      document.getElementById("moneyCard").innerHTML = `
-        <div class="flex items-center justify-between mb-1">
-          <span class="text-xs font-extrabold uppercase tracking-wider text-amber-300">💰 Money Saved This Week</span>
-          <span class="text-[10px] font-bold px-2 py-0.5 rounded-lg ${locked ? "bg-emerald-500/20 text-emerald-300" : "bg-slate-800 text-slate-400"}">${locked ? "Plan locked" : "Estimate"}</span>
-        </div>
-        <div class="text-3xl font-extrabold text-white">${fmtEur(Math.max(0, m.saved))}</div>
-        <div class="grid grid-cols-3 gap-2 mt-3 text-center">
-          <div class="p-2 rounded-xl bg-slate-900/80 border border-slate-800">
-            <div class="text-[10px] text-slate-400">${m.actual ? "Spent (receipts)" : "Cooking (estimate)"}</div>
-            <div class="text-sm font-bold text-emerald-300">${fmtEur(m.cost)}</div>
-          </div>
-          <div class="p-2 rounded-xl bg-slate-900/80 border border-slate-800">
-            <div class="text-[10px] text-slate-400">Delivery @ €${m.price}</div>
-            <div class="text-sm font-bold text-rose-300">${fmtEur(m.delivery)}</div>
-          </div>
-          <div class="p-2 rounded-xl bg-slate-900/80 border border-slate-800">
-            <div class="text-[10px] text-slate-400">Portions</div>
-            <div class="text-sm font-bold text-white">${m.portions}</div>
-          </div>
-        </div>
-        <div class="text-[11px] text-slate-400 mt-2.5">
-          🏆 All-time saved: <strong class="text-amber-300">${fmtEur(total)}</strong>${state.history.length ? ` over ${state.history.length} finished week${state.history.length > 1 ? "s" : ""}` : ""}
-        </div>
-        <button onclick="toggleMoney()" class="mt-2 text-xs font-semibold text-slate-400">Hide ▴</button>`;
-    }
 
     /* ---- Ping-pong diff: which slots did the partner change? ---- */
+    /* ---- ingredient swaps (set from the shopping list) ---- */
+    function applySubs(ing) {
+      const sub = state.subs && state.subs[safeKey(ing.name)];
+      if (!sub) return ing;
+      return Object.assign({}, ing, {
+        name: sub.to,
+        amountPerPortion: Math.round(ing.amountPerPortion * sub.ratio * 100) / 100,
+        unit: sub.unit || ing.unit,
+        aisle: sub.aisle || ing.aisle,
+        shelfLifeDays: sub.shelf || ing.shelfLifeDays,
+        swappedFrom: ing.name
+      });
+    }
+    function effectiveIngredients(rec) { return (rec.ingredients || []).map(applySubs); }
+
+    function slotDayLabel(slot) {
+      if (slot.extra) return `➕ Extra cook · ${DAY_SHORT[slot.days[0]]}`;
+      return slot.days.map(dk => `${DAY_SHORT[dk]} ${parseISO(planDateOf(dk)).getDate()}`).join(" + ");
+    }
+
+    function renderCookDrawer(slot, rec, mult) {
+      const total = slot.basePortions * mult;
+      const r1 = (n) => Math.round(n * 10) / 10;
+      const chip = (a, b) => `<span class="px-2 py-1 rounded-lg bg-slate-900 text-[11px] text-slate-300"><strong class="text-white">${a}</strong> ${b}</span>`;
+      return `
+        <div class="p-3.5 border-t border-slate-800 space-y-3 bg-slate-950/50">
+          <div class="flex flex-wrap gap-1.5">
+            ${chip(Math.round(rec.protein * mult) + " g", "protein")}${chip(Math.round(rec.carbs * mult) + " g", "carbs")}${chip(Math.round(rec.fat * mult) + " g", "fat")}${chip(Math.round(rec.calories * mult), "kcal")}
+            <span class="text-[10px] text-slate-500 self-center">per portion</span>
+          </div>
+          <div>
+            <div class="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Ingredients for ${r1(total)} portions</div>
+            ${effectiveIngredients(rec).map(i => `
+              <div class="flex justify-between text-xs text-slate-200 border-b border-slate-800/70 py-1.5">
+                <span>${esc(i.name)}${i.swappedFrom ? ` <span class="text-amber-300 text-[10px]">(swap for ${esc(i.swappedFrom)})</span>` : ""}</span>
+                <strong class="text-emerald-300 shrink-0 ml-2">${r1(i.amountPerPortion * total)} ${esc(i.unit)}</strong>
+              </div>`).join("")}
+          </div>
+          <div>
+            <div class="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Steps · ${esc(rec.equipment)}</div>
+            <ol class="space-y-1.5 text-xs text-slate-200">
+              ${(rec.steps || []).map((st, n) => `<li class="flex gap-2"><strong class="text-emerald-400 shrink-0">${n + 1}.</strong><span>${esc(st)}</span></li>`).join("")}
+            </ol>
+          </div>
+        </div>`;
+    }
+
     function diffPlans(prev, cur) {
       const map = {};
       if (!prev || !prev.length) return map;
@@ -3204,39 +3173,6 @@
     function toggleCook(slotId) {
       if (openCook.has(slotId)) openCook.delete(slotId); else openCook.add(slotId);
       renderPlanTab();
-    }
-
-    function renderCookDrawer(slot, rec, mult) {
-      const total = slot.basePortions * mult;
-      const r1 = (n) => Math.round(n * 10) / 10;
-      return `
-        <div class="p-3 rounded-2xl bg-slate-950/70 border border-emerald-500/20 space-y-2.5">
-          <div class="flex items-center justify-between text-[11px] text-slate-400">
-            <span>Eating on: <strong class="text-slate-200">${slot.days.map(d => DAY_SHORT[d]).join(" + ")}</strong></span>
-            <span>Cooking for <strong class="text-emerald-300">${r1(total)}</strong> portions</span>
-          </div>
-          <div class="grid grid-cols-4 gap-1.5 text-center">
-            <div class="p-1.5 rounded-lg bg-slate-900"><div class="text-[10px] text-slate-400">Protein</div><div class="text-xs font-extrabold text-emerald-400">${Math.round(rec.protein * mult)}g</div></div>
-            <div class="p-1.5 rounded-lg bg-slate-900"><div class="text-[10px] text-slate-400">kcal</div><div class="text-xs font-bold text-white">${Math.round(rec.calories * mult)}</div></div>
-            <div class="p-1.5 rounded-lg bg-slate-900"><div class="text-[10px] text-slate-400">Carbs</div><div class="text-xs font-bold text-slate-200">${Math.round(rec.carbs * mult)}g</div></div>
-            <div class="p-1.5 rounded-lg bg-slate-900"><div class="text-[10px] text-slate-400">Fat</div><div class="text-xs font-bold text-slate-200">${Math.round(rec.fat * mult)}g</div></div>
-          </div>
-          <div>
-            <div class="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Ingredients for the whole pot</div>
-            <div class="space-y-0.5">
-              ${(rec.ingredients || []).map(i => `
-                <div class="flex justify-between text-xs text-slate-200 border-b border-slate-800/70 py-1">
-                  <span>${esc(i.name)}</span><strong class="text-emerald-300">${r1(i.amountPerPortion * total)} ${esc(i.unit)}</strong>
-                </div>`).join("")}
-            </div>
-          </div>
-          <div>
-            <div class="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Steps · ${esc(rec.prepTime)} · ${esc(rec.equipment)}</div>
-            <ol class="space-y-1.5 text-xs text-slate-200">
-              ${(rec.steps || []).map((st, n) => `<li class="flex gap-2"><strong class="text-emerald-400 shrink-0">${n + 1}.</strong><span>${esc(st)}</span></li>`).join("")}
-            </ol>
-          </div>
-        </div>`;
     }
 
     /* ---- Smart grouped meal dropdown ---- */
@@ -3272,181 +3208,140 @@
       return { html, hiddenByDislike };
     }
 
+    const openChange = new Set();
     function renderPlanTab() {
-      if (!state.planNegotiation.currentSlots || !state.planNegotiation.currentSlots.length) {
-        state.planNegotiation.currentSlots = buildBatchSlotsFromCalendar(state.calendar, state);
-      }
-
       const neg = state.planNegotiation;
-      const lacaOk = !!neg.acceptedBy?.laca;
-      const fruzsiOk = !!neg.acceptedBy?.fruzsi;
+      if (!neg.currentSlots || !neg.currentSlots.length) {
+        neg.currentSlots = buildBatchSlotsFromCalendar(state.calendar, state);
+      }
+      const slots = neg.currentSlots;
+      const lacaOk = !!neg.acceptedBy?.laca, fruzsiOk = !!neg.acceptedBy?.fruzsi;
       const bothLocked = lacaOk && fruzsiOk;
-      const userLabel = currentUser === "laca" ? "Laca" : "Fruzsi";
+      const myAccepted = !!neg.acceptedBy?.[currentUser];
       const otherLabel = currentUser === "laca" ? "Fruzsi" : "Laca";
-      const myAccepted = neg.acceptedBy?.[currentUser];
 
-      const badge = document.getElementById("planActionBadge");
-      badge.classList.toggle("hidden", bothLocked || myAccepted);
+      document.getElementById("planActionBadge").classList.toggle("hidden", bothLocked || myAccepted || !slots.length);
 
-      renderMoneyCard();
-      renderHistoryCard();
-      renderWeekStrip();
+      const status = document.getElementById("planStatusCard");
+      const compBox = document.getElementById("comparisonContainer");
+      const list = document.getElementById("planSlotsList");
 
-      const statusCard = document.getElementById("planStatusCard");
-      if (bothLocked) {
-        statusCard.className = "glass rounded-3xl p-4 border border-emerald-500/50 bg-emerald-500/10";
-        statusCard.innerHTML = `
-          <div class="flex items-center justify-between">
-            <div>
-              <div class="text-xs font-extrabold uppercase tracking-wider text-emerald-300">🎉 Weekly Plan Locked In!</div>
-              <div class="text-sm font-bold text-white mt-0.5">Both Laca & Fruzsi accepted this plan.</div>
-            </div>
-            <button onclick="switchTab('shop')" class="px-3.5 py-2 rounded-xl bg-emerald-500 text-slate-950 font-bold text-xs shadow">
-              Open Shop List →
-            </button>
-          </div>
-        `;
-      } else {
-        statusCard.className = "glass rounded-3xl p-4 border border-amber-500/40";
-        const proposer = neg.proposedBy === "laca" ? "Laca" : "Fruzsi";
-        statusCard.innerHTML = `
-          <div class="flex items-center justify-between mb-2">
-            <span class="text-xs font-extrabold uppercase tracking-wider text-amber-300">🤝 Ping-Pong Plan Approval</span>
-            <div class="flex gap-1.5 text-[11px] font-bold">
-              <span class="px-2 py-0.5 rounded-lg ${lacaOk ? "bg-emerald-500/20 text-emerald-300" : "bg-slate-800 text-slate-400"}">
-                👦 Laca: ${lacaOk ? "✅ Accepted" : "⏳ Pending"}
-              </span>
-              <span class="px-2 py-0.5 rounded-lg ${fruzsiOk ? "bg-emerald-500/20 text-emerald-300" : "bg-slate-800 text-slate-400"}">
-                👩 Fruzsi: ${fruzsiOk ? "✅ Accepted" : "⏳ Pending"}
-              </span>
-            </div>
-          </div>
-          <p class="text-xs text-slate-300 mb-3">
-            ${myAccepted
-              ? `You (${userLabel}) accepted this version. Waiting for ${otherLabel} to accept or counter-propose on their phone.`
-              : (neg.proposedBy === currentUser
-                  ? `Review the plan below, tap Accept, or change a meal to send ${otherLabel} a counter-offer.`
-                  : `${proposer} proposed a plan! Review below and either accept it or swap a meal to send a counter-offer.`)}
-          </p>
-          <div class="flex gap-2">
-            ${!myAccepted ? `
-              <button onclick="acceptCurrentPlan()" class="flex-1 py-2.5 rounded-xl bg-emerald-500 text-slate-950 font-extrabold text-xs shadow-lg shadow-emerald-500/20">
-                ✅ Accept as ${userLabel}
-              </button>
-            ` : `
-              <button onclick="switchTab('shop')" class="flex-1 py-2.5 rounded-xl bg-slate-800 text-emerald-300 font-bold text-xs border border-emerald-500/30">
-                Preview Shopping List →
-              </button>
-            `}
-          </div>
-        `;
+      if (!slots.length) {
+        status.className = "glass rounded-3xl p-6 text-center space-y-2";
+        status.innerHTML = `
+          <div class="text-4xl">🗓</div>
+          <div class="text-sm font-extrabold text-white">Nothing to plan yet</div>
+          <p class="text-xs text-slate-400">Confirm the days you're home in the calendar, then pick meals.</p>
+          <button onclick="switchTab('week')" class="mt-1 px-4 py-2.5 rounded-xl bg-emerald-500 text-slate-950 font-extrabold text-xs">Open calendar</button>`;
+        compBox.classList.add("hidden");
+        list.innerHTML = "";
+        return;
       }
 
-      const diff = bothLocked ? {} : diffPlans(neg.previousSlots, neg.currentSlots);
-
-      const compBox = document.getElementById("comparisonContainer");
-      if (neg.previousSlots && neg.previousSlots.length && !bothLocked) {
-        compBox.classList.remove("hidden");
-        const proposerName = neg.proposedBy === "laca" ? "Laca" : "Fruzsi";
-        const changedCount = Object.keys(diff).length;
-        compBox.innerHTML = `
-          <div class="glass rounded-3xl p-4 border border-cyan-500/40 space-y-3">
-            <div class="text-xs font-bold text-cyan-300">⚡ Counter-Proposal (${proposerName} changed ${changedCount} thing${changedCount === 1 ? "" : "s"})</div>
-            <div class="grid grid-cols-2 gap-2.5">
-              <div class="p-3 rounded-2xl bg-slate-900/90 border border-slate-800">
-                <div class="text-[11px] font-bold text-slate-400 mb-1.5">Card 1: Previous Plan</div>
-                <div class="space-y-1 text-[11px] text-slate-300">
-                  ${neg.previousSlots.map(s => `<div>• <strong>${s.days.map(d => DAY_SHORT[d]).join("+")}:</strong> ${esc(getRecipeById(s.recipeId).name)}${(s.multiplier || 1) !== 1 ? ` <span class="text-slate-500">(${s.multiplier}x)</span>` : ""}</div>`).join("")}
-                </div>
-                <button onclick="revertToPreviousPlan()" class="mt-2.5 w-full py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-[11px] border border-slate-700">
-                  Accept Original
-                </button>
-              </div>
-              <div class="p-3 rounded-2xl bg-emerald-950/30 border border-emerald-500/40">
-                <div class="text-[11px] font-bold text-emerald-300 mb-1.5">Card 2: ${proposerName}'s New Plan</div>
-                <div class="space-y-1.5 text-[11px] text-white">
-                  ${neg.currentSlots.map(s => {
-                    const notes = diff[s.id];
-                    return `<div class="${notes ? "p-1.5 -mx-1 rounded-lg bg-amber-500/10 border border-amber-500/40" : ""}">
-                      • <strong>${s.days.map(d => DAY_SHORT[d]).join("+")}:</strong> ${esc(getRecipeById(s.recipeId).name)}${(s.multiplier || 1) !== 1 ? ` <span class="text-slate-400">(${s.multiplier}x)</span>` : ""}
-                      ${notes ? `<span class="ml-1 text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-amber-400 text-slate-950 align-middle">CHANGED</span>
-                        <div class="text-[10px] text-amber-200 mt-0.5">${notes.map(esc).join("<br>")}</div>` : ""}
-                    </div>`;
-                  }).join("")}
-                </div>
-                <button onclick="acceptCurrentPlan()" class="mt-2.5 w-full py-2 rounded-xl bg-emerald-500 text-slate-950 font-extrabold text-[11px]">
-                  Accept New Proposal
-                </button>
+      if (bothLocked) {
+        status.className = "glass rounded-3xl p-3.5 border border-emerald-500/40 bg-emerald-500/10";
+        status.innerHTML = `
+          <div class="flex items-center justify-between gap-3">
+            <div class="text-sm font-extrabold text-emerald-300">✅ Plan locked in</div>
+            <button onclick="switchTab('shop')" class="px-3.5 py-2 rounded-xl bg-emerald-500 text-slate-950 font-extrabold text-xs">Shopping list →</button>
+          </div>`;
+      } else {
+        const chipCls = (ok) => `px-2 py-1 rounded-lg ${ok ? "bg-emerald-500/20 text-emerald-300" : "bg-slate-800 text-slate-400"}`;
+        status.className = "glass rounded-3xl p-3.5 border border-amber-500/40";
+        status.innerHTML = `
+          <div class="flex items-center justify-between gap-3">
+            <div>
+              <div class="text-sm font-extrabold text-white">Agree on the plan</div>
+              <div class="flex gap-1.5 mt-1.5 text-[11px] font-bold">
+                <span class="${chipCls(lacaOk)}">👦 ${lacaOk ? "✓" : "⏳"}</span>
+                <span class="${chipCls(fruzsiOk)}">👩 ${fruzsiOk ? "✓" : "⏳"}</span>
               </div>
             </div>
-          </div>
-        `;
+            ${myAccepted
+              ? `<span class="text-[11px] text-slate-400 text-right">Waiting for<br>${otherLabel}</span>`
+              : `<button onclick="acceptCurrentPlan()" class="px-5 py-2.5 rounded-xl bg-emerald-500 text-slate-950 font-extrabold text-sm shadow-lg shadow-emerald-500/20">Accept</button>`}
+          </div>`;
+      }
+
+      const diff = bothLocked ? {} : diffPlans(neg.previousSlots, slots);
+      const changedIds = Object.keys(diff);
+      if (neg.previousSlots && neg.previousSlots.length && !bothLocked && changedIds.length) {
+        const proposer = neg.proposedBy === "laca" ? "Laca" : "Fruzsi";
+        const mine = neg.proposedBy === currentUser;
+        compBox.classList.remove("hidden");
+        compBox.innerHTML = `
+          <div class="glass rounded-3xl p-3.5 border border-cyan-500/40 space-y-2.5">
+            <div class="text-xs font-extrabold text-cyan-300">${mine ? "You changed" : esc(proposer) + " changed"} ${changedIds.length} thing${changedIds.length === 1 ? "" : "s"}</div>
+            <div class="space-y-1.5">
+              ${slots.filter(s => diff[s.id]).map(s => `
+                <div class="p-2 rounded-xl bg-amber-500/10 border border-amber-500/30 text-[11px] text-amber-100">
+                  <strong>${esc(slotDayLabel(s))}</strong> <span class="ml-1 text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-amber-400 text-slate-950">CHANGED</span>
+                  <div class="mt-0.5 text-amber-200/90">${diff[s.id].map(esc).join("<br>")}</div>
+                </div>`).join("")}
+            </div>
+            ${mine ? "" : `
+              <div class="grid grid-cols-2 gap-2">
+                <button onclick="revertToPreviousPlan()" class="py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-slate-200 font-bold text-xs">Keep the old plan</button>
+                <button onclick="acceptCurrentPlan()" class="py-2.5 rounded-xl bg-emerald-500 text-slate-950 font-extrabold text-xs">Accept changes</button>
+              </div>`}
+          </div>`;
       } else {
         compBox.classList.add("hidden");
       }
 
-      const slotsList = document.getElementById("planSlotsList");
-
-      slotsList.innerHTML = (neg.currentSlots || []).map((slot, idx) => {
+      list.innerHTML = slots.map((slot, idx) => {
         const rec = getRecipeById(slot.recipeId);
+        const st = foodStyle(rec);
         const mult = slot.multiplier || 1.0;
-        const effectivePortions = Math.round(slot.basePortions * mult * 10) / 10;
-        const nextSlot = neg.currentSlots[idx + 1];
+        const portions = Math.round(slot.basePortions * mult * 10) / 10;
+        const nextSlot = slots[idx + 1];
         const canSplitOrMerge = !slot.extra && (slot.days.length === 2 || (nextSlot && nextSlot.days.length === 1 && !nextSlot.extra));
         const changed = !!diff[slot.id];
-        const cookOpen = openCook.has(slot.id);
-        const changeOpen = openChange.has(slot.id);
+        const cookOpen = openCook.has(slot.id), changeOpen = openChange.has(slot.id);
         const options = renderRecipeOptions(slot);
-        const dayTitle = slot.extra
-          ? `➕ Extra cook · ${DAY_LABELS[slot.days[0]]}`
-          : `${slot.days.map(d => DAY_SHORT[d]).join(" + ")}`;
-        const btn = (on, onclick, label) => `<button onclick="${onclick}" class="py-2 rounded-xl text-xs font-bold border transition ${on ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40" : "bg-slate-800 text-slate-200 border-slate-700"}">${label}</button>`;
+        const isToday = todayInPlanWeek() && slot.days.includes(DAY_KEYS[todayIdx()]);
+        const btn = (on, onclick, label) => `<button onclick="${onclick}" class="py-2.5 rounded-xl text-xs font-bold border transition ${on ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40" : "bg-slate-800 text-slate-200 border-slate-700"}">${label}</button>`;
+        const sub = slot.days.length === 2 ? `Cook ${DAY_SHORT[slot.days[0]]} · leftovers ${DAY_SHORT[slot.days[1]]}` : (slot.extra ? "Extra meal" : `Cook ${DAY_SHORT[slot.days[0]]}`);
+        const lunch = slot.lunchBoxes ? `<div class="px-3.5 py-2 text-[11px] bg-amber-500/10 text-amber-200 border-t border-amber-500/20">🥡 Includes ${slot.lunchBoxes} lunch box${slot.lunchBoxes > 1 ? "es" : ""} for ${(slot.lunchDays || []).map(dk => DAY_SHORT[dk]).join(", ")}</div>` : "";
 
         return `
-          <div id="slot-${slot.id}" class="p-3.5 rounded-2xl bg-slate-900/80 border ${changed ? "border-amber-500/50" : "border-slate-800"} ${slot.cooked ? "opacity-60" : ""} space-y-2.5">
-            <div>
-              <div class="text-[11px] font-extrabold uppercase tracking-wider text-emerald-400">
-                ${dayTitle}
-                ${changed ? `<span class="ml-1 text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-amber-400 text-slate-950 align-middle">CHANGED</span>` : ""}
+          <div id="slot-${slot.id}" class="rounded-3xl overflow-hidden border ${changed ? "border-amber-500/50" : isToday ? "border-emerald-500/50" : "border-slate-800"} bg-slate-900/80 ${slot.cooked ? "opacity-60" : ""}">
+            <div class="p-3.5 flex gap-3" style="background:linear-gradient(135deg,${st.a},${st.b})">
+              <div class="w-14 h-14 shrink-0 rounded-2xl bg-black/25 flex items-center justify-center text-4xl">${st.emoji}</div>
+              <div class="min-w-0 flex-1">
+                <div class="text-[11px] font-extrabold uppercase tracking-wide text-white/80">${esc(slotDayLabel(slot))}${isToday ? ' <span class="ml-1 px-1.5 py-0.5 rounded bg-emerald-400 text-slate-950 text-[9px]">TODAY</span>' : ""}${changed ? ' <span class="ml-1 px-1.5 py-0.5 rounded bg-amber-400 text-slate-950 text-[9px]">CHANGED</span>' : ""}</div>
+                <div class="text-[15px] font-bold text-white leading-snug ${slot.cooked ? "line-through" : ""}" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esc(rec.name)}</div>
+                <div class="text-[11px] text-white/75 mt-1">⏱ ${esc(rec.prepTime)} · 🍽 ${portions} · 💪 ${Math.round(rec.protein * mult)} g</div>
+                <div class="text-[10px] text-white/55 mt-0.5">${esc(sub)}</div>
               </div>
-              <div class="text-sm font-bold text-white leading-snug ${slot.cooked ? "line-through" : ""}">${foodStyle(rec).emoji} ${esc(rec.name)}</div>
-              <div class="text-[11px] text-slate-400 mt-0.5">⏱ ${esc(rec.prepTime)} · 🍽 ${effectivePortions} portions · 💪 ${Math.round(rec.protein * mult)}g protein</div>
             </div>
-
-            <div class="grid grid-cols-3 gap-1.5">
-              ${btn(cookOpen, `toggleCook('${esc(slot.id)}')`, "👩‍🍳 Recipe")}
+            ${lunch}
+            <div class="p-2.5 grid grid-cols-3 gap-1.5">
+              ${btn(cookOpen, `toggleCook('${esc(slot.id)}')`, "📖 Recipe")}
               ${btn(slot.cooked, `toggleCooked(${idx})`, slot.cooked ? "↩ Undo" : "✓ Cooked")}
               ${btn(changeOpen, `toggleChange('${esc(slot.id)}')`, "⚙️ Change")}
             </div>
-
             ${changeOpen ? `
-              <div class="space-y-2.5 p-3 rounded-2xl bg-slate-950/60 border border-slate-800">
+              <div class="mx-2.5 mb-2.5 p-3 rounded-2xl bg-slate-950/60 border border-slate-800 space-y-3">
                 <div>
                   <div class="text-[11px] font-bold text-slate-400 mb-1">Swap this meal</div>
                   <select onchange="changeSlotRecipe(${idx}, this.value)" class="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-xs font-bold text-white">${options.html}</select>
-                  ${options.hiddenByDislike ? `<div class="text-[10px] text-slate-500 mt-1">${options.hiddenByDislike} meal${options.hiddenByDislike === 1 ? "" : "s"} hidden because of dislikes</div>` : ""}
+                  ${options.hiddenByDislike ? `<div class="text-[10px] text-slate-500 mt-1">${options.hiddenByDislike} hidden because of dislikes</div>` : ""}
                 </div>
                 <div>
-                  <div class="text-[11px] font-bold text-slate-400 mb-1">How hungry are we?</div>
+                  <div class="text-[11px] font-bold text-slate-400 mb-1">Portion size</div>
                   <div class="flex items-center gap-1 flex-wrap">
-                    ${[1.0, 1.25, 1.5].map(m => `
-                      <button onclick="setSlotMultiplier(${idx}, ${m})" class="px-2.5 py-1 rounded-lg text-[11px] font-bold border transition ${mult === m ? "bg-emerald-500 text-slate-950 border-emerald-400" : "bg-slate-800 text-slate-300 border-slate-700"}">${m === 1 ? "Normal" : m === 1.25 ? "Big" : "Huge"}</button>`).join("")}
-                    <button onclick="bumpRecipePermanentPortion('${esc(rec.id)}')" class="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">📈 Always +20%</button>
+                    ${[1.0, 1.25, 1.5].map(m => `<button onclick="setSlotMultiplier(${idx}, ${m})" class="px-3 py-1.5 rounded-lg text-[11px] font-bold border transition ${mult === m ? "bg-emerald-500 text-slate-950 border-emerald-400" : "bg-slate-800 text-slate-300 border-slate-700"}">${m === 1 ? "Normal" : m === 1.25 ? "Big" : "Huge"}</button>`).join("")}
+                    <button onclick="bumpRecipePermanentPortion('${esc(rec.id)}')" class="text-[11px] font-semibold px-2.5 py-1.5 rounded-lg bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">📈 Always +20%</button>
                   </div>
                 </div>
-                ${canSplitOrMerge ? `
-                  <button onclick="toggleSlotBatchSplit(${idx})" class="w-full py-2 rounded-xl bg-slate-800 border border-slate-700 text-slate-200 text-xs font-semibold">
-                    ${slot.days.length === 2 ? "✂️ Cook each day separately" : "🔗 Cook once for 2 days"}
-                  </button>` : ""}
+                ${canSplitOrMerge ? `<button onclick="toggleSlotBatchSplit(${idx})" class="w-full py-2 rounded-xl bg-slate-800 border border-slate-700 text-slate-200 text-xs font-semibold">${slot.days.length === 2 ? "✂️ Cook each day separately" : "🔗 Cook once for 2 days"}</button>` : ""}
               </div>` : ""}
-
             ${cookOpen ? renderCookDrawer(slot, rec, mult) : ""}
-          </div>
-        `;
+          </div>`;
       }).join("");
     }
 
-    const openChange = new Set();
     function toggleChange(slotId) {
       if (openChange.has(slotId)) openChange.delete(slotId); else openChange.add(slotId);
       renderPlanTab();
@@ -3495,6 +3390,371 @@
     /********************************************************************
      * 11. RENDER TAB 4: SHELF-LIFE SHOPPING SPLITTER & AISLE GROUPING
      ********************************************************************/
+    /* ---- price estimate, calibrated by your own receipts ---- */
+    const PRICE_G = { "Meat & Fish": 0.0065, "Dairy & Eggs": 0.0045, "Veggies & Fruit": 0.0020, "Dry Goods & Carbs": 0.0020, "Sauces & Spices": 0.0035 };
+    function itemPrice(ing, amount) {
+      if (ing.unit === "pcs") return amount * 0.28;
+      if (ing.unit === "set") return amount * 0.12;
+      return amount * (PRICE_G[ing.aisle] || 0.003);
+    }
+    function calibrationFactor() {
+      const h = (state.history || []).filter(x => x.real && x.est > 0 && x.cost > 0);
+      if (!h.length) return 1;
+      const f = h.reduce((n, x) => n + x.cost, 0) / h.reduce((n, x) => n + x.est, 0);
+      return Math.min(1.8, Math.max(0.6, f));
+    }
+    function weekEstimate() {
+      return (buildShoppingTrips({ includeCooked: true }).estCost || 0) * calibrationFactor();
+    }
+
+    function parseCost(str) {
+      const n = parseFloat(String(str == null ? "" : str).replace(/[^0-9.,]/g, "").replace(",", "."));
+      return isNaN(n) ? 2 : n;
+    }
+
+    function weekSpent() {
+      const wk = planMondayISO();
+      const legacyStart = getWeekMonday().getTime();
+      return (state.spending || [])
+        .filter(e => e.week ? e.week === wk : e.ts >= legacyStart)
+        .reduce((n, e) => n + (Number(e.amount) || 0), 0);
+    }
+
+    function computeMoney(slots) {
+      const portions = (slots || []).reduce((n, s) => n + s.basePortions, 0);
+      const price = Number(state.settings && state.settings.deliveryPrice) || 13;
+      const delivery = portions * price;
+      const estimate = weekEstimate();
+      const spent = weekSpent();
+      const trips = buildShoppingTrips();
+      const allBought = trips.length > 0 && trips.every(t => tripPending(t).length === 0);
+      const real = spent > 0 && (allBought || spent >= estimate);
+      const cost = real ? spent : Math.max(estimate, spent);
+      return { portions, price, delivery, estimate, spent, real, cost, saved: delivery - cost };
+    }
+
+    function addSpend() {
+      const amt = Number(document.getElementById("spendAmount").value);
+      if (!amt || amt <= 0) { showToast("Type the receipt total first"); return; }
+      const note = document.getElementById("spendNote").value.trim();
+      state.spending.push({ id: "sp" + Date.now(), ts: Date.now(), week: planMondayISO(), amount: Math.round(amt * 100) / 100, note, by: currentUser });
+      state.spending = state.spending.slice(-200);
+      document.getElementById("spendAmount").value = "";
+      document.getElementById("spendNote").value = "";
+      saveStateAndSync(currentUser);
+      showToast("Saved " + fmtEur(amt));
+    }
+
+    /* ---- "Not at the store?" swaps: same dish, still tasty, healthy and cheap ----
+       [name pattern, [[swap to, amount ratio, unit, aisle, shelf-life days, why it works]]] */
+    const SM = "Meat & Fish", SD = "Dairy & Eggs", SV = "Veggies & Fruit", SG = "Dry Goods & Carbs", SS = "Sauces & Spices";
+    const SUBS = [
+      [/chicken (breast|thigh)|chicken fillet/, [["Turkey breast fillet", 1, "g", SM, 2, "Same cooking time, even leaner"], ["Pork loin or neck (sliced)", 1, "g", SM, 3, "Juicy and often cheaper"], ["Canned chickpeas", 1.1, "g", SS, 180, "Plant protein, great in bowls and curries"]]],
+      [/minced/, [["Minced meat (any kind on offer)", 1, "g", SM, 2, "Whatever is cheapest, the dish barely changes"], ["Canned lentils", 1, "g", SS, 180, "Vegetarian version, still very filling"]]],
+      [/bacon/, [["Lean smoked ham", 1, "g", SM, 7, "Same smoky flavour, less fat"]]],
+      [/\bham\b/, [["Cooked turkey breast slices", 1, "g", SM, 7, "Same use, usually cheaper"]]],
+      [/sausage|kolb/, [["Frankfurters", 1, "g", SM, 14, "Milder but works the same"], ["Lean smoked ham", 0.8, "g", SM, 7, "Less fat, same smoky taste"]]],
+      [/pork/, [["Chicken thigh fillet", 1, "g", SM, 2, "Juicy and cheap"], ["Turkey thigh", 1, "g", SM, 2, "Lean, similar texture"]]],
+      [/beef/, [["Pork shoulder (diced)", 1, "g", SM, 3, "Cheaper, stews beautifully"], ["Chicken thigh fillet", 1, "g", SM, 2, "Cheap and juicy"]]],
+      [/turkey/, [["Chicken breast fillet", 1, "g", SM, 2, "Same cooking time"], ["Pork loin or neck (sliced)", 1, "g", SM, 3, "Juicier"]]],
+      [/tuna/, [["Canned sardines", 1, "g", SM, 365, "More omega-3, slightly stronger taste"], ["Canned mackerel", 1, "g", SM, 365, "Rich and cheap"], ["Canned chickpeas", 1.1, "g", SS, 180, "Plant swap for salads and pasta"]]],
+      [/sardine/, [["Canned tuna", 1, "g", SM, 365, "Milder taste"], ["Canned mackerel", 1, "g", SM, 365, "Similar and cheap"]]],
+      [/fish finger/, [["Chicken nuggets (frozen)", 1, "g", SM, 120, "Same crispy Airfryer cooking"], ["Frozen fish fillet", 1, "g", SM, 120, "Plain fish, season well"]]],
+      [/sweet potato/, [["Potatoes", 1, "g", SV, 21, "Cheaper, a bit less sweet"], ["Pumpkin or butternut", 1, "g", SV, 14, "Same sweetness"]]],
+      [/potato/, [["Sweet potatoes", 1, "g", SV, 14, "A touch sweeter, extra fibre"], ["Rice (dry)", 0.3, "g", SG, 180, "Make it a rice dish: 100 g dry rice replaces about 330 g potato"], ["Pasta (dry)", 0.3, "g", SG, 180, "Make it a pasta dish"]]],
+      [/rice/, [["Bulgur", 1, "g", SG, 365, "Cooks in 12 min, more fibre"], ["Couscous", 1, "g", SG, 365, "Ready in 5 min"], ["Pasta (dry)", 1.05, "g", SG, 180, "Turns the dish into a pasta bowl"]]],
+      [/gnocchi/, [["Potatoes", 1, "g", SV, 21, "Boil chunks and pan-fry them instead"], ["Pasta (dry)", 0.5, "g", SG, 180, "Penne works the same in the sauce"]]],
+      [/pasta|spaghetti|macaroni|penne/, [["Rice (dry)", 0.9, "g", SG, 180, "Serve the sauce over rice"], ["Couscous", 0.9, "g", SG, 365, "Ready in 5 min"], ["Bulgur", 0.9, "g", SG, 365, "Nutty and filling"]]],
+      [/noodle/, [["Spaghetti", 1, "g", SG, 180, "Works the same in stir-fries"], ["Rice (dry)", 0.9, "g", SG, 180, "Switch to a rice bowl"]]],
+      [/couscous|bulgur/, [["Rice (dry)", 1, "g", SG, 180, "Same job"], ["Pasta (dry)", 1, "g", SG, 180, "Same job"]]],
+      [/cottage cheese/, [["Skyr", 1, "g", SD, 10, "Same protein, smoother"], ["Greek yogurt", 1, "g", SD, 10, "Add a pinch of salt"]]],
+      [/cheese|feta|mozzarella/, [["Grated cheese (any kind)", 1, "g", SD, 14, "Use whatever is on offer"], ["Cottage cheese", 0.8, "g", SD, 10, "Lighter, adds protein"]]],
+      [/sour cream|yogurt|skyr/, [["Greek yogurt", 1, "g", SD, 10, "Tangy and high protein"], ["Skyr", 1, "g", SD, 10, "Thicker, high protein"], ["Sour cream", 1, "g", SD, 10, "Richer"], ["Cottage cheese", 1, "g", SD, 10, "Stir until creamy"]]],
+      [/cooking cream/, [["Sour cream", 1, "g", SD, 10, "Stir in off the heat so it doesn't split"], ["Greek yogurt", 1, "g", SD, 10, "Stir in off the heat, lighter"], ["Milk", 1, "ml", SD, 7, "Lighter, add a bit more cheese"]]],
+      [/passata/, [["Canned chopped tomatoes", 1, "g", SS, 60, "Mash or blend for a smooth sauce"], ["Tomato paste", 0.25, "g", SS, 90, "Mix 1 part paste with 3 parts water"]]],
+      [/spinach/, [["Frozen spinach", 0.8, "g", SV, 60, "Cheap and lasts for months"], ["Broccoli", 1, "g", SV, 6, "Different but just as healthy"], ["Frozen peas", 1, "g", SV, 60, "Sweet and easy"]]],
+      [/broccoli/, [["Cauliflower", 1, "g", SV, 7, "Same cooking"], ["Green beans", 1, "g", SV, 6, "Crunchy alternative"], ["Frozen mixed vegetables", 1, "g", SV, 60, "Cheap and quick"]]],
+      [/cauliflower/, [["Broccoli", 1, "g", SV, 6, "Same cooking"], ["Potatoes", 0.8, "g", SV, 21, "More filling"]]],
+      [/bell pepper/, [["Zucchini", 1, "pcs", SV, 7, "Milder, same texture"], ["Carrots", 120, "g", SV, 14, "Sweet and cheap"]]],
+      [/zucchini/, [["Eggplant", 1, "pcs", SV, 7, "Soaks up the sauce"], ["Bell pepper", 1, "pcs", SV, 7, "Sweeter"], ["Carrots", 150, "g", SV, 14, "Cheap and firm"]]],
+      [/eggplant/, [["Zucchini", 1, "pcs", SV, 7, "Milder and cheaper"], ["Mushrooms", 250, "g", SV, 5, "Meaty texture"]]],
+      [/cucumber/, [["Tomatoes", 200, "g", SV, 6, "Fresh and juicy"], ["Lettuce", 150, "g", SV, 5, "Crunchy"], ["Carrots", 120, "g", SV, 14, "Crunchy and cheap"]]],
+      [/tomato/, [["Cucumber", 0.005, "pcs", SV, 6, "Fresh and crunchy"], ["Canned chopped tomatoes", 1, "g", SS, 60, "Great when cooked"]]],
+      [/lettuce/, [["White cabbage", 1, "g", SV, 14, "Cheaper and crunchier"], ["Cucumber", 0.004, "pcs", SV, 6, "Fresh crunch"]]],
+      [/sauerkraut/, [["White cabbage", 1, "g", SV, 14, "Add a splash of vinegar and a pinch of salt"]]],
+      [/cabbage/, [["Carrots", 1, "g", SV, 14, "Shredded, cheap and sweet"], ["Lettuce", 1, "g", SV, 5, "Softer"]]],
+      [/carrot/, [["Frozen peas & carrots mix", 1, "g", SV, 60, "Cheap and lasts"], ["Pumpkin or butternut", 1, "g", SV, 14, "Sweet and soft"]]],
+      [/mushroom/, [["Zucchini", 0.006, "pcs", SV, 7, "Fry it hard like mushrooms"], ["Frozen mushrooms", 1, "g", SV, 60, "Same flavour, cheaper"]]],
+      [/onion/, [["Spring onions", 1, "pcs", SV, 7, "Milder, use white and green parts"], ["Leek", 0.5, "pcs", SV, 14, "Sweet when fried"]]],
+      [/green beans/, [["Broccoli", 1, "g", SV, 6, "Same cooking"], ["Frozen peas", 1, "g", SV, 60, "Sweet and easy"]]],
+      [/chickpea/, [["Canned white beans", 1, "g", SS, 180, "Creamier"], ["Canned lentils", 1, "g", SS, 180, "Earthy and filling"]]],
+      [/lentil/, [["Canned chickpeas", 1, "g", SS, 180, "Nutty and filling"], ["Canned kidney beans", 1, "g", SS, 180, "Hearty"]]],
+      [/beans/, [["Canned chickpeas", 1, "g", SS, 180, "Same job"], ["Canned lentils", 1, "g", SS, 180, "Same job"], ["Canned white beans", 1, "g", SS, 180, "Creamier"]]],
+      [/tortilla|wrap|pita/, [["Bread slices", 2, "pcs", SG, 5, "Toast 2 slices per wrap"], ["Pita bread", 1, "pcs", SG, 5, "Same size, warms in a minute"]]],
+      [/bread slices/, [["Large tortilla wraps", 0.5, "pcs", SG, 30, "Half a wrap per slice"], ["Pita bread", 0.5, "pcs", SG, 5, "Half a pita per slice"]]],
+      [/burger bun/, [["Bread slices", 2, "pcs", SG, 5, "Toast 2 slices per bun"], ["Large tortilla wraps", 1, "pcs", SG, 30, "Wrap it instead"]]],
+      [/^eggs?$/, [["Firm tofu", 60, "g", SD, 10, "Scrambled with a pinch of turmeric (not for boiled eggs)"]]],
+      [/peas/, [["Sweetcorn (canned)", 1, "g", SS, 180, "Sweet and cheap"], ["Green beans", 1, "g", SV, 6, "Crunchier"]]],
+      [/corn/, [["Frozen peas", 1, "g", SV, 60, "Sweet and cheap"]]]
+    ];
+
+    function subOptionsFor(name) {
+      const n = String(name).toLowerCase();
+      const hit = SUBS.find(s => s[0].test(n));
+      if (!hit) return [];
+      return hit[1].filter(o => o[0].toLowerCase() !== n).map(o => ({ to: o[0], ratio: o[1], unit: o[2], aisle: o[3], shelf: o[4], note: o[5] }));
+    }
+
+    let openSwapKey = null;
+    function toggleSwap(key) { openSwapKey = openSwapKey === key ? null : key; renderShopTab(); }
+
+    function applySwap(origName, idx) {
+      const opt = subOptionsFor(origName)[idx];
+      if (!opt) return;
+      state.subs[safeKey(origName)] = { from: origName, to: opt.to, ratio: opt.ratio, unit: opt.unit, aisle: opt.aisle, shelf: opt.shelf };
+      openSwapKey = null;
+      saveStateAndSync(currentUser);
+      showToast(`Swapped to ${opt.to}. The recipe is updated`);
+    }
+
+    function undoSwap(origName) {
+      delete state.subs[safeKey(origName)];
+      openSwapKey = null;
+      saveStateAndSync(currentUser);
+    }
+
+    function buildShoppingTrips(opts) {
+      const includeCooked = !!(opts && opts.includeCooked);
+      const slots = state.planNegotiation.currentSlots || [];
+      const mode = state.shopping.mode || "fresh";
+      const needs = [];
+
+      slots.forEach(slot => {
+        if (slot.cooked && !includeCooked) return;
+        const rec = getRecipeById(slot.recipeId);
+        const total = slot.basePortions * (slot.multiplier || 1.0);
+        const cookIdx = DAY_KEYS.indexOf(slot.days[0]);
+        effectiveIngredients(rec).forEach(ing => {
+          needs.push({ ing, amount: ing.amountPerPortion * total, cookIdx, cookDay: slot.days[0] });
+        });
+      });
+      const emptyResult = () => { const e = []; e.pantryUsed = {}; e.pantryList = []; e.estCost = 0; return e; };
+      if (!needs.length) return emptyResult();
+
+      // take what you already own out of the list (earliest cook day first)
+      const stock = {};
+      const pantryUsed = {};
+      (state.pantry || []).forEach(p => { stock[p.id] = Number(p.amount) || 0; });
+      needs.sort((a, b) => a.cookIdx - b.cookIdx);
+      needs.forEach(n => {
+        pantryItemsFor(n.ing).forEach(p => {
+          const take = Math.min(stock[p.id] || 0, n.amount);
+          if (take > 0) { stock[p.id] -= take; n.amount -= take; pantryUsed[p.id] = (pantryUsed[p.id] || 0) + take; }
+        });
+      });
+      const buyNeeds = needs.filter(n => n.amount > 0.05);
+      const estCost = buyNeeds.reduce((s, n) => s + itemPrice(n.ing, n.amount), 0);
+      needs.splice(0, needs.length, ...buyNeeds);
+      const pantryList = (state.pantry || []).filter(p => pantryUsed[p.id]).map(p => ({ name: p.name, amount: Math.round(pantryUsed[p.id]), unit: p.unit }));
+      if (!needs.length) { const e = emptyResult(); e.pantryUsed = pantryUsed; e.pantryList = pantryList; return e; }
+
+      const firstCook = Math.min(...needs.map(n => n.cookIdx));
+      needs.forEach(n => {
+        n.shelf = Math.max(1, Number(n.ing.shelfLifeDays) || 3);
+        n.winEnd = n.cookIdx;
+        n.winStart = Math.max(firstCook, n.cookIdx - (n.shelf - 1));
+      });
+
+      let tripDays = [];
+      if (mode === "freezer") {
+        tripDays = [firstCook];
+      } else {
+        [...needs].sort((a, b) => a.winEnd - b.winEnd).forEach(n => {
+          if (!tripDays.some(t => t >= n.winStart && t <= n.winEnd)) tripDays.push(n.winEnd);
+        });
+        tripDays.sort((a, b) => a - b);
+      }
+
+      const trips = tripDays.map(dd => ({ dayIdx: dd, dayKey: DAY_KEYS[dd], map: {} }));
+      needs.forEach(n => {
+        const trip = mode === "freezer" ? trips[0] : trips.find(t => t.dayIdx >= n.winStart && t.dayIdx <= n.winEnd);
+        const key = `${safeKey(n.ing.name)}__${safeKey(n.ing.unit)}__${trip.dayKey}`;
+        if (!trip.map[key]) {
+          trip.map[key] = { key, name: n.ing.name, amount: 0, unit: n.ing.unit, aisle: n.ing.aisle || "Other", usedFor: new Set(), freezeFor: new Set(), swappedFrom: n.ing.swappedFrom || null };
+        }
+        const item = trip.map[key];
+        item.amount = Math.round((item.amount + n.amount) * 10) / 10;
+        item.usedFor.add(DAY_SHORT[n.cookDay]);
+        if (n.ing.swappedFrom) item.swappedFrom = n.ing.swappedFrom;
+        if (n.cookIdx - trip.dayIdx >= n.shelf) item.freezeFor.add(DAY_SHORT[n.cookDay]);
+      });
+
+      const result = trips.map(t => ({ dayIdx: t.dayIdx, dayKey: t.dayKey, items: Object.values(t.map) }));
+      result.pantryUsed = pantryUsed;
+      result.pantryList = pantryList;
+      result.estCost = estCost;
+      return result;
+    }
+
+    function describeTrip(trip, i) {
+      const date = parseISO(planDateOf(trip.dayKey));
+      const diff = Math.round((date - parseISO(todayISO())) / 86400000);
+      const total = trip.items.length;
+      const pending = tripPending(trip).length;
+      const dateText = date.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
+      const when = diff === 0 ? "Buy today" : diff === 1 ? `Buy tomorrow · ${dateText}` : diff > 1 ? `Buy on ${dateText}` : `Was planned for ${dateText}`;
+      let badgeCls = "bg-slate-800 text-slate-300 border-slate-700";
+      if (!pending) badgeCls = "bg-emerald-500/15 text-emerald-300 border-emerald-500/30";
+      else if (diff < 0) badgeCls = "bg-rose-500/20 text-rose-300 border-rose-500/40";
+      else if (diff === 0) badgeCls = "bg-amber-500/20 text-amber-300 border-amber-500/40";
+      const mode = state.shopping.mode || "fresh";
+      return {
+        title: mode === "freezer" ? "🛒 The big shop" : (i === 0 ? "🛒 Main shop" : "🥩 Fresh top-up"),
+        when, done: total - pending, total, badgeCls, today: diff === 0 && pending > 0, overdue: diff < 0 && pending > 0
+      };
+    }
+
+    function renderShoppingTripCard(trip, i) {
+      if (!trip.items.length) return "";
+      const info = describeTrip(trip, i);
+      const aislesOrder = ["Meat & Fish", "Dairy & Eggs", "Veggies & Fruit", "Dry Goods & Carbs", "Sauces & Spices"];
+      const icons = { "Meat & Fish": "🥩", "Dairy & Eggs": "🧀", "Veggies & Fruit": "🥦", "Dry Goods & Carbs": "🍚", "Sauces & Spices": "🥫" };
+      const grouped = {};
+      trip.items.forEach(it => { (grouped[it.aisle || "Other"] = grouped[it.aisle || "Other"] || []).push(it); });
+      const pct = info.total ? Math.round(info.done / info.total * 100) : 0;
+
+      const row = (item) => {
+        const home = !!state.shopping.atHome?.[item.key], bought = !!state.shopping.bought?.[item.key];
+        const done = home || bought;
+        const swapOpen = openSwapKey === item.key;
+        const orig = item.swappedFrom || item.name;
+        const opts = item.swappedFrom ? [] : subOptionsFor(item.name);
+        return `
+          <div class="rounded-2xl border ${done ? "bg-slate-900/30 border-slate-800/60" : swapOpen ? "bg-slate-900 border-cyan-500/40" : "bg-slate-900/90 border-slate-800"}">
+            <div class="flex items-center gap-2.5 p-2.5">
+              <button onclick="toggleShopItem('bought','${item.key}')" aria-label="Tick" class="w-7 h-7 shrink-0 rounded-full border-2 flex items-center justify-center text-sm font-extrabold ${bought ? "bg-emerald-500 border-emerald-400 text-slate-950" : "border-slate-600 text-transparent"}">✓</button>
+              <div class="min-w-0 flex-1" onclick="toggleShopItem('bought','${item.key}')">
+                <div class="text-[13px] font-bold leading-tight ${done ? "line-through text-slate-500" : "text-white"}">${esc(item.name)} <span class="${done ? "text-slate-500" : "text-emerald-300"} font-extrabold">${item.amount} ${esc(item.unit)}</span></div>
+                <div class="text-[10px] text-slate-500 mt-0.5">${[...item.usedFor].join(" · ")}${item.swappedFrom ? ` · <span class="text-amber-300">instead of ${esc(item.swappedFrom)}</span>` : ""}${item.freezeFor.size ? ` · <span class="text-cyan-300">❄️ freeze, thaw for ${[...item.freezeFor].join(", ")}</span>` : ""}${home ? " · 🏠 have it" : ""}</div>
+              </div>
+              <button onclick="toggleShopItem('atHome','${item.key}')" aria-label="Have it at home" class="w-9 h-8 shrink-0 rounded-lg text-sm border ${home ? "bg-amber-500/25 border-amber-500/50" : "bg-slate-800 border-slate-700"}">🏠</button>
+              <button onclick="toggleSwap('${item.key}')" aria-label="Not in the store" class="w-9 h-8 shrink-0 rounded-lg text-sm font-bold border ${swapOpen || item.swappedFrom ? "bg-cyan-500/20 border-cyan-500/50 text-cyan-300" : "bg-slate-800 border-slate-700 text-slate-300"}">⇄</button>
+            </div>
+            ${swapOpen ? `
+              <div class="px-2.5 pb-2.5 space-y-1.5">
+                ${item.swappedFrom ? `
+                  <div class="text-[11px] text-slate-300">Swapped from <strong>${esc(item.swappedFrom)}</strong>.</div>
+                  <button onclick="undoSwap('${esc(orig).replace(/'/g, "\\'")}')" class="w-full py-2 rounded-xl bg-slate-800 border border-slate-700 text-slate-200 text-xs font-bold">↩ Undo swap</button>`
+                : opts.length ? `
+                  <div class="text-[11px] text-slate-400">Not in the store or too pricey? Swap it, the recipe adjusts:</div>
+                  ${opts.map((o, k) => `<button onclick="applySwap('${esc(item.name).replace(/'/g, "\\'")}', ${k})" class="w-full text-left p-2.5 rounded-xl bg-slate-800 border border-slate-700">
+                    <div class="text-xs font-bold text-white">${esc(o.to)}</div>
+                    <div class="text-[10px] text-slate-400">${esc(o.note)}</div></button>`).join("")}`
+                : `<div class="text-[11px] text-slate-400">No swap needed for this one. Leave it out and the dish still works, or tick 🏠 to skip it.</div>`}
+              </div>` : ""}
+          </div>`;
+      };
+
+      const sections = [...aislesOrder, ...Object.keys(grouped).filter(k => !aislesOrder.includes(k))]
+        .filter(a => grouped[a] && grouped[a].length)
+        .map(a => `
+          <div class="space-y-1.5">
+            <div class="text-[11px] font-extrabold uppercase tracking-wider text-emerald-400 pt-2">${icons[a] || "🛍"} ${esc(a)}</div>
+            ${grouped[a].map(row).join("")}
+          </div>`).join("");
+
+      return `
+        <div class="glass rounded-3xl p-4 space-y-2 border ${info.overdue ? "border-rose-500/40" : info.today ? "border-amber-500/50" : "border-slate-800"}">
+          <div class="flex items-start justify-between gap-2">
+            <div class="min-w-0">
+              <h3 class="text-sm font-extrabold text-white">${esc(info.title)}</h3>
+              <p class="text-[11px] ${info.overdue ? "text-rose-300" : "text-slate-400"}">${esc(info.when)}</p>
+            </div>
+            <span class="shrink-0 text-[11px] font-bold px-2.5 py-1 rounded-xl border ${info.badgeCls}">${info.done === info.total ? "✓ Done" : `${info.done}/${info.total}`}</span>
+          </div>
+          <div class="h-1.5 rounded-full bg-slate-800 overflow-hidden"><div class="h-full bg-emerald-400 rounded-full transition-all" style="width:${pct}%"></div></div>
+          ${sections}
+          <button onclick="copyChecklist(${i})" class="mt-1 w-full py-2 rounded-xl bg-slate-800 border border-slate-700 text-slate-300 text-[11px] font-bold">📋 Copy this list</button>
+        </div>`;
+    }
+
+    function renderShopTab() {
+      const mode = state.shopping.mode || "fresh";
+      const on = "py-2 px-2 rounded-xl text-xs font-bold bg-emerald-500 text-slate-950 shadow transition text-center";
+      const off = "py-2 px-2 rounded-xl text-xs font-bold text-slate-400 transition text-center";
+      document.getElementById("shopModeFresh").className = mode === "fresh" ? on : off;
+      document.getElementById("shopModeFreezer").className = mode === "freezer" ? on : off;
+      document.getElementById("shopModeDesc").textContent = mode === "fresh"
+        ? "Meat is bought close to the day you cook it, so it stays fresh."
+        : "One big shop. Meat for later in the week goes in the freezer.";
+
+      const trips = buildShoppingTrips();
+      const locked = state.planNegotiation.status === "locked";
+      let html = locked || !trips.length ? "" : `<div class="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-[11px] text-amber-200">The plan isn't locked yet, so this list can still change.</div>`;
+      html += trips.map((t, i) => renderShoppingTripCard(t, i)).join("");
+      if (trips.pantryList && trips.pantryList.length) {
+        html += `
+          <div class="glass rounded-3xl p-4 border border-cyan-500/30">
+            <h3 class="text-sm font-extrabold text-white">🧊 Take from home</h3>
+            <p class="text-[11px] text-slate-400 mb-2">Already in the house, so it's not on the list.</p>
+            ${trips.pantryList.map(i => `<div class="flex justify-between text-xs py-1.5 border-b border-slate-800/70"><span class="text-slate-200">${esc(i.name)}</span><strong class="text-cyan-300">${i.amount >= 1000 && i.unit === "g" ? i.amount / 1000 + " kg" : i.amount + " " + esc(i.unit)}</strong></div>`).join("")}
+          </div>`;
+      }
+      document.getElementById("shoppingTripsContainer").innerHTML = html ||
+        `<div class="glass rounded-3xl p-6 text-center space-y-2"><div class="text-4xl">🛒</div><div class="text-sm font-bold text-white">Nothing to buy yet</div><p class="text-xs text-slate-400">Your list appears once your days are set and meals are planned.</p></div>`;
+      renderBudget();
+    }
+
+    /* ---- Budget: estimate vs what you really spent ---- */
+    function renderBudget() {
+      const m = computeMoney(state.planNegotiation.currentSlots || []);
+      document.getElementById("budgetWeek").textContent = weekLabel();
+      const over = m.spent - m.estimate;
+      const pct = m.estimate > 0 ? Math.min(100, Math.round(m.spent / m.estimate * 100)) : 0;
+      const factor = calibrationFactor();
+      const box = (label, val, sub, cls) => `<div class="p-3 rounded-2xl bg-slate-900/80 border border-slate-800"><div class="text-[10px] text-slate-400">${label}</div><div class="text-lg font-extrabold ${cls}">${val}</div><div class="text-[10px] text-slate-500">${sub}</div></div>`;
+      document.getElementById("budgetSummary").innerHTML = `
+        <div class="grid grid-cols-2 gap-2">
+          ${box("Planned (estimate)", fmtEur(m.estimate), "for this shopping list", "text-white")}
+          ${box("Spent so far", fmtEur(m.spent), "from your receipts", m.spent > m.estimate && m.estimate > 0 ? "text-rose-300" : "text-emerald-300")}
+        </div>
+        <div class="mt-2.5">
+          <div class="h-2 rounded-full bg-slate-800 overflow-hidden"><div class="h-full rounded-full ${over > 0 ? "bg-rose-400" : "bg-emerald-400"}" style="width:${pct}%"></div></div>
+          <div class="text-[11px] mt-1.5 ${over > 0 ? "text-rose-300" : "text-slate-400"}">${m.spent > 0 ? (over > 0 ? `${fmtEur(over)} over the estimate` : `${fmtEur(-over)} left of the estimate`) : "Add your receipts below to compare."}</div>
+        </div>
+        <div class="mt-3 p-3 rounded-2xl bg-slate-900/80 border border-slate-800 text-xs space-y-1">
+          <div class="flex justify-between text-slate-300"><span>Delivery instead (${m.portions} meals × €${m.price})</span><strong class="text-rose-300">${fmtEur(m.delivery)}</strong></div>
+          <div class="flex justify-between text-slate-300"><span>${m.real ? "Cooking at home (real)" : "Cooking at home (estimate)"}</span><strong class="text-white">${fmtEur(m.cost)}</strong></div>
+          <div class="flex justify-between pt-1.5 border-t border-slate-800"><span class="font-bold text-white">${m.real ? "We saved" : "We will save (projected)"}</span><strong class="text-emerald-300 text-sm">${fmtEur(Math.max(0, m.saved))}</strong></div>
+        </div>
+        ${Math.abs(factor - 1) > 0.02 ? `<div class="text-[10px] text-slate-500 mt-1.5">Estimate adjusted ×${factor.toFixed(2)} from your past receipts.</div>` : ""}`;
+
+      const wk = planMondayISO();
+      const mine = (state.spending || []).filter(e => e.week ? e.week === wk : e.ts >= getWeekMonday().getTime()).sort((a, b) => b.ts - a.ts);
+      document.getElementById("spendList").innerHTML = mine.map(e => `
+        <div class="flex items-center justify-between p-2 rounded-xl bg-slate-900/70 border border-slate-800 text-xs">
+          <span class="text-slate-300">${new Date(e.ts).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}${e.note ? " · " + esc(e.note) : ""} <span class="text-slate-500">${e.by === "fruzsi" ? "👩" : "👦"}</span></span>
+          <span class="flex items-center gap-2"><strong class="text-white">${fmtEur(e.amount)}</strong><button onclick="deleteSpend('${esc(e.id)}')" class="text-slate-500 px-1">✕</button></span>
+        </div>`).join("");
+
+      const rows = (state.history || []).slice(-6).map(h => ({ label: String(h.week || "").replace("Week of ", ""), spent: Number(h.cost) || 0, delivery: (Number(h.cost) || 0) + (Number(h.saved) || 0) }));
+      rows.push({ label: "now", spent: m.cost, delivery: m.delivery, now: true });
+      const max = Math.max(...rows.map(r => Math.max(r.spent, r.delivery)), 1);
+      document.getElementById("historyCard").innerHTML = `
+        <div class="space-y-1.5">
+          ${rows.map(r => `
+            <div class="flex items-center gap-2">
+              <span class="w-12 text-[10px] ${r.now ? "text-amber-300 font-bold" : "text-slate-400"} shrink-0">${esc(r.label)}</span>
+              <div class="flex-1 space-y-0.5">
+                <div class="h-2 rounded bg-rose-400/70" style="width:${Math.max(2, r.delivery / max * 100)}%"></div>
+                <div class="h-2 rounded bg-emerald-400" style="width:${Math.max(2, r.spent / max * 100)}%"></div>
+              </div>
+              <span class="w-14 text-right text-[10px] text-emerald-300 font-bold shrink-0">+${fmtEur(Math.max(0, r.delivery - r.spent)).replace(".00", "")}</span>
+            </div>`).join("")}
+        </div>
+        <div class="flex gap-3 mt-2 text-[10px] text-slate-400"><span><span class="inline-block w-2 h-2 rounded bg-rose-400/70"></span> delivery</span><span><span class="inline-block w-2 h-2 rounded bg-emerald-400"></span> cooking at home</span></div>`;
+    }
+
     function setShoppingMode(mode) {
       state.shopping.mode = mode;
       saveStateAndSync(currentUser);
@@ -3527,85 +3787,6 @@
      * Freezer mode = one trip on the first cooking day; items that would not
      * last until their cook day get a "freeze" tag.
      */
-    function buildShoppingTrips() {
-      const slots = state.planNegotiation.currentSlots || [];
-      const mode = state.shopping.mode || "fresh";
-      const needs = [];
-
-      slots.forEach(slot => {
-        const rec = getRecipeById(slot.recipeId);
-        if (slot.cooked) return;
-        const total = slot.basePortions * (slot.multiplier || 1.0);
-        const cookIdx = DAY_KEYS.indexOf(slot.days[0]);
-        (rec.ingredients || []).forEach(ing => {
-          needs.push({ ing, amount: ing.amountPerPortion * total, cookIdx, cookDay: slot.days[0] });
-        });
-      });
-      const emptyResult = () => { const e = []; e.pantryUsed = {}; e.pantryList = []; return e; };
-      if (!needs.length) return emptyResult();
-
-      // Take what you already own out of the list (earliest cook day first)
-      const stock = {};
-      const pantryUsed = {};
-      (state.pantry || []).forEach(p => { stock[p.id] = Number(p.amount) || 0; });
-      needs.sort((a, b) => a.cookIdx - b.cookIdx);
-      needs.forEach(n => {
-        pantryItemsFor(n.ing).forEach(p => {
-          const take = Math.min(stock[p.id] || 0, n.amount);
-          if (take > 0) { stock[p.id] -= take; n.amount -= take; pantryUsed[p.id] = (pantryUsed[p.id] || 0) + take; }
-        });
-      });
-      const buyNeeds = needs.filter(n => n.amount > 0.05);
-      needs.splice(0, needs.length, ...buyNeeds);
-      const pantryList = (state.pantry || []).filter(p => pantryUsed[p.id]).map(p => ({ name: p.name, amount: Math.round(pantryUsed[p.id]), unit: p.unit }));
-      if (!needs.length) { const e = emptyResult(); e.pantryUsed = pantryUsed; e.pantryList = pantryList; return e; }
-
-      const firstCook = Math.min(...needs.map(n => n.cookIdx));
-      needs.forEach(n => {
-        n.shelf = Math.max(1, Number(n.ing.shelfLifeDays) || 3);
-        n.winEnd = n.cookIdx;
-        n.winStart = Math.max(firstCook, n.cookIdx - (n.shelf - 1));
-      });
-
-      let tripDays = [];
-      if (mode === "freezer") {
-        tripDays = [firstCook];
-      } else {
-        [...needs].sort((a, b) => a.winEnd - b.winEnd).forEach(n => {
-          if (!tripDays.some(t => t >= n.winStart && t <= n.winEnd)) tripDays.push(n.winEnd);
-        });
-        tripDays.sort((a, b) => a - b);
-      }
-
-      const trips = tripDays.map(d => ({ dayIdx: d, dayKey: DAY_KEYS[d], map: {} }));
-      needs.forEach(n => {
-        const trip = mode === "freezer"
-          ? trips[0]
-          : trips.find(t => t.dayIdx >= n.winStart && t.dayIdx <= n.winEnd);
-        const key = `${safeKey(n.ing.name)}__${safeKey(n.ing.unit)}__${trip.dayKey}`;
-        if (!trip.map[key]) {
-          trip.map[key] = {
-            key,
-            name: n.ing.name,
-            amount: 0,
-            unit: n.ing.unit,
-            aisle: n.ing.aisle || "Other",
-            usedFor: new Set(),
-            freezeFor: new Set()
-          };
-        }
-        const item = trip.map[key];
-        item.amount = Math.round((item.amount + n.amount) * 10) / 10;
-        item.usedFor.add(DAY_SHORT[n.cookDay]);
-        if (n.cookIdx - trip.dayIdx >= n.shelf) item.freezeFor.add(DAY_SHORT[n.cookDay]);
-      });
-
-      const result = trips.map(t => ({ dayIdx: t.dayIdx, dayKey: t.dayKey, items: Object.values(t.map) }));
-      result.pantryUsed = pantryUsed;
-      result.pantryList = pantryList;
-      return result;
-    }
-
     function isItemDone(item) {
       return !!(state.shopping.atHome?.[item.key] || state.shopping.bought?.[item.key]);
     }
@@ -3647,139 +3828,6 @@
       } else {
         fallback();
       }
-    }
-
-    function describeTrip(trip, i) {
-      const today = todayIdx();
-      const pending = tripPending(trip).length;
-      const day = DAY_LABELS[trip.dayKey];
-      let when;
-      if (trip.dayIdx === today) when = `Buy TODAY (${DAY_SHORT[trip.dayKey]})`;
-      else if (trip.dayIdx > today) when = `Buy on ${day}`;
-      else when = `${day} trip`;
-
-      let badge, badgeCls;
-      if (!pending) { badge = "✓ All done"; badgeCls = "bg-emerald-500/15 text-emerald-300 border-emerald-500/30"; }
-      else if (trip.dayIdx < today) { badge = `⚠ ${pending} overdue`; badgeCls = "bg-rose-500/20 text-rose-300 border-rose-500/40"; }
-      else if (trip.dayIdx === today) { badge = `${pending} to buy today`; badgeCls = "bg-amber-500/20 text-amber-300 border-amber-500/40"; }
-      else { badge = `${pending} to buy`; badgeCls = "bg-slate-800 text-slate-300 border-slate-700"; }
-
-      const cooks = [...new Set(trip.items.flatMap(it => [...it.usedFor]))];
-      const mode = state.shopping.mode || "fresh";
-      const subtitle = mode === "freezer"
-        ? "Everything for the week in one go. Late-week meat gets a freeze tag."
-        : `For cooks on: ${cooks.join(", ")}${i === 0 ? " + all long-life items" : ""}`;
-      return { title: `${i === 0 ? "🛒 Main Haul" : "🥩 Fresh Top-Up"} · ${when}`, subtitle, badge, badgeCls };
-    }
-
-    function renderShoppingTripCard(trip, i) {
-      if (!trip.items.length) return "";
-      const info = describeTrip(trip, i);
-
-      const aislesOrder = ["Meat & Fish", "Dairy & Eggs", "Veggies & Fruit", "Dry Goods & Carbs", "Sauces & Spices"];
-      const grouped = {};
-      trip.items.forEach(item => {
-        const a = item.aisle || "Other";
-        if (!grouped[a]) grouped[a] = [];
-        grouped[a].push(item);
-      });
-
-      const aisleIcons = {
-        "Meat & Fish": "🥩",
-        "Dairy & Eggs": "🧀",
-        "Veggies & Fruit": "🥦",
-        "Dry Goods & Carbs": "🍚",
-        "Sauces & Spices": "🥫"
-      };
-
-      const sectionsHtml = [...aislesOrder, ...Object.keys(grouped).filter(k => !aislesOrder.includes(k))]
-        .filter(a => grouped[a] && grouped[a].length)
-        .map(aisle => `
-          <div class="space-y-1.5">
-            <div class="text-xs font-extrabold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5 pt-2">
-              <span>${aisleIcons[aisle] || "🛍"}</span><span>${esc(aisle)}</span>
-            </div>
-            ${grouped[aisle].map(item => {
-              const isHome = !!state.shopping.atHome?.[item.key];
-              const isBought = !!state.shopping.bought?.[item.key];
-              const done = isHome || isBought;
-              return `
-                <div class="p-2.5 rounded-2xl border transition flex items-center justify-between gap-2 ${done ? "bg-slate-900/30 border-slate-800/60 opacity-55" : "bg-slate-900/90 border-slate-800"}">
-                  <div class="min-w-0 flex-1">
-                    <div class="text-xs font-bold ${done ? "line-through text-slate-400" : "text-white"} flex items-center gap-1.5 flex-wrap">
-                      <span>${esc(item.name)}</span>
-                      <span class="text-emerald-300 font-extrabold">${item.amount} ${esc(item.unit)}</span>
-                      ${item.freezeFor.size ? `<span class="text-[10px] px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">❄️ Freeze, thaw for ${[...item.freezeFor].join(", ")}</span>` : ""}
-                    </div>
-                    <div class="text-[10px] text-slate-400">For ${[...item.usedFor].join(", ")} cook</div>
-                  </div>
-                  <div class="flex items-center gap-1.5 shrink-0">
-                    <button onclick="toggleShopItem('atHome', '${item.key}')" class="px-2 py-1.5 rounded-xl text-[10px] font-bold border transition ${isHome ? "bg-amber-500/25 text-amber-300 border-amber-500/40" : "bg-slate-800 text-slate-400 border-slate-700"}">
-                      🏠 Home
-                    </button>
-                    <button onclick="toggleShopItem('bought', '${item.key}')" class="px-2.5 py-1.5 rounded-xl text-[10px] font-bold border transition ${isBought ? "bg-emerald-500 text-slate-950 border-emerald-400" : "bg-slate-800 text-slate-200 border-slate-700"}">
-                      ${isBought ? "✓ Bought" : "🛒 Buy"}
-                    </button>
-                  </div>
-                </div>
-              `;
-            }).join("")}
-          </div>
-        `).join("");
-
-      return `
-        <div class="glass rounded-3xl p-4 space-y-2 border ${trip.dayIdx === todayIdx() && tripPending(trip).length ? "border-amber-500/50" : "border-slate-800"}">
-          <div class="flex items-start justify-between gap-2">
-            <div class="min-w-0">
-              <h3 class="text-sm font-extrabold text-white">${esc(info.title)}</h3>
-              <p class="text-[11px] text-slate-400">${esc(info.subtitle)}</p>
-            </div>
-            <span class="shrink-0 text-[11px] font-bold px-2.5 py-1 rounded-xl border ${info.badgeCls}">${info.badge}</span>
-          </div>
-          ${sectionsHtml}
-          <button onclick="copyChecklist(${i})" class="mt-2 w-full py-2 rounded-xl bg-slate-800 border border-slate-700 text-slate-200 text-[11px] font-bold">
-            📋 Copy this trip's checklist
-          </button>
-        </div>
-      `;
-    }
-
-    function renderShopTab() {
-      const mode = state.shopping.mode || "fresh";
-      const btnFresh = document.getElementById("shopModeFresh");
-      const btnFreezer = document.getElementById("shopModeFreezer");
-      const desc = document.getElementById("shopModeDesc");
-
-      if (mode === "fresh") {
-        btnFresh.className = "py-2 px-2.5 rounded-xl text-xs font-bold bg-emerald-500 text-slate-950 shadow transition text-center";
-        btnFreezer.className = "py-2 px-2.5 rounded-xl text-xs font-bold text-slate-400 transition text-center";
-        desc.textContent = "The fewest trips that keep everything fresh. Long-life items ride along on the first haul; meat is bought as late as its shelf life allows.";
-      } else {
-        btnFreezer.className = "py-2 px-2.5 rounded-xl text-xs font-bold bg-emerald-500 text-slate-950 shadow transition text-center";
-        btnFresh.className = "py-2 px-2.5 rounded-xl text-xs font-bold text-slate-400 transition text-center";
-        desc.textContent = "1-Trip Mode: buy 100% of the week's groceries on your first cooking day and freeze whatever won't last.";
-      }
-
-      renderSpendCard();
-      const trips = buildShoppingTrips();
-      const container = document.getElementById("shoppingTripsContainer");
-      const locked = state.planNegotiation.status === "locked";
-
-      let html = locked || !trips.length ? "" : `
-        <div class="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-[11px] text-amber-200">
-          The plan isn't locked yet, so this list can still change. Accept the plan on the Plan tab first.
-        </div>`;
-      html += trips.map((t, i) => renderShoppingTripCard(t, i)).join("");
-      if (trips.pantryList && trips.pantryList.length) {
-        html += `
-        <div class="glass rounded-3xl p-4 border border-cyan-500/30">
-          <h3 class="text-sm font-extrabold text-white">🧊 Take from your pantry / freezer</h3>
-          <p class="text-[11px] text-slate-400 mb-2">Already at home, so it isn't on the shopping list.</p>
-          ${trips.pantryList.map(i => `<div class="flex justify-between text-xs py-1 border-b border-slate-800/70"><span class="text-slate-200">${esc(i.name)}</span><strong class="text-cyan-300">${i.amount >= 1000 && i.unit === "g" ? i.amount / 1000 + " kg" : i.amount + " " + esc(i.unit)}</strong></div>`).join("")}
-        </div>`;
-      }
-
-      container.innerHTML = html || `<div class="glass rounded-3xl p-5 text-center text-xs text-slate-400">No ingredients needed yet. Build your weekly plan first!</div>`;
     }
 
     /********************************************************************
@@ -3980,6 +4028,7 @@
     function renderReminderBanner() {
       const el = document.getElementById("reminderBanner");
       const hide = () => { el.classList.add("hidden"); el.innerHTML = ""; };
+      if (!todayInPlanWeek()) return hide();
 
       const now = new Date();
       const idx = todayIdx();
@@ -4025,7 +4074,7 @@
     }
 
     function maybeFireNotification() {
-      if (!("Notification" in window) || Notification.permission !== "granted") return;
+      if (!("Notification" in window) || Notification.permission !== "granted" || !todayInPlanWeek()) return;
       const now = new Date();
       const hhmm = String(now.getHours()).padStart(2, "0") + ":" + String(now.getMinutes()).padStart(2, "0");
       const dayKey = DAY_KEYS[todayIdx()];
@@ -4106,7 +4155,7 @@
     /* ---- First-time tour ---- */
     const TOUR_STEPS = [
       { icon: "🍲", title: "Cook at home, save money", text: "This app plans your week's meals, builds one shopping list and reminds you to cook, so you stop ordering expensive delivery. Both phones stay in sync live." },
-      { icon: "📅", title: "1. Set your week", text: "On the Week tab, mark each of YOUR days as Home or Away, then tap Send. Your partner does the same on their phone. The app combines both and groups days into big batches so you cook as rarely as possible." },
+      { icon: "📅", title: "1. Set your days", text: "On the Calendar tab, tap each day you know: 1 tap = home, 2 taps = half day (at work, home for the afternoon), 3 taps = away. Select several days at once, then confirm. Your partner sets their own days on their phone." },
       { icon: "🔥", title: "2. Pick meals", text: "On the Meals tab, tap ❤️ for meals you'd eat and ✕ to skip. Each of you picks on your own phone, and meals your partner already picked are skipped for you. Tell the app what you hate in Setup and those meals vanish." },
       { icon: "🤝", title: "3. Agree on the plan", text: "On the Plan tab, the app proposes a week. Either of you can swap a meal or change portions, and the other sees what changed. When you both tap Accept, it's locked in." },
       { icon: "🛒", title: "4. Shop once, cook easy", text: "The Shop tab groups everything by aisle and trip day. Tap 🛒 Buy or 🏠 Home as you go and it updates on both phones. On cook day, tap a meal on the Plan tab for the recipe." },
@@ -4148,49 +4197,8 @@
     }
 
     /* ---- "Your next step" card ---- */
-    function renderNextStep() {
-      const me = state.swipes[currentUser] || {};
-      const myLikes = Object.values(me).filter(v => v === "right").length;
-      const neg = state.planNegotiation;
-      const locked = neg.status === "locked";
-      const trips = buildShoppingTrips();
-      const pending = trips.reduce((n, t) => n + tripPending(t).length, 0);
-
-      const steps = [
-        { label: "Week", done: !!state.availabilitySent[currentUser] },
-        { label: "Meals", done: myLikes >= 3 },
-        { label: "Plan", done: locked },
-        { label: "Shop", done: locked && trips.length > 0 && pending === 0 }
-      ];
-
-      let title, text, btn, tab;
-      if (!state.availabilitySent[currentUser]) {
-        title = "First: tell us when you're home"; text = "Mark each day Home or Away, then tap Send my week."; btn = "Set my days →"; tab = "week";
-      } else if (myLikes < 3) {
-        title = "Next: swipe a few meals"; text = `Like at least 3 meals (you have ${myLikes}). Your week above looks right? Then go swipe.`; btn = "Start swiping →"; tab = "swipe";
-      } else if (!locked) {
-        const mineOk = neg.acceptedBy && neg.acceptedBy[currentUser];
-        title = mineOk ? "Waiting for your partner" : "Next: review & accept the plan";
-        text = mineOk ? "You accepted. The plan locks as soon as they accept too." : "Check the proposed meals, change anything you don't like, then tap Accept.";
-        btn = "Open the plan →"; tab = "plan";
-      } else if ((neg.currentSlots || []).length && neg.currentSlots.every(s => s.cooked)) {
-        title = "All planned meals eaten 🍽"; text = "Need food for more days? Let the app pick extra meals and update your list."; btn = "Add extra meals →"; tab = "plan";
-      } else if (pending > 0) {
-        title = "Next: go shopping"; text = `${pending} item${pending === 1 ? "" : "s"} left on your list. Tap Buy or Home as you shop.`; btn = "Open shopping list →"; tab = "shop";
-      } else {
-        title = "All set! 🎉 Time to cook"; text = "Everything is bought. Open the Plan tab and tap a meal for the recipe. When the week ends, start a new one below."; btn = "See what to cook →"; tab = "plan";
-      }
-
-      document.getElementById("nextStepCard").innerHTML = `
-        <div class="flex items-center gap-1.5 mb-2">
-          ${steps.map(s => `<span class="flex-1 text-center text-[10px] font-bold py-1 rounded-lg ${s.done ? "bg-emerald-500/25 text-emerald-300" : "bg-slate-800 text-slate-500"}">${s.done ? "✓ " : ""}${s.label}</span>`).join("")}
-        </div>
-        <div class="text-sm font-extrabold text-white">${title}</div>
-        <p class="text-xs text-slate-300 mt-0.5 mb-3">${text}</p>
-        <button onclick="switchTab('${tab}')" class="w-full py-2.5 rounded-xl bg-emerald-500 text-slate-950 font-extrabold text-xs">${btn}</button>`;
-    }
-
     function renderAll() {
+      renderHeader();
       renderNextStep();
       renderTopUserToggle();
       renderWeekTab();
@@ -4199,7 +4207,6 @@
       renderShopTab();
       renderSetupTab();
       renderReminderBanner();
-      document.getElementById("headerSub").textContent = `${getActiveRecipes().length} Fast, Cheap, Healthy Meals`;
     }
 
     window.addEventListener("DOMContentLoaded", () => {
