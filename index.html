@@ -299,17 +299,34 @@
       <details class="glass rounded-3xl">
         <summary class="p-4 flex items-center justify-between">
           <div>
-            <div class="text-sm font-bold text-white">💰 Money</div>
-            <div class="text-[11px] text-slate-400">What delivery would cost us</div>
+            <div class="text-sm font-bold text-white">💰 Money & currency</div>
+            <div class="text-[11px] text-slate-400">Euro or forint, delivery price</div>
           </div>
           <span class="chev text-slate-400">▾</span>
         </summary>
-        <div class="px-4 pb-4">
-          <p class="text-xs text-slate-400 mb-3">Price of one delivered portion. Used to work out how much you save by cooking.</p>
-          <div class="flex items-center gap-2">
-            <span class="text-sm text-slate-300">€</span>
-            <input id="deliveryPriceInput" type="number" inputmode="decimal" min="1" step="0.5" onchange="setDeliveryPrice(this.value)" class="w-24 px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white" />
-            <span class="text-xs text-slate-400">per portion</span>
+        <div class="px-4 pb-4 space-y-3.5">
+          <div>
+            <div class="text-xs font-bold text-slate-300 mb-1.5">Currency</div>
+            <div class="grid grid-cols-2 gap-1.5 bg-slate-900/90 p-1 rounded-2xl border border-slate-800">
+              <button id="curEUR" onclick="setCurrency('EUR')">€ Euro</button>
+              <button id="curHUF" onclick="setCurrency('HUF')">Ft Forint</button>
+            </div>
+          </div>
+          <div id="rateRow" class="hidden">
+            <div class="text-xs text-slate-400 mb-1.5">Exchange rate. Check today's rate. Recipe prices are kept in euros and converted. Changing the rate re-values older receipts slightly.</div>
+            <div class="flex items-center gap-2">
+              <span class="text-sm text-slate-300">1 € =</span>
+              <input id="eurRateInput" type="number" inputmode="decimal" min="1" step="1" onchange="setEurRate(this.value)" class="w-24 px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white" />
+              <span class="text-sm text-slate-300">Ft</span>
+            </div>
+          </div>
+          <div>
+            <p class="text-xs text-slate-400 mb-2">Price of one delivered portion. Used to work out how much you save by cooking.</p>
+            <div class="flex items-center gap-2">
+              <input id="deliveryPriceInput" type="number" inputmode="decimal" min="1" step="0.5" onchange="setDeliveryPrice(this.value)" class="w-28 px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white" />
+              <span id="currencySym" class="text-sm text-slate-300">€</span>
+              <span class="text-xs text-slate-400">per portion</span>
+            </div>
           </div>
         </div>
       </details>
@@ -1532,7 +1549,7 @@
         customRecipes: [],
         recipeMultipliers: {},
         hiddenRecipes: {},
-        settings: { deliveryPrice: 13, pantryMax: 2 },
+        settings: { deliveryPrice: 13, pantryMax: 2, currency: "EUR", eurRate: 390 },
         history: [],
         spending: [],
         pantry: [],
@@ -2380,7 +2397,7 @@
         { key: "none", label: "❄️ No cooking", test: r => /no cooking/i.test(r.equipment) }
       ] },
       { key: "extra", label: "Also", options: [
-        { key: "cheap", label: "💰 Under €1.50", test: r => parseCost(r.costPerPortion) < 1.5 },
+        { key: "cheap", label: "💰 Extra cheap", test: r => parseCost(r.costPerPortion) < 1.5 },
         { key: "hiprot", label: "💪 40 g+ protein", test: r => r.protein >= 40 },
         { key: "stock", label: "🧊 Uses our stock", test: r => recipeUsesPantry(r) }
       ] }
@@ -2453,7 +2470,7 @@
             <h3 class="text-xl font-extrabold text-white leading-snug">${esc(top.name)}</h3>
             <div class="flex flex-wrap gap-1.5">
               <span class="text-xs font-bold px-2.5 py-1 rounded-lg bg-cyan-500/15 text-cyan-300">⏱ ${esc(top.prepTime)}</span>
-              <span class="text-xs font-bold px-2.5 py-1 rounded-lg bg-amber-500/15 text-amber-300">💰 ${esc(top.costPerPortion)}</span>
+              <span class="text-xs font-bold px-2.5 py-1 rounded-lg bg-amber-500/15 text-amber-300">💰 ${costLabel(top.costPerPortion)}</span>
               <span class="text-xs font-bold px-2.5 py-1 rounded-lg bg-emerald-500/15 text-emerald-300">💪 ${Math.round(top.protein * mult)}g protein</span>
               <span class="text-xs font-bold px-2.5 py-1 rounded-lg bg-slate-800 text-slate-300">🍳 ${esc(top.equipment)}</span>
             </div>
@@ -2693,8 +2710,8 @@
               <input type="number" inputmode="numeric" value="${d.prepMinutes}" oninput="draftSetNum('prepMinutes', this.value)" class="${smallCls} mt-1" />
             </div>
             <div>
-              <label class="text-[11px] font-semibold text-slate-400">Cost per portion (€)</label>
-              <input type="number" inputmode="decimal" step="0.05" value="${d.costNum}" oninput="draftSetNum('costNum', this.value)" class="${smallCls} mt-1" />
+              <label class="text-[11px] font-semibold text-slate-400">Cost per portion (${currSym()})</label>
+              <input type="number" inputmode="decimal" step="any" value="${Math.round(fromEur(d.costNum) * 100) / 100}" oninput="draftSetCost(this.value)" class="${smallCls} mt-1" />
             </div>
           </div>
           <div>
@@ -2883,7 +2900,24 @@
     }
 
     /* ---- Money tracker ---- */
-    function fmtEur(n) { return "€" + (Math.round(n * 100) / 100).toFixed(2); }
+    function curr() { return (state.settings && state.settings.currency) || "EUR"; }
+    function eurRate() { return Number(state.settings && state.settings.eurRate) || 390; }
+    function fromEur(e) { return curr() === "HUF" ? e * eurRate() : e; }
+    function toEur(v) { return curr() === "HUF" ? v / eurRate() : v; }
+    function currSym() { return curr() === "HUF" ? "Ft" : "€"; }
+    function fmtEur(n) {
+      if (curr() === "HUF") return hufNum(n * eurRate()) + " Ft";
+      return "€" + (Math.round(n * 100) / 100).toFixed(2);
+    }
+    function hufNum(v) { return String(Math.round(v)).replace(/\B(?=(\d{3})+(?!\d))/g, "\u00a0"); }
+    // a receipt shows exactly what was typed while the currency is unchanged
+    function entryMoney(e, which) {
+      const orig = which === "extras" ? e.extrasOrig : e.orig;
+      const eur = which === "extras" ? e.extras : e.amount;
+      if (e.cur && e.cur === curr() && orig != null) return curr() === "HUF" ? hufNum(orig) + " Ft" : "€" + Number(orig).toFixed(2);
+      return fmtEur(eur);
+    }
+    function costLabel(str) { return fmtEur(parseCost(str)); }
 
     // Cost uses scaled portions (bigger appetite = more food bought);
     // delivery comparison counts people-meals (base portions) only.
@@ -3094,13 +3128,6 @@
     }
 
     /* ---- Week at a glance ---- */
-    function setDeliveryPrice(val) {
-      const n = Number(val);
-      if (!n || n < 1) return;
-      state.settings.deliveryPrice = n;
-      saveStateAndSync(currentUser);
-    }
-
     let moneyOpen = false;
 
     /* ---- Ping-pong diff: which slots did the partner change? ---- */
@@ -3417,6 +3444,49 @@
       return isNaN(n) ? 2 : n;
     }
 
+    function setDeliveryPrice(val) {
+      const n = toEur(Number(val));
+      if (!n || n <= 0) return;
+      state.settings.deliveryPrice = n;
+      saveStateAndSync(currentUser);
+    }
+
+    function setCurrency(c) {
+      state.settings.currency = c === "HUF" ? "HUF" : "EUR";
+      saveStateAndSync(currentUser);
+    }
+
+    function setEurRate(val) {
+      const n = Number(val);
+      if (!n || n < 1) return;
+      state.settings.eurRate = n;
+      saveStateAndSync(currentUser);
+    }
+
+    function draftSetCost(val) {
+      if (draftRecipe) draftRecipe.costNum = toEur(Number(val) || 0);
+    }
+
+    function updateCurrencyUI() {
+      const sym = currSym(), huf = curr() === "HUF";
+      const a = document.getElementById("spendAmount"), e = document.getElementById("spendExtras");
+      if (a) { a.placeholder = `${sym} total`; a.step = huf ? "1" : "0.01"; }
+      if (e) { e.placeholder = `${sym} extras`; e.step = huf ? "1" : "0.01"; }
+      document.getElementById("currencySym").textContent = sym;
+      const pe = document.getElementById("deliveryPriceInput");
+      if (pe && document.activeElement !== pe) {
+        pe.value = huf ? Math.round(fromEur(state.settings.deliveryPrice)) : Math.round(state.settings.deliveryPrice * 100) / 100;
+        pe.step = huf ? "100" : "0.5";
+      }
+      const re = document.getElementById("eurRateInput");
+      if (re && document.activeElement !== re) re.value = eurRate();
+      document.getElementById("rateRow").classList.toggle("hidden", !huf);
+      const on = "py-2 rounded-xl text-xs font-bold bg-emerald-500 text-slate-950 shadow transition text-center";
+      const off = "py-2 rounded-xl text-xs font-bold text-slate-400 transition text-center";
+      document.getElementById("curEUR").className = huf ? off : on;
+      document.getElementById("curHUF").className = huf ? on : off;
+    }
+
     function weekEntries() {
       const wk = planMondayISO();
       const legacyStart = getWeekMonday().getTime();
@@ -3434,13 +3504,16 @@
     }
 
     function addSpend() {
-      const amt = Number(document.getElementById("spendAmount").value);
+      const rawAmt = Number(document.getElementById("spendAmount").value);
+      const amt = toEur(rawAmt);
       if (!amt || amt <= 0) { showToast("Type the receipt total first"); return; }
       const note = document.getElementById("spendNote").value.trim();
-      const extras = Math.min(amt, Math.max(0, Number(document.getElementById("spendExtras").value) || 0));
+      const rawExtras = Math.max(0, Number(document.getElementById("spendExtras").value) || 0);
+      const extras = Math.min(amt, toEur(rawExtras));
       const extrasNote = document.getElementById("spendExtrasNote").value.trim();
-      const entry = { id: "sp" + Date.now(), ts: Date.now(), week: planMondayISO(), amount: Math.round(amt * 100) / 100, note, by: currentUser };
-      if (extras > 0) { entry.extras = Math.round(extras * 100) / 100; if (extrasNote) entry.extrasNote = extrasNote; }
+      const entry = { id: "sp" + Date.now(), ts: Date.now(), week: planMondayISO(), amount: Math.round(amt * 10000) / 10000, note, by: currentUser };
+      entry.cur = curr(); entry.orig = rawAmt;
+      if (extras > 0) { entry.extrasOrig = Math.min(rawAmt, rawExtras); entry.extras = Math.round(extras * 10000) / 10000; if (extrasNote) entry.extrasNote = extrasNote; }
       state.spending.push(entry);
       state.spending = state.spending.slice(-200);
       ["spendAmount", "spendNote", "spendExtras", "spendExtrasNote"].forEach(id => { document.getElementById(id).value = ""; });
@@ -3740,7 +3813,7 @@
         </div>
         ${m.extras > 0 ? `<div class="mt-2.5 p-2.5 rounded-2xl bg-pink-500/10 border border-pink-500/30 text-xs text-pink-200">➕ Extras not on the list: <strong>${fmtEur(m.extras)}</strong>${m.spent + m.extras > 0 ? ` (${Math.round(m.extras / (m.spent + m.extras) * 100)}% of what you spent)` : ""}</div>` : ""}
         <div class="mt-3 p-3 rounded-2xl bg-slate-900/80 border border-slate-800 text-xs space-y-1">
-          <div class="flex justify-between text-slate-300"><span>Delivery instead (${m.portions} meals × €${m.price})</span><strong class="text-rose-300">${fmtEur(m.delivery)}</strong></div>
+          <div class="flex justify-between text-slate-300"><span>Delivery instead (${m.portions} meals × ${fmtEur(m.price)})</span><strong class="text-rose-300">${fmtEur(m.delivery)}</strong></div>
           <div class="flex justify-between text-slate-300"><span>${m.real ? "Cooking at home (real)" : "Cooking at home (estimate)"}</span><strong class="text-white">${fmtEur(m.cost)}</strong></div>
           <div class="flex justify-between pt-1.5 border-t border-slate-800"><span class="font-bold text-white">${m.real ? "We saved" : "We will save (projected)"}</span><strong class="text-emerald-300 text-sm">${fmtEur(Math.max(0, m.saved))}</strong></div>
         </div>
@@ -3750,8 +3823,8 @@
       const mine = (state.spending || []).filter(e => e.week ? e.week === wk : e.ts >= getWeekMonday().getTime()).sort((a, b) => b.ts - a.ts);
       document.getElementById("spendList").innerHTML = mine.map(e => `
         <div class="flex items-center justify-between p-2 rounded-xl bg-slate-900/70 border border-slate-800 text-xs">
-          <span class="text-slate-300">${new Date(e.ts).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}${e.note ? " · " + esc(e.note) : ""} <span class="text-slate-500">${e.by === "fruzsi" ? "👩" : "👦"}</span>${e.extras ? `<span class="block text-[10px] text-pink-300">incl. ${fmtEur(e.extras)} extras${e.extrasNote ? ": " + esc(e.extrasNote) : ""}</span>` : ""}</span>
-          <span class="flex items-center gap-2"><strong class="text-white">${fmtEur(e.amount)}</strong><button onclick="deleteSpend('${esc(e.id)}')" class="text-slate-500 px-1">✕</button></span>
+          <span class="text-slate-300">${new Date(e.ts).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}${e.note ? " · " + esc(e.note) : ""} <span class="text-slate-500">${e.by === "fruzsi" ? "👩" : "👦"}</span>${e.extras ? `<span class="block text-[10px] text-pink-300">incl. ${entryMoney(e, "extras")} extras${e.extrasNote ? ": " + esc(e.extrasNote) : ""}</span>` : ""}</span>
+          <span class="flex items-center gap-2"><strong class="text-white">${entryMoney(e, "amount")}</strong><button onclick="deleteSpend('${esc(e.id)}')" class="text-slate-500 px-1">✕</button></span>
         </div>`).join("");
 
       const rows = (state.history || []).slice(-6).map(h => ({ label: String(h.week || "").replace("Week of ", ""), spent: Number(h.cost) || 0, delivery: (Number(h.cost) || 0) + (Number(h.saved) || 0) }));
@@ -3766,7 +3839,7 @@
                 <div class="h-2 rounded bg-rose-400/70" style="width:${Math.max(2, r.delivery / max * 100)}%"></div>
                 <div class="h-2 rounded bg-emerald-400" style="width:${Math.max(2, r.spent / max * 100)}%"></div>
               </div>
-              <span class="w-14 text-right text-[10px] text-emerald-300 font-bold shrink-0">+${fmtEur(Math.max(0, r.delivery - r.spent)).replace(".00", "")}</span>
+              <span class="w-16 text-right text-[10px] text-emerald-300 font-bold shrink-0">+${fmtEur(Math.max(0, r.delivery - r.spent)).replace(".00", "")}</span>
             </div>`).join("")}
         </div>
         <div class="flex gap-3 mt-2 text-[10px] text-slate-400"><span><span class="inline-block w-2 h-2 rounded bg-rose-400/70"></span> delivery</span><span><span class="inline-block w-2 h-2 rounded bg-emerald-400"></span> cooking at home</span></div>`;
@@ -4143,15 +4216,14 @@
       }).join("");
 
       renderPantry();
-      const priceEl = document.getElementById("deliveryPriceInput");
-      if (priceEl && document.activeElement !== priceEl) priceEl.value = state.settings.deliveryPrice;
+      updateCurrencyUI();
 
       const customs = state.customRecipes || [];
       document.getElementById("customMealsList").innerHTML = customs.length ? customs.map(r => `
         <div class="p-2.5 rounded-2xl bg-slate-900/80 border border-slate-800 flex items-center justify-between gap-2">
           <div class="min-w-0">
             <div class="text-xs font-bold text-white truncate">${esc(r.name)}</div>
-            <div class="text-[11px] text-slate-400">${esc(r.prepTime)} • ${r.protein}g P • ${esc(r.costPerPortion)}</div>
+            <div class="text-[11px] text-slate-400">${esc(r.prepTime)} • ${r.protein}g P • ${costLabel(r.costPerPortion)}</div>
           </div>
           <button onclick="openAddRecipeModal('${esc(r.id)}')" class="shrink-0 px-3 py-1.5 rounded-xl bg-slate-800 border border-slate-700 text-slate-200 text-[11px] font-bold">✏️ Edit</button>
         </div>`).join("")
@@ -4224,6 +4296,7 @@
       renderShopTab();
       renderSetupTab();
       renderReminderBanner();
+      updateCurrencyUI();
     }
 
     window.addEventListener("DOMContentLoaded", () => {
