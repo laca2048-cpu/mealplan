@@ -236,8 +236,12 @@
           <span id="budgetWeek" class="text-[11px] text-slate-400"></span>
         </div>
         <div id="budgetSummary"></div>
+        <label class="block w-full py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 font-extrabold text-sm text-center cursor-pointer">
+          📷 Scan a receipt
+          <input id="scanInput" type="file" accept="image/*" class="hidden" onchange="scanPicked(this)" />
+        </label>
         <div>
-          <div class="text-[11px] font-bold text-slate-400 mb-1.5">Add a receipt</div>
+          <div class="text-[11px] font-bold text-slate-400 mb-1.5">Or type a receipt in</div>
           <div class="flex gap-2">
             <input id="spendAmount" type="number" inputmode="decimal" step="0.01" min="0" placeholder="€ total" class="w-24 px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white" />
             <input id="spendNote" type="text" placeholder="Store (optional)" class="flex-1 min-w-0 px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white" />
@@ -249,6 +253,10 @@
           </div>
         </div>
         <div id="spendList" class="space-y-1.5"></div>
+        <details>
+          <summary class="text-xs font-semibold text-slate-300">🏷️ What things really cost <span class="chev">▾</span></summary>
+          <div class="mt-2"><div class="text-[11px] text-slate-500 mb-1">Latest price of each product from your scanned receipts, per piece.</div><div id="priceBook"></div></div>
+        </details>
         <details>
           <summary class="text-xs font-semibold text-slate-300">📊 Week by week <span class="chev">▾</span></summary>
           <div id="historyCard" class="mt-2"></div>
@@ -385,6 +393,17 @@
         <button onclick="closeAddRecipeModal()" class="text-slate-400 text-sm px-2 py-1">✕</button>
       </div>
       <div id="addRecipeBody"></div>
+    </div>
+  </div>
+
+  <!-- RECEIPT SCANNER -->
+  <div id="scanModal" class="fixed inset-0 z-[56] bg-slate-950/95 backdrop-blur-xl hidden overflow-y-auto">
+    <div class="max-w-md mx-auto p-4 pb-6">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-base font-extrabold text-white">📷 Scan a receipt</h3>
+        <button onclick="closeScan()" class="text-slate-400 text-sm px-2 py-1">✕</button>
+      </div>
+      <div id="scanBody"></div>
     </div>
   </div>
 
@@ -1604,7 +1623,7 @@
       s.hiddenRecipes = r.hiddenRecipes || {};
       s.settings = Object.assign({}, d.settings, r.settings || {});
       s.history = toArr(r.history);
-      s.spending = toArr(r.spending);
+      s.spending = toArr(r.spending).map(e => e && e.items ? Object.assign({}, e, { items: toArr(e.items) }) : e);
       s.pantry = toArr(r.pantry);
       s.subs = r.subs || {};
       s.planWeekStart = r.planWeekStart || isoDate(mondayOf(new Date()));
@@ -2906,7 +2925,7 @@
     function toEur(v) { return curr() === "HUF" ? v / eurRate() : v; }
     function currSym() { return curr() === "HUF" ? "Ft" : "€"; }
     function fmtEur(n) {
-      if (curr() === "HUF") return hufNum(n * eurRate()) + " Ft";
+      if (curr() === "HUF") return hufNum(n * eurRate()) + "\u00a0Ft";
       return "€" + (Math.round(n * 100) / 100).toFixed(2);
     }
     function hufNum(v) { return String(Math.round(v)).replace(/\B(?=(\d{3})+(?!\d))/g, "\u00a0"); }
@@ -2914,7 +2933,7 @@
     function entryMoney(e, which) {
       const orig = which === "extras" ? e.extrasOrig : e.orig;
       const eur = which === "extras" ? e.extras : e.amount;
-      if (e.cur && e.cur === curr() && orig != null) return curr() === "HUF" ? hufNum(orig) + " Ft" : "€" + Number(orig).toFixed(2);
+      if (e.cur && e.cur === curr() && orig != null) return curr() === "HUF" ? hufNum(orig) + "\u00a0Ft" : "€" + Number(orig).toFixed(2);
       return fmtEur(eur);
     }
     function costLabel(str) { return fmtEur(parseCost(str)); }
@@ -3521,6 +3540,627 @@
       showToast("Saved " + fmtEur(amt));
     }
 
+    // ---------- receipt photo preparation: find the paper, straighten, clean up ----------
+    function rcCanvas(w, h) { const c = document.createElement("canvas"); c.width = Math.max(1, Math.round(w)); c.height = Math.max(1, Math.round(h)); return c; }
+
+    function rcGray(c) {
+      const d = c.getContext("2d").getImageData(0, 0, c.width, c.height).data;
+      const g = new Uint8ClampedArray(c.width * c.height);
+      for (let i = 0, j = 0; i < g.length; i++, j += 4) g[i] = (d[j] * 77 + d[j + 1] * 150 + d[j + 2] * 29) >> 8;
+      return g;
+    }
+
+    function rcOtsu(g) {
+      const h = new Array(256).fill(0);
+      for (let i = 0; i < g.length; i++) h[g[i]]++;
+      let sum = 0; for (let i = 0; i < 256; i++) sum += i * h[i];
+      let wB = 0, sB = 0, best = 0, th = 128;
+      for (let t = 0; t < 256; t++) {
+        wB += h[t]; if (!wB) continue;
+        const wF = g.length - wB; if (!wF) break;
+        sB += t * h[t];
+        const mB = sB / wB, mF = (sum - sB) / wF;
+        const v = wB * wF * (mB - mF) * (mB - mF);
+        if (v > best) { best = v; th = t; }
+      }
+      return th;
+    }
+
+    // rotate/crop the photo so the paper is upright and fills the frame.
+    // The paper is found by where the printed text is: lots of horizontal edges (wood grain has few).
+    function rcStraighten(src) {
+      const k = Math.min(1, 1500 / Math.max(src.width, src.height));
+      const mw = Math.max(48, Math.round(src.width * k)), mh = Math.max(48, Math.round(src.height * k));
+      const m = rcCanvas(mw, mh); m.getContext("2d").drawImage(src, 0, 0, mw, mh);
+      const g = rcGray(m), cell = 12, cw = Math.floor(mw / cell), ch = Math.floor(mh / cell);
+      if (cw < 6 || ch < 6) return src;
+      const dens = new Float32Array(cw * ch);
+      for (let y = 1; y < mh - 1; y++) {
+        const cy = (y / cell) | 0; if (cy >= ch) break;
+        for (let x = 0; x < mw; x++) {
+          const cx = (x / cell) | 0; if (cx >= cw) break;
+          if (Math.abs(g[(y + 1) * mw + x] - g[(y - 1) * mw + x]) > 40) dens[cy * cw + cx]++;
+        }
+      }
+      let mask = new Uint8Array(cw * ch);
+      for (let i = 0; i < mask.length; i++) mask[i] = dens[i] / (cell * cell) > 0.13 ? 1 : 0;
+      const dil = new Uint8Array(cw * ch); // grow by 2 cells so the lines of text join up
+      for (let y = 0; y < ch; y++) for (let x = 0; x < cw; x++) if (mask[y * cw + x])
+        for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) { const xx = x + dx, yy = y + dy; if (xx >= 0 && yy >= 0 && xx < cw && yy < ch) dil[yy * cw + xx] = 1; }
+      const lab = new Int32Array(cw * ch); let bestId = 0, best = 0, id = 0;
+      for (let s = 0; s < cw * ch; s++) {
+        if (lab[s] || !dil[s]) continue;
+        id++; let n = 0; const st = [s]; lab[s] = id;
+        while (st.length) {
+          const p = st.pop(); if (mask[p]) n += dens[p];
+          const x = p % cw, y = (p / cw) | 0;
+          if (x > 0 && !lab[p - 1] && dil[p - 1]) { lab[p - 1] = id; st.push(p - 1); }
+          if (x < cw - 1 && !lab[p + 1] && dil[p + 1]) { lab[p + 1] = id; st.push(p + 1); }
+          if (y > 0 && !lab[p - cw] && dil[p - cw]) { lab[p - cw] = id; st.push(p - cw); }
+          if (y < ch - 1 && !lab[p + cw] && dil[p + cw]) { lab[p + cw] = id; st.push(p + cw); }
+        }
+        if (n > best) { best = n; bestId = id; }
+      }
+      if (!bestId) return src;
+      let cnt = 0, sx = 0, sy = 0, sxx = 0, syy = 0, sxy = 0;
+      for (let p = 0; p < cw * ch; p++) if (lab[p] === bestId && mask[p]) { const x = p % cw, y = (p / cw) | 0; cnt++; sx += x; sy += y; sxx += x * x; syy += y * y; sxy += x * y; }
+      if (cnt < 12) return src;
+      const mx = sx / cnt, my = sy / cnt;
+      const cxx = sxx / cnt - mx * mx, cyy = syy / cnt - my * my, cxy = sxy / cnt - mx * my;
+      const phi = 0.5 * Math.atan2(2 * cxy, cxx - cyy);
+      let a = Math.PI / 2 - phi; while (a > Math.PI / 2) a -= Math.PI; while (a < -Math.PI / 2) a += Math.PI;
+      if (Math.abs(a) > 0.35 || cyy < cxx * 1.2) a = 0; // not a tall strip: only crop, do not rotate
+      const ca = Math.cos(a), sa = Math.sin(a);
+      const cx0 = mw / 2, cy0 = mh / 2;
+      const rp = [];
+      for (let p = 0; p < cw * ch; p++) if (lab[p] === bestId && mask[p]) {
+        const x = (p % cw) * cell + cell / 2 - cx0, y = ((p / cw) | 0) * cell + cell / 2 - cy0;
+        rp.push(ca * x - sa * y, sa * x + ca * y);
+      }
+      // the paper is the busiest band of columns: ignore stray patches (glare, wood) beside it
+      let lo = 1e9; for (let i = 0; i < rp.length; i += 2) if (rp[i] < lo) lo = rp[i];
+      const colMass = [];
+      for (let i = 0; i < rp.length; i += 2) { const b = Math.floor((rp[i] - lo) / cell); colMass[b] = (colMass[b] || 0) + 1; }
+      for (let b = 0; b < colMass.length; b++) colMass[b] = colMass[b] || 0;
+      let pk = 0; for (let b = 1; b < colMass.length; b++) if (colMass[b] > colMass[pk]) pk = b;
+      const cut = colMass[pk] * 0.2;
+      let bl = pk, br = pk;
+      for (let b = pk - 1, gap = 0; b >= 0 && gap <= 1; b--) { if (colMass[b] >= cut) { bl = b; gap = 0; } else gap++; }
+      for (let b = pk + 1, gap = 0; b < colMass.length && gap <= 1; b++) { if (colMass[b] >= cut) { br = b; gap = 0; } else gap++; }
+      let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
+      for (let i = 0; i < rp.length; i += 2) {
+        const b = Math.floor((rp[i] - lo) / cell); if (b < bl || b > br) continue;
+        if (rp[i] < x0) x0 = rp[i]; if (rp[i] > x1) x1 = rp[i]; if (rp[i + 1] < y0) y0 = rp[i + 1]; if (rp[i + 1] > y1) y1 = rp[i + 1];
+      }
+      const f = src.width / mw, pad = cell * 1.6;
+      x0 = (x0 - pad) * f; x1 = (x1 + pad) * f; y0 = (y0 - pad) * f; y1 = (y1 + pad) * f;
+      const ow = x1 - x0, oh = y1 - y0;
+      if (ow < 60 || oh < 60) return src;
+      const out = rcCanvas(ow, oh), ctx = out.getContext("2d");
+      ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, out.width, out.height);
+      const ccx = cx0 * f, ccy = cy0 * f;
+      ctx.setTransform(ca, sa, -sa, ca, -(ca * ccx - sa * ccy) - x0, -(sa * ccx + ca * ccy) - y0);
+      ctx.drawImage(src, 0, 0);
+      return out;
+    }
+
+    // flatten the lighting (shadows, folds) and boost the ink, keeping soft grey edges
+    function rcFlatten(src) {
+      const w = src.width, h = src.height, g = rcGray(src);
+      const I = new Float64Array((w + 1) * (h + 1));
+      for (let y = 0; y < h; y++) { let row = 0; for (let x = 0; x < w; x++) { row += g[y * w + x]; I[(y + 1) * (w + 1) + x + 1] = I[y * (w + 1) + x + 1] + row; } }
+      const r = Math.max(8, Math.round(w / 40));
+      const out = rcCanvas(w, h), ctx = out.getContext("2d"), img = ctx.createImageData(w, h);
+      for (let y = 0; y < h; y++) {
+        const ya = Math.max(0, y - r), yb = Math.min(h, y + r + 1);
+        for (let x = 0; x < w; x++) {
+          const xa = Math.max(0, x - r), xb = Math.min(w, x + r + 1);
+          const m = (I[yb * (w + 1) + xb] - I[ya * (w + 1) + xb] - I[yb * (w + 1) + xa] + I[ya * (w + 1) + xa]) / ((xb - xa) * (yb - ya));
+          const o = (y * w + x) * 4, v = Math.max(0, Math.min(255, ((g[y * w + x] / (m + 1)) - 0.45) / 0.5 * 255));
+          img.data[o] = img.data[o + 1] = img.data[o + 2] = v; img.data[o + 3] = 255;
+        }
+      }
+      ctx.putImageData(img, 0, 0);
+      return out;
+    }
+
+    // small remaining tilt of the text lines (+-4 degrees), found from the row profile
+    function rcDeskew(bin) {
+      const w = bin.width, h = bin.height, d = bin.getContext("2d").getImageData(0, 0, w, h).data;
+      const pts = [], step = Math.max(1, Math.round(Math.sqrt(w * h / 60000)));
+      for (let y = 0; y < h; y += step) for (let x = 0; x < w; x += step) if (d[(y * w + x) * 4] < 110) pts.push(x, y);
+      let bestA = 0, bestS = -1;
+      for (let a = -4; a <= 4.001; a += 0.25) {
+        const t = Math.tan(a * Math.PI / 180), bins = new Float64Array(h * 2 + 4);
+        for (let i = 0; i < pts.length; i += 2) bins[Math.max(0, Math.round(pts[i + 1] + pts[i] * t + h * 0.5))]++;
+        let s = 0; for (let i = 0; i < bins.length; i++) s += bins[i] * bins[i];
+        if (s > bestS) { bestS = s; bestA = a; }
+      }
+      if (Math.abs(bestA) < 0.3) return bin;
+      const ang = -bestA * Math.PI / 180, out = rcCanvas(w, h), ctx = out.getContext("2d");
+      ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, w, h);
+      ctx.translate(w / 2, h / 2); ctx.rotate(ang); ctx.drawImage(bin, -w / 2, -h / 2);
+      return out;
+    }
+
+    // photo (<img>) -> canvas ready for OCR. whole = skip the paper search and use the entire photo
+    function prepareReceipt(img, whole) {
+      const nw = img.naturalWidth || img.width, nh = img.naturalHeight || img.height;
+      const k = Math.min(1, 2600 / Math.max(nw, nh));
+      const c0 = rcCanvas(nw * k, nh * k); c0.getContext("2d").drawImage(img, 0, 0, c0.width, c0.height);
+      const c = whole ? c0 : rcStraighten(c0);
+      const s = Math.max(0.5, Math.min(3, 1200 / c.width));
+      const c2 = rcCanvas(c.width * s, c.height * s), x2 = c2.getContext("2d");
+      x2.imageSmoothingQuality = "high"; x2.drawImage(c, 0, 0, c2.width, c2.height);
+      return rcDeskew(rcFlatten(c2));
+    }
+
+    // ---------- receipt text -> products, discounts, total; misreads are repaired with the receipt's own sums ----------
+    const RC_STORES = ["SPAR", "INTERSPAR", "TESCO", "LIDL", "ALDI", "AUCHAN", "CBA", "COOP", "PENNY", "ROSSMANN", "MÜLLER", "DM", "PROFI", "REAL", "METRO"];
+
+    function rcAmountOf(tok) {
+      const neg = /^\s*-/.test(tok);
+      const n = parseInt(String(tok).replace(/[^0-9]/g, ""), 10);
+      return isNaN(n) ? null : (neg ? -n : n);
+    }
+
+    // "NAME      1 923 Ft" -> { name, amount }, amount is null when the line has none
+    function rcSplit(line) {
+      line = line.replace(/(\d{2,})\s+[0-9A-Za-z]$/, "$1");
+      const m = line.match(/^(.*?)(\s{3,}|\s)(-?\s?\d{1,3}(?: \d{3})+|-?\s?\d+)\s*(?:Ft|HUF|F1)?[^A-Za-z0-9]*$/);
+      if (!m) return { name: line.trim(), amount: null };
+      const tok = m[3];
+      if (m[2].length < 3 && !/^\s*-/.test(tok) && !/ /.test(tok.trim())) return { name: line.trim(), amount: null }; // a size like 250G read as 2506
+      return { name: m[1].trim(), amount: rcAmountOf(tok) };
+    }
+
+    function rcName(raw) {
+      const parts = raw.split(/\s+/).map(t => t.replace(/^[^A-Za-zÁ-űÉ£0-9]+/, "")).filter(Boolean);
+      while (parts.length > 1 && (/^\d{1,2}$/.test(parts[0]) || /^[A-Za-zÁ-ű]$/.test(parts[0]) || /^e?[A-Za-z£8]?[0OoDd]{2}$/.test(parts[0]))) parts.shift(); // row noise and the VAT class code (B00, eC00)
+      let s = parts.join(" ").replace(/[^A-Za-zÁ-űÉ0-9%.,'\/+\- ]+/g, " ");
+      s = s.replace(/(^|[\s.])(\d{2,3}[05])[64]\b/g, "$1$2G").replace(/BU[O0]GET/g, "BUDGET").replace(/^5-/, "S-");
+      s = s.replace(/([A-Za-zÁ-ű])0([A-Za-zÁ-ű])/g, "$1O$2").replace(/\s+/g, " ").trim();
+      s = s.toLowerCase().replace(/(\d)g\b/g, "$1g");
+      const w = s.match(/^(.*?\b\d+(?:[.,]\d+)?\s?(?:g|kg|dkg|ml|l|dl|cl)\b)(.*)$/); // stray marks after the size are not part of the name
+      if (w && !/[a-zá-ű]{3}/.test(w[2])) s = w[1];
+      s = s.replace(/(\s+[^\s0-9]){1,3}$/, m => (/[a-zá-ű]{2}/.test(m) ? m : "")).trim();
+      s = s.replace(/[.,\-\s]+$/, "");
+      return s.charAt(0).toUpperCase() + s.slice(1);
+    }
+
+    function parseReceipt(text) {
+      const lines = String(text || "").replace(/[‒–—−]/g, "-").split(/\r?\n/).map(l => l.replace(/ /g, " ").replace(/\s+$/, ""));
+      let start = 0, end = lines.length, totalIdx = -1;
+      const PAY = /repon|k[eé]szp|keszp|mastercard|visa|maestro|k[aá]rty|sz[eé]p|utalv|paypass|bankk/i;
+      lines.forEach((l, i) => { if (totalIdx < 0 && (/^\W*[ÖO0]SSZ/i.test(l) && !/ES\s*H|EG\s*\/|pont/i.test(l) || /FIZETEND/i.test(l))) totalIdx = i; });
+      let payStart = totalIdx;
+      if (payStart < 0) lines.forEach((l, i) => { if (payStart < 0 && PAY.test(l) && rcSplit(l).amount != null) payStart = i; });
+      end = totalIdx >= 0 ? totalIdx : (payStart >= 0 ? payStart : lines.length);
+      for (let i = 0; i < Math.min(end, 24); i++) if (/menny|egys[eé]g|[eé]rt[eé]k\b|megnev/i.test(lines[i])) start = i + 1;
+      if (!start) for (let i = 0; i < Math.min(end, 24); i++) if (/nyugta|sz[aá]mla/i.test(lines[i])) start = i + 1;
+
+      const out = { items: [], total: null, payments: [], change: 0, savings: null, date: "", store: "", cur: "", fixes: [], verified: false, diff: null, target: null };
+      const head = lines.slice(0, 12).join(" ").toUpperCase();
+      out.store = RC_STORES.find(s => new RegExp("(^|[^A-ZÖ])" + s + "([^A-ZÖ]|$)").test(head)) || "";
+      if (out.store) out.store = out.store.charAt(0) + out.store.slice(1).toLowerCase();
+      const dm = lines.join("\n").match(/(20\d{2})\s*[.\-\/]\s*(\d{1,2})\s*[.\-\/]\s*(\d{1,2})/);
+      if (dm) out.date = dm[1] + "-" + String(dm[2]).padStart(2, "0") + "-" + String(dm[3]).padStart(2, "0");
+      out.cur = /\bFt\b|HUF/i.test(text) ? "HUF" : /€|EUR/i.test(text) ? "EUR" : "";
+
+      let prev = null;
+      for (let i = start; i < end; i++) {
+        const line = lines[i];
+        if (!line.trim() || /^[\s*=\-_.~]+$/.test(line.trim()) || /^[\s*x]{12,}$/i.test(line)) continue;
+        const q = line.match(/(\d+)\s*(?:DB|D8|db|0B)\s*[x×*X]\s*(\d[\d ]*?)\s*(?:Ft|F1|HUF)/);
+        if (q) {
+          const qty = parseInt(q[1], 10), unit = parseInt(q[2].replace(/ /g, ""), 10);
+          const rest = line.slice(q.index + q[0].length).match(/\s{3,}(-?\d[\d ]*)\s*[^A-Za-z0-9]*$/);
+          if (prev && prev.amount == null && prev.kind === "item") {
+            prev.qty = qty; prev.unit = unit;
+            const derived = qty * unit, seen = rest ? rcAmountOf(rest[1]) : null;
+            prev.alts = seen != null && seen !== derived ? [derived, seen] : [derived];
+            prev.amount = prev.alts[0];
+          }
+          continue;
+        }
+        const sp = rcSplit(line);
+        const name = rcName(sp.name);
+        if ((name.match(/[A-Za-zÁ-ű]/g) || []).length < 3) continue;
+        const flat = name.toLowerCase().replace(/[^a-zá-ű]/g, "");
+        if (/([a-zá-ű])\1{2,}/.test(flat) || (flat.length >= 18 && new Set(flat).size / flat.length < 0.42)) continue; // noise, not a product
+        let kind = "item";
+        if (/joker|kedvezm|akci[oó]|enged|le[aá]raz|kupon|punkt/i.test(name) || (sp.amount != null && sp.amount < 0)) kind = "discount";
+        else if (/g[öo]ngy[öo]l|bet[eé]td|^drs\b/i.test(name)) kind = "deposit";
+        const it = { id: "r" + out.items.length, name, kind, qty: 1, unit: null, amount: sp.amount, alts: sp.amount == null ? [] : [sp.amount], gross: 0, disc: 0 };
+        out.items.push(it);
+        if (kind === "item") prev = it;
+      }
+
+      // the same product on two lines normally costs the same: each reading is an alternative for the other
+      out.items.forEach(a => out.items.forEach(b => {
+        if (a !== b && a.kind === "item" && b.kind === "item" && a.name.toLowerCase() === b.name.toLowerCase() && a.qty === 1 && b.qty === 1 && b.amount != null && a.alts.indexOf(b.amount) < 0) a.alts.push(b.amount);
+      }));
+      out.items.forEach(a => { if (a.alts.length > 1 && a.amount != null && a.qty === 1) a.dup = true; });
+
+      // payments, change, savings, and the total as printed
+      for (let i = payStart < 0 ? lines.length : payStart; i < lines.length; i++) {
+        const l = lines[i], sp = rcSplit(l);
+        if (i === totalIdx) { out.total = sp.amount; continue; }
+        if (/megtakar|h[uű]s[eé]g|\*{5,}|^\s*x{8,}/i.test(l) && i > payStart + 1) { if (/megtakar/i.test(l)) { const m = l.match(/(\d[\d ]*)\s*F?t?\s*$/); if (m) out.savings = rcAmountOf(m[1]); } if (/h[uű]s[eé]g|\*{5,}|^\s*x{8,}/i.test(l)) break; else continue; }
+        if (sp.amount == null) continue;
+        if (/visszaj|v[aá]lt[oó]p|r[eé]sz|change/i.test(l)) out.change += sp.amount;
+        else if (PAY.test(l)) out.payments.push(sp.amount);
+      }
+
+      reconcileReceipt(out);
+      return out;
+    }
+
+    // Make the product lines add up to the printed total, using the other numbers on the receipt as evidence.
+    function reconcileReceipt(r) {
+      const lines = r.items;
+      const payNet = r.payments.length ? r.payments.reduce((a, b) => a + b, 0) - r.change : null;
+      const targets = [];
+      if (payNet != null && payNet > 0) targets.push(payNet);
+      if (r.total != null && r.total > 0 && targets.indexOf(r.total) < 0) targets.push(r.total);
+      if (!targets.length) { finishLines(r); return; }
+      const varLines = lines.filter(l => l.alts.length > 1);
+      const unknown = lines.filter(l => l.amount == null);
+      const base = lines.reduce((n, l) => n + (l.amount == null || l.alts.length > 1 ? 0 : l.amount), 0);
+      const confuse = { "0": "89", "1": "7", "2": "7", "3": "8", "5": "69", "6": "58", "7": "12", "8": "036", "9": "05", "4": "9" };
+
+      function dupKey(l) { return l.name.toLowerCase(); }
+      function tryTarget(T) {
+        // 1) choose between alternative readings of the same line; consistent duplicates and fewer changes first
+        let combos = [];
+        (function walk(i, picks) { if (i === varLines.length) combos.push(picks.slice()); else for (let a = 0; a < varLines[i].alts.length && combos.length < 512; a++) { picks.push(a); walk(i + 1, picks); picks.pop(); } })(0, []);
+        const score = picks => {
+          const seen = {}; let incons = 0, changes = 0;
+          picks.forEach((a, i) => { const l = varLines[i], v = l.alts[a]; if (a > 0 && !l.dup) changes += 1; else if (a > 0) changes += 1; if (l.dup) { const k = dupKey(l); if (seen[k] != null && seen[k] !== v) incons++; seen[k] = v; } });
+          return incons * 100 + changes;
+        };
+        combos = combos.map(p => ({ p, sc: score(p) })).sort((x, y) => x.sc - y.sc).map(x => x.p);
+        let ambiguous = false, first = null;
+        for (const picks of combos) {
+          const s = base + picks.reduce((n, a, i) => n + varLines[i].alts[a], 0);
+          let hit = null;
+          if (unknown.length === 0 && s === T) hit = { picks, fill: null };
+          else if (unknown.length === 1) { const v = T - s, u = unknown[0]; if (u.kind === "discount" ? v < 0 : v > 0) hit = { picks, fill: v }; }
+          if (hit) { if (!first) first = hit; else if (score(picks) === score(first.picks)) ambiguous = true; }
+        }
+        if (first) { first.ambiguous = ambiguous; return first; }
+        if (unknown.length > 0) return null;
+        // 2) one line has a digit misread: pick the most plausible single fix (a 50 Ft deposit, or the price of the same product on another line)
+        const cur = lines.reduce((n, l) => n + l.amount, 0), found = [];
+        lines.forEach((l, li) => {
+          const s0 = String(Math.abs(l.amount)), sign = l.amount < 0 ? -1 : 1;
+          for (let p = 0; p < s0.length; p++) for (const c of (confuse[s0[p]] || "")) {
+            const v = sign * parseInt(s0.slice(0, p) + c + s0.slice(p + 1), 10);
+            if (cur - l.amount + v !== T) continue;
+            let pr = 1;
+            if (l.kind === "deposit" && v === 50) pr = 3;
+            else if (lines.some(o => o !== l && o.kind === l.kind && o.name.toLowerCase() === l.name.toLowerCase() && o.amount === v)) pr = 2;
+            found.push({ li, v, pr });
+          }
+        });
+        if (!found.length) return null;
+        const top = Math.max.apply(null, found.map(f => f.pr)), best = found.filter(f => f.pr === top);
+        const uniq = best.filter((f, i) => best.findIndex(g => g.li === f.li && g.v === f.v) === i);
+        if (uniq.length === 1) return { picks: null, digit: uniq[0], ambiguous: top === 1 && found.length > 1 };
+        return null;
+      }
+
+      for (const T of targets) {
+        const sol = tryTarget(T);
+        if (!sol) continue;
+        if (sol.picks) varLines.forEach((l, i) => { const v = l.alts[sol.picks[i]]; if (v !== l.amount) r.fixes.push({ id: l.id, from: l.amount, to: v, why: l.qty > 1 ? "quantity x price" : "same product, same price" }); l.amount = v; });
+        if (sol.fill != null) { const u = lines.find(l => l.amount == null); u.amount = sol.fill; r.fixes.push({ id: u.id, from: null, to: sol.fill, why: "missing number worked out from the total" }); r.weak = true; }
+        if (sol.digit) { const l = lines[sol.digit.li]; r.fixes.push({ id: l.id, from: l.amount, to: sol.digit.v, why: "one digit looked misread" }); l.amount = sol.digit.v; }
+        r.target = T; r.verified = !sol.ambiguous && !r.weak; r.ambiguous = !!sol.ambiguous; r.ambIds = sol.ambiguous ? varLines.concat(unknown).map(l => l.id) : []; r.diff = 0; finishLines(r); return;
+      }
+      // nothing fits: keep the best guess and let the person fix it
+      varLines.forEach(l => { l.amount = l.alts[0]; });
+      r.target = targets[0];
+      const sum = lines.reduce((n, l) => n + (l.amount || 0), 0);
+      r.diff = r.target - sum;
+      finishLines(r);
+    }
+
+    // discounts belong to the product above them; shown as one net price per product
+    function finishLines(r) {
+      const merged = [], fixed = {};
+      r.fixes.forEach(f => { fixed[f.id] = f; });
+      r.items.forEach(l => {
+        if (l.kind === "discount" && merged.length) { const p = merged[merged.length - 1]; if (p.kind === "item") { p.disc += l.amount || 0; p.ids.push(l.id); return; } }
+        merged.push(Object.assign({}, l, { gross: l.amount || 0, disc: 0, ids: [l.id] }));
+      });
+      merged.forEach(l => {
+        l.net = l.gross + l.disc;
+        l.flag = l.ids.some(i => fixed[i] || (r.ambIds || []).indexOf(i) >= 0) ? "fixed" : "";
+      });
+      r.lines = merged;
+      r.sum = merged.reduce((n, l) => n + l.net, 0);
+      if (r.target != null) { r.diff = r.target - r.sum; r.verified = r.diff === 0 && !r.ambiguous && !r.weak; }
+    }
+
+    /* ---- Scan a receipt: photo -> read on this phone -> check it adds up -> save ---- */
+    const TESS_URL = "https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js";
+    const TESS_LANG = "https://cdn.jsdelivr.net/npm/@tesseract.js-data/hun/4.0.0_best_int";
+    const EXTRA_WORDS = /popcorn|chips|snack|csoki|nass|keksz|gumi|cukorka|szelet\b|jégkrém|fagyi|üdít|licsi|cola|fanta|sprite|jegesteá|ice ?tea|energia|red ?bull|monster|\bsör|\bbor\b|pálinka|whisky|vodka|cigi|dohány/i;
+    let scanState = null, scanUrl = null;
+
+    function fmtHuf(v) { return (v < 0 ? "-" : "") + hufNum(Math.abs(v)) + "\u00a0Ft"; }
+
+    function scanPicked(inp) {
+      const f = inp.files && inp.files[0];
+      inp.value = "";
+      if (f) startScan(f);
+    }
+
+    function closeScan() {
+      if (scanState) { scanState.cancelled = true; if (scanState.worker) { try { scanState.worker.terminate(); } catch (e) { } } }
+      if (scanUrl) { URL.revokeObjectURL(scanUrl); scanUrl = null; }
+      scanState = null;
+      document.getElementById("scanModal").classList.add("hidden");
+    }
+
+    function scanProgress(msg, pct) {
+      const m = document.getElementById("scanMsg"), b = document.getElementById("scanBar");
+      if (m) m.textContent = msg;
+      if (b) b.style.width = Math.round(pct) + "%";
+    }
+
+    function loadScript(src) {
+      return new Promise((res, rej) => {
+        const s = document.createElement("script");
+        s.src = src; s.onload = res; s.onerror = () => rej(new Error("load"));
+        document.head.appendChild(s);
+      });
+    }
+
+    async function startScan(file) {
+      const st = scanState = { stage: "working", cancelled: false };
+      if (scanUrl) URL.revokeObjectURL(scanUrl);
+      scanUrl = URL.createObjectURL(file);
+      renderScan();
+      document.getElementById("scanModal").classList.remove("hidden");
+      try {
+        scanProgress("Straightening the photo…", 4);
+        const img = new Image();
+        img.src = scanUrl;
+        await img.decode();
+        await new Promise(r => setTimeout(r, 40));
+        let canvas = prepareReceipt(img, false);
+        if (st.cancelled) return;
+        if (!window.Tesseract) { scanProgress("Downloading the reader (first time only)…", 8); await loadScript(TESS_URL); }
+        const worker = await Tesseract.createWorker("hun", 1, {
+          langPath: TESS_LANG,
+          logger: m => {
+            if (st.cancelled) return;
+            const p = m.progress || 0, t = m.status || "";
+            if (/core|initializing tesseract/.test(t)) scanProgress("Starting the reader…", 10 + p * 5);
+            else if (/language/.test(t)) scanProgress("Loading the Hungarian reader…", 15 + p * 30);
+            else if (/initializing api/.test(t)) scanProgress("Getting ready…", 46);
+            else if (/recognizing/.test(t)) scanProgress("Reading the receipt… " + Math.round(p * 100) + "%", 48 + p * 50);
+          }
+        });
+        st.worker = worker;
+        await worker.setParameters({ tessedit_pageseg_mode: "6", preserve_interword_spaces: "1" });
+        let res = await worker.recognize(canvas);
+        let parsed = parseReceipt(res.data.text), conf = res.data.confidence || 0;
+        const trusted = (p, c) => p.lines.length >= 2 && c >= 40 && (p.target != null || c >= 55);
+        if (!trusted(parsed, conf) && !st.cancelled) {
+          scanProgress("Trying the whole photo…", 60);
+          canvas = prepareReceipt(img, true);
+          res = await worker.recognize(canvas);
+          const p2 = parseReceipt(res.data.text), c2 = res.data.confidence || 0;
+          if (trusted(p2, c2) || (p2.target != null && parsed.target == null) || c2 > conf) { parsed = p2; conf = c2; }
+        }
+        await worker.terminate();
+        st.worker = null;
+        if (st.cancelled) return;
+        if (!trusted(parsed, conf)) {
+          st.stage = "error";
+          st.msg = parsed.lines.length
+            ? "That photo is too blurry or dark for me to read the numbers reliably. Hold the phone steady, fill the frame with the receipt, use good light and try again."
+            : "I couldn't find any products on that photo. Lay the receipt flat, fill the photo with it, use good light and try again.";
+        } else {
+          st.stage = "review";
+          st.parsed = parsed;
+          st.lines = parsed.lines.map(l => ({ id: l.id, name: l.name, kind: l.kind, qty: l.qty, unit: l.unit, gross: l.gross, disc: l.disc, net: l.net, flag: l.flag, extra: false, removed: false, guess: false }));
+          st.lines.forEach(l => { if (l.kind === "item" && EXTRA_WORDS.test(l.name)) { l.extra = true; l.guess = true; } });
+          if (st.lines.some(l => l.extra && /üdít|licsi|cola|fanta|sprite|sör|\bbor\b|jegesteá|ice ?tea|energia|red ?bull|monster/i.test(l.name))) st.lines.forEach(l => { if (l.kind === "deposit") { l.extra = true; l.guess = true; } });
+          st.total = parsed.target != null ? parsed.target : null;
+          st.store = parsed.store || "";
+          st.date = parsed.date || "";
+        }
+        renderScan();
+      } catch (e) {
+        if (st.cancelled) return;
+        st.stage = "error";
+        st.msg = navigator.onLine === false
+          ? "The reader needs internet the first time to download (about 10 MB). Connect to Wi-Fi and try again."
+          : "Something went wrong while reading the photo. Try again, or type the receipt in by hand.";
+        renderScan();
+      }
+    }
+
+    function scanSum() { return scanState.lines.filter(l => !l.removed).reduce((n, l) => n + (Number(l.net) || 0), 0); }
+    function scanExtrasSum() { return scanState.lines.filter(l => !l.removed && l.extra).reduce((n, l) => n + (Number(l.net) || 0), 0); }
+
+    function scanCheckHtml() {
+      const st = scanState, sum = scanSum(), flagged = st.lines.some(l => !l.removed && l.flag);
+      let html;
+      if (st.total == null) {
+        html = `<div class="p-3 rounded-2xl bg-slate-800/80 border border-slate-700 text-xs text-slate-300">I couldn't read the receipt total, so I can't check the lines. They add up to <strong class="text-white">${fmtHuf(sum)}</strong>. Type the real total below.</div>`;
+      } else {
+        const diff = st.total - sum;
+        if (diff === 0 && flagged && st.parsed && (st.parsed.weak || st.parsed.ambiguous)) html = `<div class="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/40 text-xs text-amber-200">The lines add up to <strong>${fmtHuf(sum)}</strong>, but I had to work out a number I couldn't read. Check the yellow lines against the receipt.</div>`;
+        else if (diff === 0) html = `<div class="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/40 text-xs text-emerald-200">✓ The lines add up to <strong>${fmtHuf(sum)}</strong>, exactly the receipt total.</div>`;
+        else html = `<div class="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/40 text-xs text-amber-200">The lines add up to <strong>${fmtHuf(sum)}</strong>, but the receipt says <strong>${fmtHuf(st.total)}</strong>. ${fmtHuf(Math.abs(diff))} ${diff > 0 ? "is missing" : "too much"}, so a number is probably misread or a line is missing. Check the lines.</div>`;
+      }
+      if (flagged) html += `<div class="mt-2 text-[11px] text-amber-300">Yellow lines were repaired using the receipt's own numbers. Please check them.</div>`;
+      return html;
+    }
+
+    function scanFooterHtml() {
+      const st = scanState, sum = scanSum(), ex = scanExtrasSum(), total = st.total != null ? st.total : sum;
+      return `
+        <div class="flex justify-between text-xs text-slate-300"><span>Total on the receipt</span><strong class="text-white">${fmtHuf(total)}</strong></div>
+        <div class="flex justify-between text-xs text-slate-300 mt-1"><span>On our list</span><strong class="text-emerald-300">${fmtHuf(Math.max(0, total - ex))}</strong></div>
+        <div class="flex justify-between text-xs text-slate-300 mt-1"><span>Extras (not on our list)</span><strong class="text-pink-300">${fmtHuf(ex)}</strong></div>`;
+    }
+
+    function scanRefresh() {
+      const c = document.getElementById("scanCheck"), f = document.getElementById("scanFoot");
+      if (c) c.innerHTML = scanCheckHtml();
+      if (f) f.innerHTML = scanFooterHtml();
+    }
+
+    function scanLineHtml(l, i) {
+      if (l.removed) return "";
+      const info = l.qty > 1 && l.unit ? `${l.qty} × ${fmtHuf(l.unit)}` : (l.disc ? `${fmtHuf(l.gross)} − ${fmtHuf(-l.disc)} discount` : (l.kind === "deposit" ? "bottle deposit" : ""));
+      const box = l.flag ? "border-amber-400/70 bg-amber-500/10" : "border-slate-800 bg-slate-900/70";
+      return `
+        <div class="rounded-2xl border ${box} p-2.5">
+          <div class="flex items-center gap-2">
+            <input type="text" value="${esc(l.name)}" oninput="scanSetName(${i}, this.value)" class="flex-1 min-w-0 px-2.5 py-2 rounded-xl bg-slate-950/70 border border-slate-700 text-xs text-white" />
+            <input type="number" inputmode="numeric" value="${l.net}" oninput="scanSetNet(${i}, this.value)" class="w-24 px-2.5 py-2 rounded-xl bg-slate-950/70 border border-slate-700 text-xs text-white text-right" />
+          </div>
+          <div class="flex items-center justify-between mt-1.5">
+            <span class="text-[10px] text-slate-500">${esc(info)}</span>
+            <span class="flex items-center gap-1.5">
+              <button onclick="scanToggleExtra(${i})" class="px-2 py-1 rounded-lg text-[10px] font-bold ${l.extra ? "bg-pink-500/20 text-pink-200 border border-pink-500/40" : "bg-slate-800 text-slate-400 border border-slate-700"}">${l.extra ? "➕ Extra" + (l.guess ? " (guess)" : "") : "On our list"}</button>
+              <button onclick="scanRemove(${i})" class="px-1.5 text-slate-500 text-sm">✕</button>
+            </span>
+          </div>
+        </div>`;
+    }
+
+    function renderScan() {
+      const st = scanState, body = document.getElementById("scanBody");
+      if (!st) return;
+      if (st.stage === "working") {
+        body.innerHTML = `
+          <div class="glass rounded-3xl p-5 border border-slate-700 text-center space-y-3">
+            ${scanUrl ? `<img src="${scanUrl}" class="mx-auto max-h-48 rounded-xl opacity-80" alt="" />` : ""}
+            <div id="scanMsg" class="text-sm font-bold text-white">Starting…</div>
+            <div class="h-2 rounded-full bg-slate-800 overflow-hidden"><div id="scanBar" class="h-full rounded-full bg-emerald-400 transition-all" style="width:2%"></div></div>
+            <p class="text-[11px] text-slate-400">Everything happens on this phone, the photo is never uploaded. This takes about 20 to 40 seconds.</p>
+            <button onclick="closeScan()" class="px-4 py-2 rounded-xl bg-slate-800 border border-slate-700 text-slate-300 text-xs font-bold">Cancel</button>
+          </div>`;
+        return;
+      }
+      if (st.stage === "error") {
+        body.innerHTML = `
+          <div class="glass rounded-3xl p-5 border border-rose-500/30 text-center space-y-3">
+            <div class="text-4xl">🤔</div>
+            <p class="text-sm text-slate-200">${esc(st.msg)}</p>
+            <div class="flex gap-2 justify-center">
+              <label class="px-4 py-2.5 rounded-xl bg-emerald-500 text-slate-950 text-xs font-extrabold cursor-pointer">Try another photo<input type="file" accept="image/*" class="hidden" onchange="scanPicked(this)" /></label>
+              <button onclick="closeScan()" class="px-4 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-slate-300 text-xs font-bold">Type it in instead</button>
+            </div>
+          </div>`;
+        return;
+      }
+      const total = st.total != null ? st.total : "";
+      body.innerHTML = `
+        <div class="space-y-3">
+          <div id="scanCheck">${scanCheckHtml()}</div>
+          <div class="text-[11px] text-slate-400">Fix any name or price. Tap <strong>On our list</strong> to mark snacks, drinks and other extras. Discounts are already taken off.</div>
+          <div class="space-y-2">${st.lines.map((l, i) => scanLineHtml(l, i)).join("")}</div>
+          <button onclick="scanAddLine()" class="w-full py-2 rounded-xl bg-slate-800/80 border border-slate-700 text-slate-300 text-xs font-bold">+ Add a missing line</button>
+          <div class="glass rounded-2xl p-3 border border-slate-700 space-y-2">
+            <div class="flex gap-2">
+              <div class="flex-1"><div class="text-[10px] text-slate-400 mb-1">Receipt total (Ft)</div><input type="number" inputmode="numeric" value="${total}" oninput="scanSetTotal(this.value)" class="w-full px-2.5 py-2 rounded-xl bg-slate-950/70 border border-slate-700 text-xs text-white" /></div>
+              <div class="flex-1"><div class="text-[10px] text-slate-400 mb-1">Store</div><input type="text" value="${esc(st.store)}" oninput="scanState.store = this.value" class="w-full px-2.5 py-2 rounded-xl bg-slate-950/70 border border-slate-700 text-xs text-white" /></div>
+            </div>
+            <div id="scanFoot">${scanFooterHtml()}</div>
+          </div>
+          <div class="sticky bottom-0 -mx-4 px-4 py-3 bg-slate-950/95 border-t border-slate-800 flex gap-2">
+            <button onclick="closeScan()" class="px-4 py-3 rounded-2xl bg-slate-800 border border-slate-700 text-slate-300 font-bold text-xs">Cancel</button>
+            <button onclick="saveScan()" class="flex-1 py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 font-extrabold text-sm">Save receipt</button>
+          </div>
+        </div>`;
+    }
+
+    function scanSetName(i, v) { scanState.lines[i].name = v; }
+    function scanSetNet(i, v) { const l = scanState.lines[i]; l.net = Math.round(Number(v) || 0); l.flag = ""; scanRefresh(); }
+    function scanSetTotal(v) { scanState.total = v === "" ? null : Math.round(Number(v) || 0); scanRefresh(); }
+    function scanToggleExtra(i) { const l = scanState.lines[i]; l.extra = !l.extra; l.guess = false; renderScan(); }
+    function scanRemove(i) { scanState.lines[i].removed = true; renderScan(); }
+    function scanAddLine() {
+      scanState.lines.push({ id: "m" + scanState.lines.length, name: "", kind: "item", qty: 1, unit: null, gross: 0, disc: 0, net: 0, flag: "", extra: false, removed: false, guess: false });
+      renderScan();
+    }
+
+    function saveScan() {
+      const st = scanState;
+      const lines = st.lines.filter(l => !l.removed && (l.name.trim() || l.net));
+      const sum = scanSum();
+      const total = st.total != null && st.total > 0 ? st.total : sum;
+      if (!(total > 0)) { showToast("The total is empty"); return; }
+      if (st.total != null && st.total !== sum && !confirm("The lines don't add up to the receipt total yet. Save anyway?")) return;
+      const rate = eurRate();
+      if ((state.spending || []).some(e => e.cur === "HUF" && e.orig === total && e.rdate && e.rdate === st.date && e.scan) && !confirm("This looks like a receipt you already saved. Save it again?")) return;
+      const extras = Math.min(total, lines.filter(l => l.extra).reduce((n, l) => n + (Number(l.net) || 0), 0));
+      const entry = { id: "sp" + Date.now(), ts: Date.now(), week: planMondayISO(), amount: Math.round(total / rate * 10000) / 10000, note: (st.store || "").trim(), by: currentUser, cur: "HUF", orig: total, scan: 1 };
+      if (st.date) entry.rdate = st.date;
+      entry.items = lines.map(l => ({ n: l.name.trim() || "Item", a: Math.round(Number(l.net) || 0), q: l.qty > 1 ? l.qty : 1, x: l.extra ? 1 : 0 }));
+      if (extras > 0) {
+        entry.extrasOrig = extras;
+        entry.extras = Math.round(extras / rate * 10000) / 10000;
+        entry.extrasNote = lines.filter(l => l.extra).map(l => l.name.trim()).filter(Boolean).join(", ").slice(0, 80);
+      }
+      state.spending.push(entry);
+      state.spending = state.spending.slice(-200);
+      saveStateAndSync(currentUser);
+      closeScan();
+      showToast(`Saved ${fmtEur(total / rate)} · ${entry.items.length} items`);
+    }
+
+    // amounts on a scanned receipt are stored in the receipt's own currency
+    function itemMoney(e, a) {
+      if (e.cur && e.cur === curr()) return curr() === "HUF" ? hufNum(a) + "\u00a0Ft" : "€" + Number(a).toFixed(2);
+      return fmtEur(e.cur === "HUF" ? a / eurRate() : a);
+    }
+
+    function receiptRowHtml(e) {
+      const day = e.rdate ? new Date(e.rdate + "T12:00:00") : new Date(e.ts);
+      const head = `${day.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}${e.note ? " · " + esc(e.note) : ""} <span class="text-slate-500">${e.by === "fruzsi" ? "👩" : "👦"}</span>${e.extras ? `<span class="block text-[10px] text-pink-300">incl. ${entryMoney(e, "extras")} extras${e.extrasNote ? ": " + esc(e.extrasNote) : ""}</span>` : ""}`;
+      const del = `<button onclick="deleteSpend('${esc(e.id)}')" class="text-slate-500 px-1">✕</button>`;
+      if (!e.items || !e.items.length) {
+        return `<div class="flex items-center justify-between p-2 rounded-xl bg-slate-900/70 border border-slate-800 text-xs"><span class="text-slate-300">${head}</span><span class="flex items-center gap-2"><strong class="text-white whitespace-nowrap">${entryMoney(e, "amount")}</strong>${del}</span></div>`;
+      }
+      return `
+        <details class="rounded-xl bg-slate-900/70 border border-slate-800 text-xs">
+          <summary class="flex items-center justify-between p-2"><span class="text-slate-300">${head} <span class="text-slate-500">· ${e.items.length} items ▾</span></span><span class="flex items-center gap-2"><strong class="text-white whitespace-nowrap">${entryMoney(e, "amount")}</strong>${del}</span></summary>
+          <div class="px-2 pb-2 space-y-0.5">
+            ${e.items.map(it => `<div class="flex justify-between gap-2 text-[11px] ${it.x ? "text-pink-300" : "text-slate-300"}"><span class="truncate">${it.q > 1 ? it.q + "× " : ""}${esc(it.n)}${it.x ? " ➕" : ""}</span><span class="shrink-0">${itemMoney(e, it.a)}</span></div>`).join("")}
+          </div>
+        </details>`;
+    }
+
+    // what each product really cost on our receipts (latest price, per piece)
+    function renderPriceBook() {
+      const book = {};
+      (state.spending || []).slice().sort((a, b) => a.ts - b.ts).forEach(e => (e.items || []).forEach(it => {
+        const k = String(it.n).toLowerCase();
+        if (!k || !it.a || it.a <= 0) return;
+        const each = it.a / (it.q > 1 ? it.q : 1);
+        const eur = e.cur === "HUF" ? each / eurRate() : each;
+        const cur = book[k] || { name: it.n, n: 0 };
+        book[k] = { name: it.n, eur, raw: e.cur === curr() ? each : null, n: cur.n + 1, store: e.note || "", ts: e.ts };
+      }));
+      const rows = Object.values(book).sort((a, b) => a.name.localeCompare(b.name));
+      const el = document.getElementById("priceBook");
+      if (!el) return;
+      el.innerHTML = rows.length
+        ? rows.map(r => `<div class="flex justify-between gap-2 text-[11px] py-1 border-b border-slate-800/70"><span class="text-slate-300 truncate">${esc(r.name)}</span><span class="shrink-0 text-white font-semibold">${r.raw != null && curr() === "HUF" ? hufNum(r.raw) + "\u00a0Ft" : fmtEur(r.eur)}${r.n > 1 ? ` <span class="text-slate-500 font-normal">×${r.n}</span>` : ""}</span></div>`).join("")
+        : `<div class="text-[11px] text-slate-500">Scan a receipt and the real prices show up here.</div>`;
+    }
+
+
     function computeMoney(slots) {
       const portions = (slots || []).reduce((n, s) => n + s.basePortions, 0);
       const price = Number(state.settings && state.settings.deliveryPrice) || 13;
@@ -3821,11 +4461,8 @@
 
       const wk = planMondayISO();
       const mine = (state.spending || []).filter(e => e.week ? e.week === wk : e.ts >= getWeekMonday().getTime()).sort((a, b) => b.ts - a.ts);
-      document.getElementById("spendList").innerHTML = mine.map(e => `
-        <div class="flex items-center justify-between p-2 rounded-xl bg-slate-900/70 border border-slate-800 text-xs">
-          <span class="text-slate-300">${new Date(e.ts).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}${e.note ? " · " + esc(e.note) : ""} <span class="text-slate-500">${e.by === "fruzsi" ? "👩" : "👦"}</span>${e.extras ? `<span class="block text-[10px] text-pink-300">incl. ${entryMoney(e, "extras")} extras${e.extrasNote ? ": " + esc(e.extrasNote) : ""}</span>` : ""}</span>
-          <span class="flex items-center gap-2"><strong class="text-white">${entryMoney(e, "amount")}</strong><button onclick="deleteSpend('${esc(e.id)}')" class="text-slate-500 px-1">✕</button></span>
-        </div>`).join("");
+      document.getElementById("spendList").innerHTML = mine.map(receiptRowHtml).join("");
+      renderPriceBook();
 
       const rows = (state.history || []).slice(-6).map(h => ({ label: String(h.week || "").replace("Week of ", ""), spent: Number(h.cost) || 0, delivery: (Number(h.cost) || 0) + (Number(h.saved) || 0) }));
       rows.push({ label: "now", spent: m.cost, delivery: m.delivery, now: true });
