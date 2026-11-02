@@ -3266,37 +3266,39 @@
       renderPlanTab();
     }
 
-    /* ---- Smart grouped meal dropdown ---- */
-    function renderRecipeOptions(slot) {
+    /* ---- Changing a meal: a random draw, so nobody has to choose ---- */
+    // meals that are safe for this slot (not already in the plan, no disliked ingredients), by how well they are liked
+    function randomMealPool(slot) {
       const who = slot.whoConstraint;
-      const L = state.swipes.laca || {};
-      const F = state.swipes.fruzsi || {};
-      const groups = { pantry: [], both: [], liked: [], other: [] };
-      let hiddenByDislike = 0;
+      const L = state.swipes.laca || {}, F = state.swipes.fruzsi || {};
+      const inPlan = new Set((state.planNegotiation.currentSlots || []).map(s => s.recipeId));
+      const safe = getActiveRecipes().filter(r => !inPlan.has(r.id) && !recipeMatchesDislikes(r, who));
+      const likes = r => who === "both" ? [L[r.id] === "right", F[r.id] === "right"] : [(who === "laca" ? L : F)[r.id] === "right"];
+      return { both: safe.filter(r => likes(r).every(Boolean)), some: safe.filter(r => likes(r).some(Boolean)), safe };
+    }
 
-      getActiveRecipes().forEach(r => {
-        if (r.id === slot.recipeId) return;
-        if (recipeMatchesDislikes(r, who)) { hiddenByDislike++; return; }
-        if (recipeUsesPantry(r)) { groups.pantry.push(r); return; }
-        const l = L[r.id] === "right", f = F[r.id] === "right";
-        if (who === "both") {
-          if (l && f) groups.both.push(r); else if (l || f) groups.liked.push(r); else groups.other.push(r);
-        } else {
-          const mine = who === "laca" ? l : f;
-          if (mine) groups.liked.push(r); else groups.other.push(r);
-        }
-      });
-
-      const cur = getRecipeById(slot.recipeId);
-      const opt = (r) => `<option value="${esc(r.id)}">${esc(r.name)} (${esc(r.prepTime)} • ${esc(r.equipment)})</option>`;
-      const group = (label, list) => list.length ? `<optgroup label="${label}">${list.map(opt).join("")}</optgroup>` : "";
-      const html = `
-        <optgroup label="✅ Current pick"><option value="${esc(cur.id)}" selected>${esc(cur.name)} (${esc(cur.prepTime)} • ${esc(cur.equipment)})</option></optgroup>
-        ${group("🧊 Uses your pantry / freezer", groups.pantry)}
-        ${group("💘 Both matched", groups.both)}
-        ${group(who === "both" ? "👍 Liked by one of you" : "👍 You liked these", groups.liked)}
-        ${group("🍽 Other safe meals", groups.other)}`;
-      return { html, hiddenByDislike };
+    const rolledMeals = {}; // slot id -> meals already drawn, so the next draw is something new
+    function rollMeal(idx) {
+      const slot = state.planNegotiation.currentSlots[idx];
+      if (!slot) return;
+      const pools = randomMealPool(slot);
+      let pool = pools.both, tier = "both";
+      if (!pool.length) { pool = pools.some; tier = "some"; }
+      if (!pool.length) { pool = pools.safe; tier = "any"; }
+      if (!pool.length) { showToast("There are no other meals to draw from"); return; }
+      const seen = rolledMeals[slot.id] || (rolledMeals[slot.id] = new Set());
+      seen.add(slot.recipeId);
+      let fresh = pool.filter(r => !seen.has(r.id));
+      if (!fresh.length) { seen.clear(); seen.add(slot.recipeId); fresh = pool.filter(r => r.id !== slot.recipeId); if (!fresh.length) fresh = pool; }
+      // still random, but not last week's meals or a protein that is already in this plan, when other choices exist
+      const lastWeek = new Set(state.lastWeekMeals || []);
+      const usedProt = new Set(state.planNegotiation.currentSlots.filter((s, i) => i !== idx).map(s => mainProtein(getRecipeById(s.recipeId))));
+      const nice = fresh.filter(r => !lastWeek.has(r.id) && (mainProtein(r) === "other" || !usedProt.has(mainProtein(r))));
+      const from = nice.length ? nice : fresh;
+      const pick = from[Math.floor(Math.random() * from.length)];
+      seen.add(pick.id);
+      changeSlotRecipe(idx, pick.id);
+      showToast(tier === "both" ? `🎲 ${pick.name}` : `🎲 ${pick.name} (no more meals you both liked)`);
     }
 
     const openChange = new Set();
@@ -3389,7 +3391,7 @@
         const canSplitOrMerge = !slot.extra && (slot.days.length === 2 || (nextSlot && nextSlot.days.length === 1 && !nextSlot.extra));
         const changed = !!diff[slot.id];
         const cookOpen = openCook.has(slot.id), changeOpen = openChange.has(slot.id);
-        const options = renderRecipeOptions(slot);
+        const pool = changeOpen ? randomMealPool(slot) : { both: [] };
         const isToday = todayInPlanWeek() && slot.days.includes(DAY_KEYS[todayIdx()]);
         const btn = (on, onclick, label) => `<button onclick="${onclick}" class="py-2.5 rounded-xl text-xs font-bold border transition ${on ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40" : "bg-slate-800 text-slate-200 border-slate-700"}">${label}</button>`;
         const sub = slot.days.length === 2 ? `Cook ${DAY_SHORT[slot.days[0]]} · leftovers ${DAY_SHORT[slot.days[1]]}` : (slot.extra ? "Extra meal" : `Cook ${DAY_SHORT[slot.days[0]]}`);
@@ -3415,9 +3417,9 @@
             ${changeOpen ? `
               <div class="mx-2.5 mb-2.5 p-3 rounded-2xl bg-slate-950/60 border border-slate-800 space-y-3">
                 <div>
-                  <div class="text-[11px] font-bold text-slate-400 mb-1">Swap this meal</div>
-                  <select onchange="changeSlotRecipe(${idx}, this.value)" class="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-xs font-bold text-white">${options.html}</select>
-                  ${options.hiddenByDislike ? `<div class="text-[10px] text-slate-500 mt-1">${options.hiddenByDislike} hidden because of dislikes</div>` : ""}
+                  <div class="text-[11px] font-bold text-slate-400 mb-1">Change this meal</div>
+                  <button onclick="rollMeal(${idx})" class="w-full py-3 rounded-xl bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white font-extrabold text-sm shadow-lg shadow-violet-500/20">🎲 Surprise ${slot.whoConstraint === "both" ? "us" : "me"}</button>
+                  <div class="text-[10px] text-slate-500 mt-1">${pool.both.length ? `Drawn at random from ${pool.both.length} meal${pool.both.length === 1 ? "" : "s"} ${slot.whoConstraint === "both" ? "you both liked" : "you liked"}. Tap again for another.` : "You've used every meal you both liked, so this draws from meals one of you liked."}</div>
                 </div>
                 <div>
                   <div class="text-[11px] font-bold text-slate-400 mb-1">Portion size</div>
@@ -4923,7 +4925,7 @@
       { icon: "🍲", title: "Cook at home, save money", text: "This app plans your week's meals, builds one shopping list and reminds you to cook, so you stop ordering expensive delivery. Both phones stay in sync live." },
       { icon: "📅", title: "1. Set your days", text: "On the Calendar tab, tap each day you know: 1 tap = home, 2 taps = half day (at work, home for the afternoon), 3 taps = away. Select several days at once, then confirm. Your partner sets their own days on their phone." },
       { icon: "🔥", title: "2. Pick meals", text: "On the Meals tab, tap ❤️ for meals you'd eat and ✕ to skip. Each of you picks on your own phone, and meals your partner already picked are skipped for you. Tell the app what you hate in Setup and those meals vanish." },
-      { icon: "🤝", title: "3. Agree on the plan", text: "On the Plan tab, the app proposes a week. Either of you can swap a meal or change portions, and the other sees what changed. When you both tap Accept, it's locked in." },
+      { icon: "🤝", title: "3. Agree on the plan", text: "On the Plan tab, the app proposes a week. Either of you can tap 🎲 to swap a meal for a random one you both liked, or change portions, and the other sees what changed. When you both tap Accept, it's locked in." },
       { icon: "🛒", title: "4. Shop once, cook easy", text: "The Shop tab groups everything by aisle and trip day. Tap 🛒 Buy or 🏠 Home as you go and it updates on both phones. On cook day, tap a meal on the Plan tab for the recipe." },
       { icon: "🔔", title: "You're ready!", text: "Turn on reminders in Setup so you never forget. The green card at the top of the Week tab always tells you what to do next." }
     ];
