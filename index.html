@@ -58,6 +58,10 @@
       opacity: 0; pointer-events: none; transition: all .25s ease; z-index: 60;
     }
     .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .notif-enter { animation: notifIn .38s cubic-bezier(.2, .9, .3, 1.15) both; }
+    @keyframes notifIn { from { opacity: 0; transform: translateY(-28px) scale(.96); } to { opacity: 1; transform: none; } }
+    .notif-bar { transform-origin: left; animation: notifBar 8s linear forwards; }
+    @keyframes notifBar { from { transform: scaleX(1); } to { transform: scaleX(0); } }
     summary { list-style: none; cursor: pointer; }
     summary::-webkit-details-marker { display: none; }
     .chev { transition: transform .2s; display: inline-block; }
@@ -159,8 +163,8 @@
 
       <div id="swipeArea" class="relative"></div>
 
-      <button onclick="generateInitialPlanFromSwipes()" class="w-full py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 font-extrabold text-sm shadow-lg shadow-emerald-500/20">
-        Done picking → build our week
+      <button onclick="openPlanFromMeals()" class="w-full py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 font-extrabold text-sm shadow-lg shadow-emerald-500/20">
+        See our plan →
       </button>
     </section>
 
@@ -176,13 +180,13 @@
         </summary>
         <div class="px-4 pb-4 space-y-3">
           <div>
-            <div class="text-xs font-bold text-slate-300 mb-1.5">Ate faster than planned?</div>
+            <div class="text-xs font-bold text-slate-300 mb-1.5">Need more meals?</div>
             <div class="grid grid-cols-2 gap-2">
               <button onclick="addExtraMeals(1)" class="py-2.5 rounded-xl bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 font-bold text-xs">+1 cook<br><span class="font-normal text-[10px]">about 2 days of food</span></button>
               <button onclick="addExtraMeals(2)" class="py-2.5 rounded-xl bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 font-bold text-xs">+2 cooks<br><span class="font-normal text-[10px]">about 4 days of food</span></button>
             </div>
           </div>
-          <button onclick="generateInitialPlanFromSwipes()" class="w-full py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-slate-200 font-semibold text-xs">🔄 New suggestions from our picks</button>
+          <button onclick="newSuggestions()" class="w-full py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-slate-200 font-semibold text-xs">🔄 New plan from our picks</button>
         </div>
       </details>
     </section>
@@ -199,7 +203,7 @@
           <button onclick="copyChecklist('all')" class="flex-1 py-2 rounded-xl bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 font-bold text-xs">📋 Copy list for Reminders</button>
           <button onclick="clearShoppingChecks()" class="px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-slate-400 font-semibold text-xs">Clear ticks</button>
         </div>
-        <p class="text-[10px] text-slate-500 mt-2">Tap an item to tick it · 🏠 we have it · ⇄ not in the store? get a swap</p>
+        <p class="text-[10px] text-slate-500 mt-2">Tap to tick · 🏠 have it · ⇄ swap</p>
       </div>
 
       <div id="shoppingTripsContainer" class="space-y-3"></div>
@@ -222,7 +226,7 @@
             </div>
           </div>
           <div id="pantryList" class="space-y-2 mt-3"></div>
-          <p class="text-[11px] text-slate-400 mt-3">Type what you have, like "chicken 1000 g". Stock drops by itself when you tap ✓ Cooked, and the app plans meals with it and takes it off your list.</p>
+          <p class="text-[11px] text-slate-400 mt-3">Add what you have, like "chicken 1000 g". It's used up when you tap ✓ Cooked.</p>
           <div class="flex items-center justify-between mt-2 text-xs text-slate-300">
             <span>Max meals per week with the same item</span>
             <select id="pantryMaxSelect" onchange="setPantryMax(this.value)" class="px-2 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-xs text-white"><option value="1">1</option><option value="2">2</option><option value="3">3</option></select>
@@ -421,6 +425,7 @@
     </div>
   </div>
 
+  <div id="notifHost" class="fixed inset-x-0 top-0 z-[65] px-3 pointer-events-none" style="padding-top: calc(var(--safe-top) + 8px)"></div>
   <div id="toast" class="toast px-4 py-2.5 rounded-2xl bg-slate-100 text-slate-900 text-xs font-bold shadow-xl"></div>
 
   <!-- BOTTOM NAVIGATION BAR -->
@@ -1625,6 +1630,7 @@
       s.history = toArr(r.history);
       s.lastWeekMeals = toArr(r.lastWeekMeals);
       s.swipesBackup = r.swipesBackup || {};
+      s.events = toArr(r.events).slice(-15);
       s.spending = toArr(r.spending).map(e => e && e.items ? Object.assign({}, e, { items: toArr(e.items) }) : e);
       s.pantry = toArr(r.pantry);
       s.subs = r.subs || {};
@@ -1806,6 +1812,7 @@
             localStorage.setItem("lf_shared_state_v2", JSON.stringify(state));
             renderAll();
             isApplyingRemoteUpdate = false;
+            checkNewEvents();
           } else {
             saveStateAndSync(currentUser);
           }
@@ -2190,8 +2197,8 @@
 
         ${calEditing ? `
           <div class="mt-3 p-3 rounded-2xl bg-slate-900/70 border border-slate-800 space-y-2.5">
-            <div class="text-[11px] text-slate-300 leading-relaxed">Tap a day: <strong>1×</strong> 🏠 home · <strong>2×</strong> 🌓 half day · <strong>3×</strong> ✈️ away · <strong>4×</strong> clear</div>
-            <div class="text-[10px] text-slate-500">🌓 Half day: you're at work and eat at home only in the afternoon. We cook extra the day before so you can take a lunch box.</div>
+            <div class="text-[11px] text-slate-300">Tap a day to change it: <strong>🏠 Home</strong> → <strong>🌓 Half</strong> → <strong>✈️ Away</strong> → clear</div>
+            <details class="text-[10px] text-slate-500"><summary class="underline">What is a half day?</summary><div class="mt-1">At work, home in the afternoon. We cook extra the day before so you can take a lunch box.</div></details>
             <button onclick="calToggleSelect()" class="w-full py-2 rounded-xl text-xs font-bold border ${calSelectMode ? "bg-cyan-500/20 border-cyan-500/50 text-cyan-300" : "bg-slate-800 border-slate-700 text-slate-200"}">${calSelectMode ? "✓ Selecting several days" : "☑ Select several days"}</button>
             ${calSelectMode ? `
               <div class="flex flex-wrap gap-1.5">
@@ -2409,6 +2416,7 @@
         currentSlots: buildBatchSlotsFromCalendar(state.calendar, state)
       };
       localStorage.removeItem("lf_banner_snooze");
+      pushEvent("week", `${uName(currentUser)} started the new week`, "Days and meal likes carried over.");
       saveStateAndSync(currentUser);
       const likes = u => Object.values(state.swipes[u] || {}).filter(v => v === "right").length;
       const ready = likes("laca") >= 3 && likes("fruzsi") >= 3;
@@ -2554,20 +2562,31 @@
       attachSwipeDrag();
     }
 
-    function generateInitialPlanFromSwipes() {
-      const freshSlots = buildBatchSlotsFromCalendar(state.calendar, state);
+    // a fresh plan from your picks; both of you still need to say OK
+    function generateInitialPlanFromSwipes(announce) {
       state.planNegotiation = {
-        status: "proposed",
+        status: "draft",
         proposedBy: currentUser,
-        acceptedBy: {
-          laca: currentUser === "laca",
-          fruzsi: currentUser === "fruzsi"
-        },
+        acceptedBy: { laca: false, fruzsi: false },
         previousSlots: null,
-        currentSlots: freshSlots
+        prevState: null,
+        currentSlots: buildBatchSlotsFromCalendar(state.calendar, state)
       };
+      if (announce) pushEvent("changed", `${uName(currentUser)} built a new plan`, "Open it to check it.");
       saveStateAndSync(currentUser);
       switchTab("plan");
+    }
+
+    // from the Meals tab: build the plan from the picks, unless people already worked on it
+    function openPlanFromMeals() {
+      const neg = state.planNegotiation;
+      if (neg.status === "draft" && !neg.previousSlots) generateInitialPlanFromSwipes(false);
+      else switchTab("plan");
+    }
+
+    function newSuggestions() {
+      if (!confirm("Replace the current plan with new suggestions from your picks? You both need to say OK again.")) return;
+      generateInitialPlanFromSwipes(true);
     }
 
     /********************************************************************
@@ -2874,23 +2893,120 @@
     }
 
     /********************************************************************
+     * NOTIFICATIONS: tell the other person what just happened
+     ********************************************************************/
+    const uName = (u) => u === "laca" ? "Laca" : "Fruzsi";
+    const NOTIF = {
+      changed: { icon: "🔄", border: "border-amber-400/50", tile: "bg-amber-500/20", bar: "bg-amber-400", tab: "plan" },
+      ok:      { icon: "👍", border: "border-sky-400/50", tile: "bg-sky-500/20", bar: "bg-sky-400", tab: "plan" },
+      locked:  { icon: "✅", border: "border-emerald-400/60", tile: "bg-emerald-500/20", bar: "bg-emerald-400", tab: "shop" },
+      undone:  { icon: "↩️", border: "border-amber-400/50", tile: "bg-amber-500/20", bar: "bg-amber-400", tab: "plan" },
+      week:    { icon: "🗓", border: "border-teal-400/50", tile: "bg-teal-500/20", bar: "bg-teal-400", tab: "plan" },
+      receipt: { icon: "🧾", border: "border-pink-400/50", tile: "bg-pink-500/20", bar: "bg-pink-400", tab: "shop" }
+    };
+
+    // one line in the shared activity list; the other phone turns it into a notification
+    function pushEvent(kind, title, text, showToMe) {
+      let evs = toArr(state.events);
+      const last = evs[evs.length - 1];
+      const ev = { id: "e" + Date.now(), ts: Date.now(), by: currentUser, kind, title, text };
+      // several swaps in a row are one change, not five notifications
+      if (kind === "changed" && last && last.kind === "changed" && last.by === currentUser && ev.ts - last.ts < 15 * 60000) evs = evs.slice(0, -1);
+      evs.push(ev);
+      state.events = evs.slice(-15);
+      if (showToMe) showNotif(ev);
+      return ev;
+    }
+
+    function dropLastChangeEvent() {
+      const evs = toArr(state.events), last = evs[evs.length - 1];
+      if (last && last.kind === "changed" && last.by === currentUser) state.events = evs.slice(0, -1);
+    }
+
+    function planChangeSummary() {
+      const neg = state.planNegotiation;
+      const diff = diffPlans(neg.previousSlots, neg.currentSlots);
+      const ids = Object.keys(diff);
+      if (!ids.length) return null;
+      const me = uName(currentUser);
+      if (ids.length === 1) {
+        const s = neg.currentSlots.find(x => diff[x.id]);
+        if (s.extra) return { title: `${me} added an extra cook`, text: "Open the plan to check it." };
+        if (diff[s.id].some(n => n.indexOf("🍽") === 0)) return { title: `${me} swapped a meal`, text: `${slotDayLabel(s)} is now ${getRecipeById(s.recipeId).name}` };
+        return { title: `${me} changed the plan`, text: `${slotDayLabel(s)} was adjusted` };
+      }
+      return { title: `${me} changed ${ids.length} meals`, text: "Open the plan to check them." };
+    }
+
+    let notifTimer = null;
+    function showNotif(ev, more) {
+      const st = NOTIF[ev.kind] || NOTIF.changed;
+      const host = document.getElementById("notifHost");
+      if (!host) return;
+      clearTimeout(notifTimer);
+      host.innerHTML = `
+        <div class="notif-enter pointer-events-auto relative overflow-hidden max-w-md mx-auto rounded-2xl bg-slate-900 border ${st.border} shadow-2xl shadow-black/70" onclick="openNotif('${st.tab}')">
+          <div class="flex items-center gap-3 p-3.5 pr-9">
+            <div class="w-11 h-11 shrink-0 rounded-xl ${st.tile} flex items-center justify-center text-2xl">${st.icon}</div>
+            <div class="min-w-0 flex-1">
+              <div class="text-sm font-extrabold text-white leading-tight">${esc(ev.title)}</div>
+              <div class="text-xs text-slate-300 mt-0.5 leading-snug" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esc(ev.text)}${more > 1 ? ` (+${more - 1} more)` : ""}</div>
+            </div>
+          </div>
+          <button onclick="event.stopPropagation(); hideNotif()" class="absolute top-1.5 right-1.5 w-7 h-7 text-slate-500 text-xs" aria-label="Close">✕</button>
+          <div class="notif-bar absolute bottom-0 left-0 h-0.5 w-full ${st.bar}"></div>
+        </div>`;
+      notifTimer = setTimeout(hideNotif, 8000);
+      if (navigator.vibrate) { try { navigator.vibrate(30); } catch (e) { } }
+    }
+    function hideNotif() { clearTimeout(notifTimer); const h = document.getElementById("notifHost"); if (h) h.innerHTML = ""; }
+    function openNotif(tab) { hideNotif(); switchTab(tab); }
+
+    // called whenever new data arrives from the other phone, and when the app comes back to the front
+    function checkNewEvents() {
+      const evs = toArr(state.events);
+      const key = "lf_seen_" + currentUser;
+      let seen = Number(localStorage.getItem(key) || 0);
+      const newest = evs.length ? evs[evs.length - 1].ts : 0;
+      if (!seen) { localStorage.setItem(key, String(Math.max(newest, Date.now()))); return; } // first time on this phone: no old news
+      const fresh = evs.filter(e => e.ts > seen && e.by !== currentUser);
+      if (!fresh.length) { if (newest > seen) localStorage.setItem(key, String(newest)); return; }
+      if (document.hidden) return; // show it when the app is looked at
+      const rank = { locked: 4, changed: 3, undone: 3, ok: 2, week: 2, receipt: 1 };
+      const top = fresh.slice().sort((a, b) => (rank[b.kind] || 0) - (rank[a.kind] || 0) || b.ts - a.ts)[0];
+      showNotif(top, fresh.length);
+      localStorage.setItem(key, String(newest));
+    }
+
+    /********************************************************************
      * 10. RENDER TAB 3: PING-PONG PLAN NEGOTIATION & PORTION MEMORY
      ********************************************************************/
     function recordCounterProposal(mutatorFn) {
       const neg = state.planNegotiation;
       // Several edits in a row by the same person stay ONE counter-offer:
-      // keep the plan the partner last saw as "Card 1".
+      // keep the plan the partner last saw, and how things stood at that moment.
       const keepOriginal = neg.status === "proposed" && neg.proposedBy === currentUser && neg.previousSlots && neg.previousSlots.length;
       if (!keepOriginal) {
         neg.previousSlots = JSON.parse(JSON.stringify(neg.currentSlots || []));
+        neg.prevState = { status: neg.status, proposedBy: neg.proposedBy, acceptedBy: Object.assign({ laca: false, fruzsi: false }, neg.acceptedBy) };
       }
       mutatorFn(state.planNegotiation.currentSlots);
+      const sum = planChangeSummary();
+      if (!sum && neg.prevState) {
+        // swapped back to what it was: nothing to agree on
+        neg.status = neg.prevState.status; neg.proposedBy = neg.prevState.proposedBy; neg.acceptedBy = neg.prevState.acceptedBy;
+        neg.previousSlots = null; neg.prevState = null;
+        dropLastChangeEvent();
+        saveStateAndSync(currentUser);
+        return;
+      }
       state.planNegotiation.status = "proposed";
       state.planNegotiation.proposedBy = currentUser;
       state.planNegotiation.acceptedBy = {
         laca: currentUser === "laca",
         fruzsi: currentUser === "fruzsi"
       };
+      if (sum) pushEvent("changed", sum.title, sum.text);
       saveStateAndSync(currentUser);
     }
 
@@ -2941,20 +3057,33 @@
     }
 
     function acceptCurrentPlan() {
-      state.planNegotiation.acceptedBy[currentUser] = true;
-      if (state.planNegotiation.acceptedBy.laca && state.planNegotiation.acceptedBy.fruzsi) {
-        state.planNegotiation.status = "locked";
-        state.planNegotiation.previousSlots = null;
+      const neg = state.planNegotiation;
+      neg.acceptedBy[currentUser] = true;
+      if (neg.acceptedBy.laca && neg.acceptedBy.fruzsi) {
+        neg.status = "locked";
+        neg.previousSlots = null;
+        neg.prevState = null;
+        pushEvent("locked", "Plan is set! 🎉", "You both said OK. Time to shop.", true);
+      } else {
+        pushEvent("ok", `${uName(currentUser)} said OK 👍`, "Your turn to say OK.");
       }
       saveStateAndSync(currentUser);
     }
 
+    // Undo my own change, or refuse the other person's change: back to how things stood before it
     function revertToPreviousPlan() {
-      if (!state.planNegotiation.previousSlots) return;
-      state.planNegotiation.currentSlots = JSON.parse(JSON.stringify(state.planNegotiation.previousSlots));
-      state.planNegotiation.previousSlots = null;
-      state.planNegotiation.acceptedBy = { laca: true, fruzsi: true };
-      state.planNegotiation.status = "locked";
+      const neg = state.planNegotiation;
+      if (!neg.previousSlots) return;
+      const mine = neg.proposedBy === currentUser;
+      const prev = neg.prevState || { status: "draft", proposedBy: currentUser, acceptedBy: { laca: false, fruzsi: false } };
+      neg.currentSlots = JSON.parse(JSON.stringify(neg.previousSlots));
+      neg.previousSlots = null;
+      neg.status = prev.status;
+      neg.proposedBy = prev.proposedBy;
+      neg.acceptedBy = Object.assign({ laca: false, fruzsi: false }, prev.acceptedBy);
+      neg.prevState = null;
+      if (mine) dropLastChangeEvent();
+      else pushEvent("undone", `${uName(currentUser)} kept the old plan`, prev.status === "locked" ? "Back to the plan you both agreed on." : "Back to the earlier version. Say OK or swap again.", prev.status === "locked");
       saveStateAndSync(currentUser);
     }
 
@@ -3308,15 +3437,14 @@
         neg.currentSlots = buildBatchSlotsFromCalendar(state.calendar, state);
       }
       const slots = neg.currentSlots;
-      const lacaOk = !!neg.acceptedBy?.laca, fruzsiOk = !!neg.acceptedBy?.fruzsi;
-      const bothLocked = lacaOk && fruzsiOk;
-      const myAccepted = !!neg.acceptedBy?.[currentUser];
-      const otherLabel = currentUser === "laca" ? "Fruzsi" : "Laca";
+      const other = currentUser === "laca" ? "fruzsi" : "laca", otherName = uName(other);
+      const bothLocked = !!neg.acceptedBy?.laca && !!neg.acceptedBy?.fruzsi;
+      const myAccepted = !!neg.acceptedBy?.[currentUser], otherOk = !!neg.acceptedBy?.[other];
 
       document.getElementById("planActionBadge").classList.toggle("hidden", bothLocked || myAccepted || !slots.length);
 
       const status = document.getElementById("planStatusCard");
-      const compBox = document.getElementById("comparisonContainer");
+      document.getElementById("comparisonContainer").classList.add("hidden");
       const list = document.getElementById("planSlotsList");
 
       if (!slots.length) {
@@ -3324,62 +3452,40 @@
         status.innerHTML = `
           <div class="text-4xl">🗓</div>
           <div class="text-sm font-extrabold text-white">Nothing to plan yet</div>
-          <p class="text-xs text-slate-400">Confirm the days you're home in the calendar, then pick meals.</p>
+          <p class="text-xs text-slate-400">Set the days you're home first.</p>
           <button onclick="switchTab('week')" class="mt-1 px-4 py-2.5 rounded-xl bg-emerald-500 text-slate-950 font-extrabold text-xs">Open calendar</button>`;
-        compBox.classList.add("hidden");
         list.innerHTML = "";
         return;
       }
 
-      if (bothLocked) {
-        status.className = "glass rounded-3xl p-3.5 border border-emerald-500/40 bg-emerald-500/10";
-        status.innerHTML = `
-          <div class="flex items-center justify-between gap-3">
-            <div class="text-sm font-extrabold text-emerald-300">✅ Plan locked in</div>
-            <button onclick="switchTab('shop')" class="px-3.5 py-2 rounded-xl bg-emerald-500 text-slate-950 font-extrabold text-xs">Shopping list →</button>
-          </div>`;
-      } else {
-        const chipCls = (ok) => `px-2 py-1 rounded-lg ${ok ? "bg-emerald-500/20 text-emerald-300" : "bg-slate-800 text-slate-400"}`;
-        status.className = "glass rounded-3xl p-3.5 border border-amber-500/40";
-        status.innerHTML = `
-          <div class="flex items-center justify-between gap-3">
-            <div>
-              <div class="text-sm font-extrabold text-white">Agree on the plan</div>
-              <div class="flex gap-1.5 mt-1.5 text-[11px] font-bold">
-                <span class="${chipCls(lacaOk)}">👦 ${lacaOk ? "✓" : "⏳"}</span>
-                <span class="${chipCls(fruzsiOk)}">👩 ${fruzsiOk ? "✓" : "⏳"}</span>
-              </div>
-            </div>
-            ${myAccepted
-              ? `<span class="text-[11px] text-slate-400 text-right">Waiting for<br>${otherLabel}</span>`
-              : `<button onclick="acceptCurrentPlan()" class="px-5 py-2.5 rounded-xl bg-emerald-500 text-slate-950 font-extrabold text-sm shadow-lg shadow-emerald-500/20">Accept</button>`}
-          </div>`;
-      }
-
+      // what is going on right now, in one sentence, with at most two buttons
       const diff = bothLocked ? {} : diffPlans(neg.previousSlots, slots);
-      const changedIds = Object.keys(diff);
-      if (neg.previousSlots && neg.previousSlots.length && !bothLocked && changedIds.length) {
-        const proposer = neg.proposedBy === "laca" ? "Laca" : "Fruzsi";
-        const mine = neg.proposedBy === currentUser;
-        compBox.classList.remove("hidden");
-        compBox.innerHTML = `
-          <div class="glass rounded-3xl p-3.5 border border-cyan-500/40 space-y-2.5">
-            <div class="text-xs font-extrabold text-cyan-300">${mine ? "You changed" : esc(proposer) + " changed"} ${changedIds.length} thing${changedIds.length === 1 ? "" : "s"}</div>
-            <div class="space-y-1.5">
-              ${slots.filter(s => diff[s.id]).map(s => `
-                <div class="p-2 rounded-xl bg-amber-500/10 border border-amber-500/30 text-[11px] text-amber-100">
-                  <strong>${esc(slotDayLabel(s))}</strong> <span class="ml-1 text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-amber-400 text-slate-950">CHANGED</span>
-                  <div class="mt-0.5 text-amber-200/90">${diff[s.id].map(esc).join("<br>")}</div>
-                </div>`).join("")}
-            </div>
-            ${mine ? "" : `
-              <div class="grid grid-cols-2 gap-2">
-                <button onclick="revertToPreviousPlan()" class="py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-slate-200 font-bold text-xs">Keep the old plan</button>
-                <button onclick="acceptCurrentPlan()" class="py-2.5 rounded-xl bg-emerald-500 text-slate-950 font-extrabold text-xs">Accept changes</button>
-              </div>`}
-          </div>`;
+      const nChanged = Object.keys(diff).length;
+      const hasChanges = nChanged > 0 && neg.previousSlots && neg.previousSlots.length;
+      const meals = nChanged === 1 ? "a meal" : nChanged + " meals";
+      const head = (icon, tile, title, sub) => `
+        <div class="flex items-center gap-3">
+          <div class="w-11 h-11 shrink-0 rounded-xl ${tile} flex items-center justify-center text-2xl">${icon}</div>
+          <div class="min-w-0">
+            <div class="text-[15px] font-extrabold text-white leading-tight">${title}</div>
+            ${sub ? `<div class="text-xs text-slate-400 mt-0.5 leading-snug">${sub}</div>` : ""}
+          </div>
+        </div>`;
+      const big = (onclick, label, cls) => `<button onclick="${onclick}" class="flex-1 py-3 rounded-2xl font-extrabold text-sm ${cls}">${label}</button>`;
+      const okCls = "bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20";
+      const ghost = "bg-slate-800 border border-slate-700 text-slate-200 !font-bold";
+      const box = (border, inner) => { status.className = `glass rounded-3xl p-4 border ${border} space-y-3`; status.innerHTML = inner; };
+
+      if (bothLocked) {
+        box("border-emerald-500/40", head("✅", "bg-emerald-500/20", "Plan is set", "You both said OK.") + `<div class="flex gap-2">${big("switchTab('shop')", "Shopping list →", okCls)}</div>`);
+      } else if (hasChanges && neg.proposedBy !== currentUser && !myAccepted) {
+        box("border-amber-500/50", head("🔄", "bg-amber-500/20", `${esc(otherName)} changed ${meals}`, "Marked below. OK with it?") + `<div class="flex gap-2">${big("revertToPreviousPlan()", "↩ Keep the old one", ghost)}${big("acceptCurrentPlan()", "👍 OK", okCls)}</div>`);
+      } else if (hasChanges && neg.proposedBy === currentUser) {
+        box("border-sky-500/40", head("⏳", "bg-sky-500/20", `Waiting for ${esc(otherName)}`, `You changed ${meals}. ${esc(otherName)} needs to say OK.`) + `<div class="flex gap-2">${big("revertToPreviousPlan()", "↩ Undo my changes", ghost)}</div>`);
+      } else if (!myAccepted) {
+        box("border-emerald-500/30", head("🍽", "bg-emerald-500/20", "Happy with this week?", `Not keen on a meal? Tap 🎲 Swap for another one you both like.${otherOk ? " " + esc(otherName) + " already said OK." : ""}`) + `<div class="flex gap-2">${big("acceptCurrentPlan()", "👍 Looks good", okCls)}</div>`);
       } else {
-        compBox.classList.add("hidden");
+        box("border-sky-500/40", head("⏳", "bg-sky-500/20", `Waiting for ${esc(otherName)}`, `You said OK. It's set when ${esc(otherName)} does too.`));
       }
 
       list.innerHTML = slots.map((slot, idx) => {
@@ -3390,10 +3496,10 @@
         const nextSlot = slots[idx + 1];
         const canSplitOrMerge = !slot.extra && (slot.days.length === 2 || (nextSlot && nextSlot.days.length === 1 && !nextSlot.extra));
         const changed = !!diff[slot.id];
-        const cookOpen = openCook.has(slot.id), changeOpen = openChange.has(slot.id);
-        const pool = changeOpen ? randomMealPool(slot) : { both: [] };
+        const was = changed ? diff[slot.id].map(n => n.indexOf("🍽") === 0 ? "Was: " + n.slice(2).trim().split(" → ")[0] : n).join(" · ") : "";
+        const cookOpen = openCook.has(slot.id), moreOpen = openChange.has(slot.id);
         const isToday = todayInPlanWeek() && slot.days.includes(DAY_KEYS[todayIdx()]);
-        const btn = (on, onclick, label) => `<button onclick="${onclick}" class="py-2.5 rounded-xl text-xs font-bold border transition ${on ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40" : "bg-slate-800 text-slate-200 border-slate-700"}">${label}</button>`;
+        const btn = (on, onclick, label, extra) => `<button onclick="${onclick}" class="${extra || "flex-1"} py-2.5 rounded-xl text-xs font-bold border transition ${on ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40" : "bg-slate-800 text-slate-200 border-slate-700"}">${label}</button>`;
         const sub = slot.days.length === 2 ? `Cook ${DAY_SHORT[slot.days[0]]} · leftovers ${DAY_SHORT[slot.days[1]]}` : (slot.extra ? "Extra meal" : `Cook ${DAY_SHORT[slot.days[0]]}`);
         const lunch = slot.lunchBoxes ? `<div class="px-3.5 py-2 text-[11px] bg-amber-500/10 text-amber-200 border-t border-amber-500/20">🥡 Includes ${slot.lunchBoxes} lunch box${slot.lunchBoxes > 1 ? "es" : ""} for ${(slot.lunchDays || []).map(dk => DAY_SHORT[dk]).join(", ")}</div>` : "";
 
@@ -3406,21 +3512,18 @@
                 <div class="text-[15px] font-bold text-white leading-snug ${slot.cooked ? "line-through" : ""}" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esc(rec.name)}</div>
                 <div class="text-[11px] text-white/75 mt-1">⏱ ${esc(rec.prepTime)} · 🍽 ${portions} · 💪 ${Math.round(rec.protein * mult)} g</div>
                 <div class="text-[10px] text-white/55 mt-0.5">${esc(sub)}</div>
+                ${was ? `<div class="text-[11px] text-amber-200 mt-1 leading-snug" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esc(was)}</div>` : ""}
               </div>
             </div>
             ${lunch}
-            <div class="p-2.5 grid grid-cols-3 gap-1.5">
+            <div class="p-2.5 flex gap-1.5">
               ${btn(cookOpen, `toggleCook('${esc(slot.id)}')`, "📖 Recipe")}
-              ${btn(slot.cooked, `toggleCooked(${idx})`, slot.cooked ? "↩ Undo" : "✓ Cooked")}
-              ${btn(changeOpen, `toggleChange('${esc(slot.id)}')`, "⚙️ Change")}
+              ${slot.cooked ? "" : btn(false, `rollMeal(${idx})`, "🎲 Swap")}
+              ${bothLocked ? btn(slot.cooked, `toggleCooked(${idx})`, slot.cooked ? "↩ Undo" : "✓ Cooked") : ""}
+              ${btn(moreOpen, `toggleChange('${esc(slot.id)}')`, "⋯", "w-12 shrink-0")}
             </div>
-            ${changeOpen ? `
+            ${moreOpen ? `
               <div class="mx-2.5 mb-2.5 p-3 rounded-2xl bg-slate-950/60 border border-slate-800 space-y-3">
-                <div>
-                  <div class="text-[11px] font-bold text-slate-400 mb-1">Change this meal</div>
-                  <button onclick="rollMeal(${idx})" class="w-full py-3 rounded-xl bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white font-extrabold text-sm shadow-lg shadow-violet-500/20">🎲 Surprise ${slot.whoConstraint === "both" ? "us" : "me"}</button>
-                  <div class="text-[10px] text-slate-500 mt-1">${pool.both.length ? `Drawn at random from ${pool.both.length} meal${pool.both.length === 1 ? "" : "s"} ${slot.whoConstraint === "both" ? "you both liked" : "you liked"}. Tap again for another.` : "You've used every meal you both liked, so this draws from meals one of you liked."}</div>
-                </div>
                 <div>
                   <div class="text-[11px] font-bold text-slate-400 mb-1">Portion size</div>
                   <div class="flex items-center gap-1 flex-wrap">
@@ -3578,6 +3681,7 @@
       state.spending.push(entry);
       state.spending = state.spending.slice(-200);
       ["spendAmount", "spendNote", "spendExtras", "spendExtrasNote"].forEach(id => { document.getElementById(id).value = ""; });
+      pushEvent("receipt", `${uName(currentUser)} added a receipt`, fmtEur(amt));
       saveStateAndSync(currentUser);
       showToast("Saved " + fmtEur(amt));
     }
@@ -4156,6 +4260,7 @@
       }
       state.spending.push(entry);
       state.spending = state.spending.slice(-200);
+      pushEvent("receipt", `${uName(currentUser)} added a receipt`, `${fmtEur(total / rate)} · ${entry.items.length} items`);
       saveStateAndSync(currentUser);
       closeScan();
       showToast(`Saved ${fmtEur(total / rate)} · ${entry.items.length} items`);
@@ -4925,7 +5030,7 @@
       { icon: "🍲", title: "Cook at home, save money", text: "This app plans your week's meals, builds one shopping list and reminds you to cook, so you stop ordering expensive delivery. Both phones stay in sync live." },
       { icon: "📅", title: "1. Set your days", text: "On the Calendar tab, tap each day you know: 1 tap = home, 2 taps = half day (at work, home for the afternoon), 3 taps = away. Select several days at once, then confirm. Your partner sets their own days on their phone." },
       { icon: "🔥", title: "2. Pick meals", text: "On the Meals tab, tap ❤️ for meals you'd eat and ✕ to skip. Each of you picks on your own phone, and meals your partner already picked are skipped for you. Tell the app what you hate in Setup and those meals vanish." },
-      { icon: "🤝", title: "3. Agree on the plan", text: "On the Plan tab, the app proposes a week. Either of you can tap 🎲 to swap a meal for a random one you both liked, or change portions, and the other sees what changed. When you both tap Accept, it's locked in." },
+      { icon: "🤝", title: "3. Agree on the plan", text: "On the Plan tab, the app proposes a week. Either of you can tap 🎲 to swap a meal for a random one you both liked, or change portions, and the other sees what changed. When you both tap 👍, it's set." },
       { icon: "🛒", title: "4. Shop once, cook easy", text: "The Shop tab groups everything by aisle and trip day. Tap 🛒 Buy or 🏠 Home as you go and it updates on both phones. On cook day, tap a meal on the Plan tab for the recipe." },
       { icon: "🔔", title: "You're ready!", text: "Turn on reminders in Setup so you never forget. The green card at the top of the Week tab always tells you what to do next." }
     ];
@@ -4980,6 +5085,8 @@
 
     window.addEventListener("DOMContentLoaded", () => {
       renderAll();
+      checkNewEvents();
+      document.addEventListener("visibilitychange", () => { if (!document.hidden) checkNewEvents(); });
       setInterval(() => { renderReminderBanner(); maybeFireNotification(); }, 30000);
       if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
         navigator.serviceWorker.register("sw.js").catch(() => {});
