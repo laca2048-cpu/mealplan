@@ -482,6 +482,7 @@
     let activeSwipeFilter = "all"; // "all" | "fast" | "airfryer" | "ricecooker" | "stove" | "oven"
     let firebaseRoomRef = null;
     let isApplyingRemoteUpdate = false;
+    let lastSynced = null; // the shared data as this phone last knew it
 
     /********************************************************************
      * 2. BUDGET, FAST, HIGH-PROTEIN, BIG-PORTION RECIPES
@@ -1671,12 +1672,14 @@
       pn.acceptedBy = Object.assign({ laca: false, fruzsi: false }, pn.acceptedBy || {});
       pn.currentSlots = toArr(pn.currentSlots).map(sl => Object.assign({}, sl, { days: toArr(sl.days) }));
       pn.previousSlots = pn.previousSlots ? toArr(pn.previousSlots).map(sl => Object.assign({}, sl, { days: toArr(sl.days) })) : null;
+      if (pn.acceptedBy.laca && pn.acceptedBy.fruzsi && pn.status !== "locked") { pn.status = "locked"; pn.previousSlots = null; pn.prevState = null; }
       s.planNegotiation = pn;
       return s;
     }
 
     let state = createDefaultState();
     state = loadLocalState();
+    lastSynced = JSON.parse(JSON.stringify(state));
 
     function loadLocalState() {
       try {
@@ -1694,13 +1697,63 @@
       state.updatedBy = triggerBy;
       localStorage.setItem("lf_shared_state_v2", JSON.stringify(state));
 
-      if (!isApplyingRemoteUpdate && firebaseRoomRef) {
-        firebaseRoomRef.set(state).catch((err) => {
+      if (!isApplyingRemoteUpdate && firebaseRoomRef) pushChanges();
+      renderAll();
+    }
+
+    /* Only the fields this phone changed are sent. A phone that is a moment behind
+       can then never wipe out what the other person just did. */
+    const isPlainObj = (v) => v && typeof v === "object" && !Array.isArray(v);
+    const isEmptyVal = (v) => v === undefined || v === null || (Array.isArray(v) && !v.length) || (isPlainObj(v) && !Object.keys(v).length);
+    function diffPaths(prev, next, base, out) {
+      if (isPlainObj(prev) && isPlainObj(next)) {
+        new Set(Object.keys(prev).concat(Object.keys(next))).forEach(k => diffPaths(prev[k], next[k], base ? base + "/" + k : k, out));
+      } else if (!(isEmptyVal(prev) && isEmptyVal(next)) && JSON.stringify(prev) !== JSON.stringify(next)) {
+        out[base] = next === undefined ? null : next;
+      }
+    }
+    function pushChanges() {
+      const next = JSON.parse(JSON.stringify(state));
+      const changes = {};
+      diffPaths(lastSynced || {}, next, "", changes);
+      if (!Object.keys(changes).length) return;
+      lastSynced = next;
+      try {
+        firebaseRoomRef.update(changes).catch((err) => {
           console.warn("Firebase write error:", err);
           updateSyncBadge("error", "Sync Error");
         });
+      } catch (err) {
+        console.warn("Firebase write error:", err);
+        updateSyncBadge("error", "Sync Error");
       }
-      renderAll();
+    }
+
+    // new data from the other phone (or the echo of our own save)
+    function applyRemoteValue(remote) {
+      if (remote && typeof remote === "object") {
+        isApplyingRemoteUpdate = true;
+        state = normalizeState(remote);
+        if (!state.planNegotiation.currentSlots.length) {
+          state.planNegotiation.currentSlots = buildBatchSlotsFromCalendar(state.calendar, state);
+        }
+        lastSynced = JSON.parse(JSON.stringify(state));
+        localStorage.setItem("lf_shared_state_v2", JSON.stringify(state));
+        renderAll();
+        isApplyingRemoteUpdate = false;
+        checkNewEvents();
+      } else {
+        // nothing shared yet: this phone's data becomes the shared data
+        state.updatedAt = Date.now();
+        state.updatedBy = currentUser;
+        localStorage.setItem("lf_shared_state_v2", JSON.stringify(state));
+        lastSynced = JSON.parse(JSON.stringify(state));
+        firebaseRoomRef.set(lastSynced).catch((err) => {
+          console.warn("Firebase write error:", err);
+          updateSyncBadge("error", "Sync Error");
+        });
+        renderAll();
+      }
     }
 
     /********************************************************************
@@ -1811,22 +1864,8 @@
         firebaseRoomRef = db.ref("rooms/" + secretPin);
 
         firebaseRoomRef.on("value", (snapshot) => {
-          const remote = snapshot.val();
           updateSyncBadge("online", "Live Synced");
-          if (remote && typeof remote === "object") {
-            isApplyingRemoteUpdate = true;
-            state = normalizeState(remote);
-            if (!state.planNegotiation.currentSlots.length) {
-              state.planNegotiation.currentSlots = buildBatchSlotsFromCalendar(state.calendar, state);
-            }
-
-            localStorage.setItem("lf_shared_state_v2", JSON.stringify(state));
-            renderAll();
-            isApplyingRemoteUpdate = false;
-            checkNewEvents();
-          } else {
-            saveStateAndSync(currentUser);
-          }
+          applyRemoteValue(snapshot.val());
         }, (err) => {
           console.warn("Realtime listener error:", err);
           updateSyncBadge("error", "Check PIN");
@@ -2401,6 +2440,7 @@
           real: m.real,
           extras: Math.round(m.extras * 100) / 100,
           portions: m.portions,
+          meals: (neg.currentSlots || []).map(s => s.recipeId).filter(Boolean),
           ts: Date.now()
         });
         state.history = state.history.slice(-52);
@@ -3617,7 +3657,7 @@
             <div class="p-2.5 flex gap-1.5">
               ${btn(cookOpen, `toggleCook('${esc(slot.id)}')`, "📖 Recipe")}
               ${slot.cooked ? "" : btn(false, `rollMeal(${idx})`, "🎲 Swap")}
-              ${bothLocked ? btn(slot.cooked, `toggleCooked(${idx})`, slot.cooked ? "↩ Undo" : "✓ Cooked") : ""}
+              ${bothLocked || planDateOf(slot.days[0]) <= todayISO() ? btn(slot.cooked, `toggleCooked(${idx})`, slot.cooked ? "↩ Undo" : "✓ Cooked") : ""}
               ${btn(moreOpen, `toggleChange('${esc(slot.id)}')`, "⋯", "w-12 shrink-0")}
             </div>
             ${moreOpen ? `
@@ -4503,8 +4543,11 @@
       const mode = state.shopping.mode || "fresh";
       const needs = [];
 
+      const today = todayISO();
       slots.forEach(slot => {
         if (slot.cooked && !includeCooked) return;
+        // a meal whose cooking day is over needs no shopping, ticked as cooked or not
+        if (!includeCooked && planDateOf(slot.days[0]) < today) return;
         const rec = getRecipeById(slot.recipeId);
         const total = slot.basePortions * (slot.multiplier || 1.0);
         const cookIdx = DAY_KEYS.indexOf(slot.days[0]);
@@ -4674,8 +4717,10 @@
             ${trips.pantryList.map(i => `<div class="flex justify-between text-xs py-1.5 border-b border-slate-800/70"><span class="text-slate-200">${esc(i.name)}</span><strong class="text-cyan-300">${i.amount >= 1000 && i.unit === "g" ? i.amount / 1000 + " kg" : i.amount + " " + esc(i.unit)}</strong></div>`).join("")}
           </div>`;
       }
-      document.getElementById("shoppingTripsContainer").innerHTML = html ||
-        `<div class="glass rounded-3xl p-6 text-center space-y-2"><div class="text-4xl">🛒</div><div class="text-sm font-bold text-white">Nothing to buy yet</div><p class="text-xs text-slate-400">Your list appears once your days are set and meals are planned.</p></div>`;
+      const emptyShop = (state.planNegotiation.currentSlots || []).length
+        ? `<div class="glass rounded-3xl p-6 text-center space-y-2"><div class="text-4xl">🎉</div><div class="text-sm font-bold text-white">Nothing left to buy</div><p class="text-xs text-slate-400">All the meals are cooked or past.</p></div>`
+        : `<div class="glass rounded-3xl p-6 text-center space-y-2"><div class="text-4xl">🛒</div><div class="text-sm font-bold text-white">Nothing to buy yet</div><p class="text-xs text-slate-400">Set your days and plan the meals first.</p></div>`;
+      document.getElementById("shoppingTripsContainer").innerHTML = html || emptyShop;
       renderBudget();
     }
 
