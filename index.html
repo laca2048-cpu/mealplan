@@ -142,7 +142,7 @@
           <span>🗓 Week finished? Start a new one</span><span class="chev text-slate-400">▾</span>
         </summary>
         <div class="px-4 pb-4">
-          <p class="text-xs text-slate-400 mb-3">Saves this week's budget, then clears meal picks, the plan and shopping ticks. Your calendar days stay.</p>
+          <p class="text-xs text-slate-400 mb-3">Saves this week's budget, then clears the plan and shopping ticks. Your meal likes stay, and the days are copied from this week.</p>
           <button onclick="startNewWeek()" class="w-full py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-100 font-bold text-xs transition">🔄 Start new week</button>
         </div>
       </details>
@@ -1623,6 +1623,8 @@
       s.hiddenRecipes = r.hiddenRecipes || {};
       s.settings = Object.assign({}, d.settings, r.settings || {});
       s.history = toArr(r.history);
+      s.lastWeekMeals = toArr(r.lastWeekMeals);
+      s.swipesBackup = r.swipesBackup || {};
       s.spending = toArr(r.spending).map(e => e && e.items ? Object.assign({}, e, { items: toArr(e.items) }) : e);
       s.pantry = toArr(r.pantry);
       s.subs = r.subs || {};
@@ -1951,6 +1953,8 @@
           else if (fruzsiSwipes[r.id] !== "left") score = 25;
         }
         if (score > 0) {
+          // not the same meals as last week again, if there are other good ones
+          if ((currentState.lastWeekMeals || []).includes(r.id)) score -= 35;
           // variety: every repeat of the same main protein this week costs points
           const prot = mainProtein(r);
           if (prot !== "other") {
@@ -2221,6 +2225,13 @@
     }
 
     function renderNextStep() {
+      if (weekIsOver()) {
+        document.getElementById("nextStepCard").innerHTML = `
+          <div class="text-sm font-extrabold text-white">This week is finished 🎉</div>
+          <p class="text-xs text-slate-400 mt-1 mb-3">The next one starts with the same days and your meal likes, so you only need to check the plan.</p>
+          <button onclick="startNewWeek(true)" class="w-full py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 font-extrabold text-sm">Start next week →</button>`;
+        return;
+      }
       const me = state.swipes[currentUser] || {};
       const myLikes = Object.values(me).filter(v => v === "right").length;
       const neg = state.planNegotiation;
@@ -2273,9 +2284,22 @@
       }, 210);
     }
 
+    // wipes only the current person's likes and dislikes
     function resetWeeklySwipes() {
-      state.swipes = { laca: {}, fruzsi: {} };
+      if (!confirm("Forget all your meal likes and dislikes and start swiping from scratch? Your partner's picks stay. You can undo this afterwards.")) return;
+      if (!state.swipesBackup) state.swipesBackup = {};
+      if (Object.keys(state.swipes[currentUser] || {}).length) state.swipesBackup[currentUser] = state.swipes[currentUser];
+      state.swipes[currentUser] = {};
       saveStateAndSync(currentUser);
+    }
+
+    function restoreSwipes() {
+      const b = state.swipesBackup && state.swipesBackup[currentUser];
+      if (!b) return;
+      state.swipes[currentUser] = Object.assign({}, b, state.swipes[currentUser]);
+      delete state.swipesBackup[currentUser];
+      saveStateAndSync(currentUser);
+      showToast("Your old picks are back");
     }
 
     // Finger/mouse drag on the card: release past 90px to swipe
@@ -2339,11 +2363,16 @@
       });
     }
 
-    function startNewWeek() {
+    function weekIsOver() { return todayISO() > addDaysISO(planMondayISO(), 6); }
+
+    function startNewWeek(skipAsk) {
       const nextMon = nextPlanMondayISO();
+      const prevStart = state.planWeekStart;
       const nextLabel = parseISO(nextMon).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
-      if (!confirm(`Start the week of ${nextLabel}? Meal picks, the plan and shopping ticks will be cleared. Your calendar days stay.`)) return;
+      if (!skipAsk && !weekIsOver() && !confirm(`Start the week of ${nextLabel} now? This week's plan and shopping ticks will be cleared. Your meal likes and days carry over.`)) return;
       const neg = state.planNegotiation;
+      // remember what we just ate, so the next plan does not repeat it straight away
+      state.lastWeekMeals = (neg.currentSlots || []).map(s => s.recipeId).filter(Boolean);
       if (neg.status === "locked" && (neg.currentSlots || []).length) {
         const m = computeMoney(neg.currentSlots);
         state.history.push({
@@ -2359,9 +2388,17 @@
         state.history = state.history.slice(-52);
       }
       state.planWeekStart = nextMon;
+      // same days as last week, unless a day was already set for the new week
+      ["laca", "fruzsi"].forEach(u => {
+        if (!state.avail[u]) state.avail[u] = {};
+        for (let i = 0; i < 7; i++) {
+          const nd = addDaysISO(nextMon, i), od = addDaysISO(prevStart, i);
+          if (!state.avail[u][nd] && state.avail[u][od]) state.avail[u][nd] = state.avail[u][od];
+        }
+      });
       refreshCalendar(state);
       state.subs = {};
-      state.swipes = { laca: {}, fruzsi: {} };
+      // meal likes and dislikes stay: they are your taste, not this week's picks
       state.shopping.atHome = {};
       state.shopping.bought = {};
       state.planNegotiation = {
@@ -2373,8 +2410,10 @@
       };
       localStorage.removeItem("lf_banner_snooze");
       saveStateAndSync(currentUser);
-      switchTab("swipe");
-      showToast("Fresh week started! Swipe your meals 🎉");
+      const likes = u => Object.values(state.swipes[u] || {}).filter(v => v === "right").length;
+      const ready = likes("laca") >= 3 && likes("fruzsi") >= 3;
+      switchTab(ready ? "plan" : "swipe");
+      showToast(ready ? "New week started. Your days and likes carried over, check the plan" : "New week started. Swipe a few more meals");
     }
 
     let showFilters = false;
@@ -2467,7 +2506,8 @@
                 ${g.options.map(o => `<button onclick="toggleFilterOpt('${g.key}','${o.key}')" class="px-2.5 py-1.5 rounded-xl text-xs font-semibold border transition ${(activeFilters[g.key] || []).includes(o.key) ? "bg-emerald-500 text-slate-950 border-emerald-400" : "bg-slate-900/90 text-slate-300 border-slate-700"}">${o.label}</button>`).join("")}
               </div>
             </div>`).join("")}
-          <button onclick="resetWeeklySwipes()" class="text-[11px] text-slate-500 underline">Start all swipes over</button>`;
+          <button onclick="resetWeeklySwipes()" class="text-[11px] text-slate-500 underline">Forget my picks and start over</button>
+          ${state.swipesBackup && state.swipesBackup[currentUser] ? `<button onclick="restoreSwipes()" class="ml-3 text-[11px] text-emerald-300 underline">Undo: bring my old picks back</button>` : ""}`;
       }
 
       const area = document.getElementById("swipeArea");
