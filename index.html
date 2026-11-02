@@ -311,6 +311,17 @@
       <details class="glass rounded-3xl">
         <summary class="p-4 flex items-center justify-between">
           <div>
+            <div class="text-sm font-bold text-white">📲 Phone alerts</div>
+            <div id="pushSub" class="text-[11px] text-slate-400">Know when your partner changes the plan</div>
+          </div>
+          <span class="chev text-slate-400">▾</span>
+        </summary>
+        <div id="pushBody" class="px-4 pb-4 space-y-3"></div>
+      </details>
+
+      <details class="glass rounded-3xl">
+        <summary class="p-4 flex items-center justify-between">
+          <div>
             <div class="text-sm font-bold text-white">💰 Money & currency</div>
             <div class="text-[11px] text-slate-400">Euro or forint, delivery price</div>
           </div>
@@ -2914,13 +2925,14 @@
       if (kind === "changed" && last && last.kind === "changed" && last.by === currentUser && ev.ts - last.ts < 15 * 60000) evs = evs.slice(0, -1);
       evs.push(ev);
       state.events = evs.slice(-15);
+      queuePush(kind, title, text);
       if (showToMe) showNotif(ev);
       return ev;
     }
 
     function dropLastChangeEvent() {
       const evs = toArr(state.events), last = evs[evs.length - 1];
-      if (last && last.kind === "changed" && last.by === currentUser) state.events = evs.slice(0, -1);
+      if (last && last.kind === "changed" && last.by === currentUser) { state.events = evs.slice(0, -1); cancelQueuedPush(); }
     }
 
     function planChangeSummary() {
@@ -2976,6 +2988,92 @@
       const top = fresh.slice().sort((a, b) => (rank[b.kind] || 0) - (rank[a.kind] || 0) || b.ts - a.ts)[0];
       showNotif(top, fresh.length);
       localStorage.setItem(key, String(newest));
+    }
+
+    /* ---- Phone alerts when the app is closed: a short line through the free ntfy.sh service ---- */
+    const NTFY_URL = "https://ntfy.sh/";
+    const PUSH_KINDS = ["changed", "ok", "locked", "undone"];
+    let pendingPush = null, pushTimer = null;
+
+    function pushTopic(user) { return "lf-" + (state.settings.pushKey || "") + "-" + user; }
+    function randomKey() {
+      const a = new Uint8Array(16);
+      if (window.crypto && crypto.getRandomValues) crypto.getRandomValues(a); else a.forEach((_, i) => { a[i] = Math.floor(Math.random() * 256); });
+      return Array.from(a, b => b.toString(36).padStart(2, "0")).join("").slice(0, 26);
+    }
+
+    function setPushOn(on) {
+      state.settings.pushOn = !!on;
+      if (on && !state.settings.pushKey) state.settings.pushKey = randomKey();
+      saveStateAndSync(currentUser);
+    }
+
+    function sendPushNow(p) {
+      if (!p || !state.settings.pushOn || !state.settings.pushKey) return;
+      const body = { topic: pushTopic(p.to), title: p.title, message: p.text, tags: ["fork_and_knife"] };
+      if (/^https?:/.test(location.href)) body.click = location.origin + location.pathname;
+      try { fetch(NTFY_URL, { method: "POST", body: JSON.stringify(body), keepalive: true }).catch(() => { }); } catch (e) { }
+    }
+
+    function flushPush() {
+      clearTimeout(pushTimer);
+      const p = pendingPush;
+      pendingPush = null;
+      sendPushNow(p);
+    }
+
+    // swaps in a row become one alert; it is sent a few seconds after the last swap, or when the app is left
+    function queuePush(kind, title, text) {
+      if (!state.settings.pushOn || PUSH_KINDS.indexOf(kind) < 0) return;
+      const to = currentUser === "laca" ? "fruzsi" : "laca";
+      if (kind === "changed") {
+        pendingPush = { to, title, text };
+        clearTimeout(pushTimer);
+        pushTimer = setTimeout(flushPush, 8000);
+      } else {
+        flushPush();
+        sendPushNow({ to, title, text });
+      }
+    }
+    function cancelQueuedPush() { clearTimeout(pushTimer); pendingPush = null; }
+
+    function testPush() {
+      sendPushNow({ to: currentUser, title: "Phone alerts work 🎉", text: `${uName(currentUser)}, you will get a message like this when the other person changes the plan.` });
+      showToast("Test sent. Look at your ntfy app");
+    }
+
+    function copyText(t, msg) {
+      const done = () => showToast(msg);
+      const fallback = () => {
+        const ta = document.createElement("textarea");
+        ta.value = t; ta.style.position = "fixed"; ta.style.opacity = "0";
+        document.body.appendChild(ta); ta.select();
+        try { document.execCommand("copy"); done(); } catch (e) { showToast("Could not copy"); }
+        document.body.removeChild(ta);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(done).catch(fallback); else fallback();
+    }
+    function copyPushTopic() { copyText(pushTopic(currentUser), "Alert name copied"); }
+
+    function renderPushUI() {
+      const body = document.getElementById("pushBody"), sub = document.getElementById("pushSub");
+      if (!body) return;
+      const on = !!state.settings.pushOn && !!state.settings.pushKey;
+      sub.textContent = on ? "On. Set up your phone below" : "Know when your partner changes the plan";
+      if (!on) {
+        body.innerHTML = `
+          <p class="text-xs text-slate-400">Get a notification on your phone even when the app is closed. Free, through the ntfy app.</p>
+          <button onclick="setPushOn(true)" class="w-full py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 font-extrabold text-sm">Turn on phone alerts</button>`;
+        return;
+      }
+      const step = (n, inner) => `<div class="flex gap-3"><div class="w-6 h-6 shrink-0 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-extrabold flex items-center justify-center">${n}</div><div class="min-w-0 flex-1 space-y-1.5">${inner}</div></div>`;
+      body.innerHTML = `
+        <div class="text-[11px] text-slate-400">Each of you does these steps on your own phone. This is ${uName(currentUser)}'s.</div>
+        ${step(1, `<div class="text-xs text-slate-200">Install the free <strong>ntfy</strong> app</div><a href="https://apps.apple.com/app/ntfy/id1625396347" target="_blank" rel="noopener" class="inline-block px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-xs font-bold text-slate-100">Open in App Store</a>`)}
+        ${step(2, `<div class="text-xs text-slate-200">In ntfy tap <strong>+</strong> and type this name</div><div class="flex gap-2"><code class="flex-1 min-w-0 px-2.5 py-2 rounded-xl bg-slate-950 border border-slate-700 text-[11px] text-emerald-300 break-all select-text">${esc(pushTopic(currentUser))}</code><button onclick="copyPushTopic()" class="px-3 rounded-xl bg-emerald-500 text-slate-950 text-xs font-extrabold">Copy</button></div>`)}
+        ${step(3, `<div class="text-xs text-slate-200">Allow notifications, then test it</div><button onclick="testPush()" class="px-3 py-2 rounded-xl bg-cyan-500/15 border border-cyan-500/30 text-xs font-bold text-cyan-300">Send me a test</button>`)}
+        <p class="text-[10px] text-slate-500">Only short lines like "Laca swapped a meal" are sent, through the free ntfy.sh service. The alert name is private to you two.</p>
+        <button onclick="setPushOn(false)" class="text-[11px] text-slate-500 underline">Turn off phone alerts</button>`;
     }
 
     /********************************************************************
@@ -4980,6 +5078,7 @@
     }
 
     function renderSetupTab() {
+      renderPushUI();
       const userLabel = currentUser === "laca" ? "Laca" : "Fruzsi";
       document.getElementById("dislikeUserLabel").textContent = userLabel;
 
@@ -5086,7 +5185,8 @@
     window.addEventListener("DOMContentLoaded", () => {
       renderAll();
       checkNewEvents();
-      document.addEventListener("visibilitychange", () => { if (!document.hidden) checkNewEvents(); });
+      document.addEventListener("visibilitychange", () => { if (document.hidden) flushPush(); else checkNewEvents(); });
+      window.addEventListener("pagehide", flushPush);
       setInterval(() => { renderReminderBanner(); maybeFireNotification(); }, 30000);
       if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
         navigator.serviceWorker.register("sw.js").catch(() => {});
